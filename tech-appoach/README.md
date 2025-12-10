@@ -62,6 +62,9 @@ Standalone Desktop Application
 - **[01-run-and-debug.md](01-run-and-debug.md)** - Maven commands and development workflow
 - **[05-docker-setup.md](05-docker-setup.md)** - Docker Compose configuration
 
+### Governance & Quality
+- **[15-project-rules.md](15-project-rules.md)** - Project rules, coding standards, workflow
+
 ### Technical Specifications
 - **[01-technology-stack.md](01-technology-stack.md)** - Detailed technology choices with Maven
 - **[14-architecture-overview.md](14-architecture-overview.md)** - Application architecture and design patterns
