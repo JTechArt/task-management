@@ -1,0 +1,162 @@
+---
+alwaysApply: true
+Rule Name: Development Process Enhancements
+Description: Comprehensive rules for visual-first development, mockup generation, quality standards, and enhanced workflows
+Globs: ["*"]
+---
+
+# Development Process Enhancements
+
+## Overview
+These rules establish enhanced development processes integrating visual mockups, automated quality gates, and improved collaboration workflows for all AiTask application development.
+
+## Visual Mockup Generation Requirements
+
+### When to Generate Mockups
+- **MANDATORY for UI Changes**: Any task involving new user interface components or screens
+- **MANDATORY for Workflow Changes**: Tasks that modify how users interact with the system
+- **MANDATORY for Dashboard/Reporting**: Any new metrics, charts, or data visualization
+- **MANDATORY for Forms/Inputs**: New forms, input fields, or data entry workflows
+
+### Mockup Types Required
+1. **Interactive HTML Prototypes**: For complex user workflows and multi-step processes
+2. **Static Visual Mockups**: For initial concept validation and stakeholder presentations
+3. **Component Library Mockups**: For reusable UI components
+
+### Quality Standards for Mockups
+- **Realistic Content**: Use meaningful dummy data, not placeholder text
+- **Responsive Design**: Show behavior across mobile, tablet, and desktop
+- **Interaction States**: Include loading, error, and success states
+- **Accessibility**: Follow WCAG 2.1 AA standards
+- **Performance**: Mockups must load quickly and be responsive
+
+## Enhanced 4-Phase Development Workflow
+
+### Phase 1: Requirements and Visual Planning
+1. **Task Analysis**: Understand business requirements and UI implications
+2. **Mockup Generation**: Create appropriate visual mockups using the mockup services
+3. **Stakeholder Review**: Present mockups for approval before development
+4. **Technical Architecture**: Design approach with mockup references
+
+### Phase 2: Implementation with Visual Reference
+1. **Mockup-Driven Development**: Implement features following approved mockups exactly
+2. **Concurrent Testing**: Write tests while developing, with 80%+ coverage
+3. **Code Review**: At least two peer reviewers for significant changes
+4. **Quality Gates**: All automated tests must pass before proceeding
+
+### Phase 3: Validation Against Mockups
+1. **Mockup Compliance Testing**: Validate implementation matches approved mockups
+2. **E2E Testing**: Test all user workflows shown in mockups
+3. **Cross-browser Testing**: Ensure compatibility across different browsers
+4. **Performance Testing**: Meet benchmarks (3s load time, responsive interactions)
+
+### Phase 4: Documentation and Completion
+1. **Feature Documentation**: Include mockups in final documentation
+2. **User Guides**: Use mockups for training materials
+3. **Completion Verification**: Mark task complete only after verification
+4. **Archive and Knowledge Sharing**: Move to completed folder and update docs
+
+## Quality Gates (NON-NEGOTIABLE)
+
+### Code Quality Standards
+- **Test Coverage**: Minimum 80% code coverage required
+- **TypeScript**: Strict mode with comprehensive typing
+- **Linting**: All ESLint/TSLint checks must pass
+- **Security**: No critical vulnerabilities allowed
+
+### Performance Standards
+- **Load Time**: Pages must load within 3 seconds
+- **Interaction Response**: UI interactions must respond within 200ms
+- **Bundle Optimization**: Code-split and optimized bundles
+- **Memory Management**: No memory leaks
+
+### Accessibility Standards
+- **WCAG 2.1 AA**: Minimum compliance level required
+- **Keyboard Navigation**: Full keyboard accessibility
+- **Screen Reader**: Proper semantic markup and ARIA labels
+- **Color Contrast**: Sufficient contrast ratios
+
+## Mockup Service Integration
+
+### API Usage Requirements
+- Use `generate-visual-mockup` for static mockups and prototypes
+- Use `generate-html-prototype` for interactive demonstrations
+- Use `generate-rule` for creating custom development standards
+- Always specify appropriate output formats and layout hints
+
+### File Organization
+- Store mockups in task-specific folders under `doc/tasks/{task-name}/`
+- Use descriptive filenames: `mockup-{feature-name}.html`
+- Include mockups in task documentation and completion reports
+
+## Documentation Requirements
+
+### Mandatory Documentation
+- **Task Documentation**: Include mockups in task.md files
+- **API Documentation**: OpenAPI/Swagger specs for endpoints
+- **Component Documentation**: Storybook docs for UI components
+- **User Guides**: Include mockup screenshots and workflows
+
+### Visual Documentation Standards
+- **Mockup Integration**: Embed mockups in all feature documentation
+- **Progressive Enhancement**: Show different states and scenarios
+- **Cross-referencing**: Link mockups to implementation code
+- **Version Control**: Track mockup changes and iterations
+
+## Collaboration and Communication
+
+### Stakeholder Communication
+- **Visual Presentations**: Use mockups for all stakeholder demos
+- **Approval Workflows**: Require explicit approval on mockups before coding
+- **Feedback Collection**: Structured feedback on visual specifications
+- **Change Management**: Visual diff for scope changes
+
+### Team Collaboration
+- **Cross-functional Reviews**: Include design, dev, product, and QA
+- **Mockup Reviews**: Regular review sessions for mockup quality
+- **Knowledge Sharing**: Share mockup best practices across teams
+- **Tool Training**: Ensure team knows how to use mockup services
+
+## Failure Prevention
+
+### Common Pitfalls to Avoid
+- **Late Mockup Creation**: Never start development without approved mockups
+- **Insufficient Detail**: Mockups must show all interaction states
+- **Skipping Reviews**: All mockups require stakeholder approval
+- **Implementation Drift**: Final implementation must match approved mockups exactly
+
+### Quality Checkpoints
+- **Pre-development**: Mockups approved by stakeholders
+- **Mid-development**: Implementation matches mockup specifications
+- **Pre-completion**: All mockup scenarios tested and validated
+- **Post-completion**: Documentation includes mockups and is complete
+
+## Continuous Improvement
+
+### Metrics and Monitoring
+- **Mockup Approval Rate**: Track first-time approval percentage
+- **Implementation Accuracy**: Measure mockup-to-code fidelity
+- **User Satisfaction**: Collect feedback on delivered features
+- **Process Efficiency**: Monitor time from mockup to delivery
+
+### Regular Process Review
+- **Monthly Reviews**: Assess process effectiveness and issues
+- **Tool Improvement**: Enhance mockup generation capabilities
+- **Training Updates**: Keep team skills current with new tools
+- **Best Practice Evolution**: Continuously refine standards
+
+## Success Criteria
+
+### Project-Level Success
+- **90%+ Mockup Approval Rate**: High first-time approval on mockups
+- **95%+ Implementation Accuracy**: Implementation matches approved mockups
+- **Zero Critical Bugs**: No critical issues in delivered features
+- **Improved Velocity**: Faster development with clearer specifications
+
+### Quality Assurance
+- **100% Rule Compliance**: All development follows these standards
+- **Complete Documentation**: All features have comprehensive docs with mockups
+- **Stakeholder Satisfaction**: High satisfaction with delivered features
+- **Team Efficiency**: Reduced rework and clarification meetings
+
+This enhanced development process is MANDATORY for all new features and significant changes to ensure consistent quality, clear communication, and successful delivery.
