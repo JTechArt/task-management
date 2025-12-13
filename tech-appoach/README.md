@@ -1,7 +1,7 @@
 # AiTask - Maven/Kotlin/PostgreSQL Standalone Application
 
 ## Overview
-This directory contains technical specifications for implementing AiTask as a standalone application using **Maven**, **Kotlin**, **Jetpack Compose Desktop** for UI, and **PostgreSQL** for the database. This is a complete rewrite for **public use**, excluding proprietary integrations (Adobe Workfront).
+This directory contains technical specifications for implementing AiTask as a standalone application using **Maven**, **Kotlin**, **Jetpack Compose Desktop** for UI, and **PostgreSQL** for the database. 
 
 ## Architecture Transformation
 
@@ -161,13 +161,6 @@ Standalone Desktop Application
 - **Local Git Operations** - Full Git workflow support
 - **Process Launching** - Open IDEs and external tools
 - **Native UI** - Platform-native look and feel
-
-### Excluded Features (Proprietary) ❌
-- Adobe Workfront Integration
-- Workfront OAuth2 Authentication
-- Workfront Task Synchronization
-- Workfront Project Import
-
 ## Project Structure
 
 ```
