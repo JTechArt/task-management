@@ -1,0 +1,47 @@
+# TaskManager Scaffold
+
+Kotlin 2 / JVM 21 Compose Desktop scaffold with env-driven config, database wiring, Docker, and jpackage skeleton.
+
+## Modules
+- `core`: Configuration loader, database factory (Hikari + Flyway + Exposed types), logging helpers.
+- `desktop-app`: Compose Desktop entry point, logback config, startup smoke hook.
+
+## Quick start
+```bash
+cd taskmanager
+mvn -pl desktop-app -am package
+java -jar desktop-app/target/desktop-app-0.1.0-SNAPSHOT.jar
+```
+
+## Environment variables
+| Name | Default | Purpose |
+| --- | --- | --- |
+| `APP_NAME` | TaskManager | Window title and app id |
+| `DB_HOST` | localhost | Database host |
+| `DB_PORT` | 5432 | Database port |
+| `DB_NAME` | taskmanager | Database name |
+| `DB_USER` | taskmanager | Database user |
+| `DB_PASSWORD` | taskmanager_local | Database password (not logged) |
+| `DB_MAX_POOL_SIZE` | 10 | Hikari maximumPoolSize |
+| `DB_MIN_IDLE` | 2 | Hikari minimumIdle |
+| `DB_CONNECTION_TIMEOUT` | 30000 | Hikari connectionTimeout (ms) |
+| `DB_IDLE_TIMEOUT` | 600000 | Hikari idleTimeout (ms) |
+| `DB_MAX_LIFETIME` | 1800000 | Hikari maxLifetime (ms) |
+| `BOOTSTRAP_DATABASE` | false | Run Flyway + connect on startup |
+
+## Docker
+```bash
+docker-compose build
+docker-compose up
+```
+
+## Jpackage skeleton
+```bash
+./script/build-jpackage.sh
+```
+
+## Smoke test
+```bash
+mvn -pl desktop-app -am test
+```
+
