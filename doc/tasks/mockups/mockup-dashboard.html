@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TasK Manager – Dashboard Aggregates Mockup</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --border: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --primary: #2f5fff;
+      --success: #16a34a;
+      --warning: #d97706;
+      --error: #dc2626;
+      --focus: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    h1 { margin: 0; font-size: 16px; }
+    button {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #111827;
+      color: var(--text);
+    }
+    button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    button:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+    main { padding: 14px; display: grid; gap: 12px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      position: relative;
+      min-height: 120px;
+    }
+    .label { color: var(--muted); font-size: 12px; }
+    .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+    .skeleton {
+      width: 60%;
+      height: 20px;
+      background: #1a2435;
+      border-radius: 6px;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.45; }
+      50% { opacity: 1; }
+      100% { opacity: 0.45; }
+    }
+    .error {
+      color: #fff;
+      background: #3b0a0a;
+      border: 1px solid #7f1d1d;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .empty { color: var(--muted); }
+    .list {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .item:last-child { border-bottom: 0; }
+    .pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .status-open { background: var(--primary); color: #fff; }
+    .status-done { background: var(--success); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Dashboard Aggregates (Loading / Empty / Error / Success)</h1>
+    <div>
+      <button onclick="setState('loading')">Loading</button>
+      <button onclick="setState('empty')">Empty</button>
+      <button onclick="setState('error')">Error</button>
+      <button class="primary" onclick="setState('success')">Refresh</button>
+    </div>
+  </header>
+  <main>
+    <div id="cards" class="grid"></div>
+    <section class="list" aria-label="Recent activity">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h2 style="margin:0;font-size:14px;">Recent Activity</h2>
+        <button onclick="setState(currentState)">Replay State</button>
+      </div>
+      <div id="activity"></div>
+    </section>
+  </main>
+  <script>
+    const cards = document.getElementById('cards');
+    const activity = document.getElementById('activity');
+    let currentState = 'success';
+
+    function renderCardsSuccess() {
+      cards.innerHTML = '';
+      const data = [
+        { label: 'Open Tasks', value: 24 },
+        { label: 'In Progress', value: 12 },
+        { label: 'Blocked', value: 3 },
+        { label: 'Done (7d)', value: 41 }
+      ];
+      data.forEach(d => {
+        const c = document.createElement('div');
+        c.className = 'card';
+        c.innerHTML = `<div class="label">${d.label}</div><div class="value">${d.value}</div>`;
+        cards.appendChild(c);
+      });
+    }
+
+    function renderCardsLoading() {
+      cards.innerHTML = '';
+      for (let i = 0; i < 4; i++) {
+        const c = document.createElement('div');
+        c.className = 'card';
+        c.innerHTML = `<div class="skeleton"></div>`;
+        cards.appendChild(c);
+      }
+    }
+
+    function renderCardsError() {
+      cards.innerHTML = '';
+      const c = document.createElement('div');
+      c.className = 'card';
+      c.innerHTML = `<div class="error" role="alert">Error loading aggregates. <button onclick="setState('success')">Retry</button></div>`;
+      cards.appendChild(c);
+    }
+
+    function renderCardsEmpty() {
+      cards.innerHTML = '';
+      const c = document.createElement('div');
+      c.className = 'card';
+      c.innerHTML = `<div class="empty">No data yet. Create a task to see aggregates.</div>`;
+      cards.appendChild(c);
+    }
+
+    function renderActivitySuccess() {
+      activity.innerHTML = '';
+      for (let i = 1; i <= 5; i++) {
+        const row = document.createElement('div');
+        row.className = 'item';
+        row.innerHTML = `
+          <div>
+            <div><strong>Task ${i}</strong> moved to In Progress</div>
+            <div style="color:var(--muted);font-size:12px;">Moments ago • by Alex</div>
+          </div>
+          <div class="pill status-open">IN PROGRESS</div>
+        `;
+        activity.appendChild(row);
+      }
+    }
+
+    function renderActivityEmpty() {
+      activity.innerHTML = `<div class="empty">No recent activity. Start by creating a task.</div>`;
+    }
+
+    function renderActivityError() {
+      activity.innerHTML = `<div class="error" role="alert">Failed to load activity. <button onclick="setState('success')">Retry</button></div>`;
+    }
+
+    function renderActivityLoading() {
+      activity.innerHTML = `<div class="skeleton" style="width:80%;height:14px;"></div>`;
+    }
+
+    function setState(state) {
+      currentState = state;
+      if (state === 'loading') {
+        renderCardsLoading();
+        renderActivityLoading();
+        return;
+      }
+      if (state === 'empty') {
+        renderCardsEmpty();
+        renderActivityEmpty();
+        return;
+      }
+      if (state === 'error') {
+        renderCardsError();
+        renderActivityError();
+        return;
+      }
+      renderCardsSuccess();
+      renderActivitySuccess();
+    }
+
+    setState('success');
+  </script>
+</body>
+</html>
+

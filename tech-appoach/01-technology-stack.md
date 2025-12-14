@@ -1,7 +1,7 @@
 # Technology Stack - Maven/Kotlin Standalone Application
 
 ## Overview
-Technology choices for implementing AiTask as a standalone application using Maven, Kotlin, Jetpack Compose Desktop, and PostgreSQL. This stack is optimized for public deployment with Docker containerization.
+Technology choices for implementing AiTask as a standalone application using Maven, Kotlin, JetBrains Compose Multiplatform for Desktop (org.jetbrains.compose), and PostgreSQL. This stack is optimized for public deployment with Docker containerization.
 
 ## Build System
 

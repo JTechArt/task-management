@@ -1,11 +1,11 @@
 # AiTask Standalone — Product Requirements Document (PRD)
 
 ## 1. Summary
-AiTask is a Kotlin/Compose Desktop application for task and project management with deep Git and IDE integrations. This PRD is derived from `tech-appoach` specifications to guide the Maven/Kotlin/PostgreSQL implementation, replacing the prior Electron/TypeScript stack while enabling future IDE add-ons (Cursor, JetBrains, Augment).
+AiTask is a Kotlin/Compose Multiplatform for Desktop (org.jetbrains.compose) application for task and project management with deep Git and IDE integrations. This PRD is derived from `tech-appoach` specifications to guide the Maven/Kotlin/PostgreSQL implementation, replacing the prior Electron/TypeScript stack while enabling future IDE add-ons (Cursor, JetBrains, Augment).
 
 ## 2. Goals
 - Provide reliable task and project management with Git-aware workflows.
-- Deliver a native desktop UX (Compose Desktop) with fast load and responsive interactions.
+- Deliver a native desktop UX (Compose Multiplatform for Desktop via org.jetbrains.compose) with fast load and responsive interactions.
 - Support integrations: Git (GitHub/GitLab/Bitbucket via JGit), Slack notifications, Cursor IDE launch (future IDEs).
 - Enforce rule management and future-proof for additional integration packs.
 
@@ -19,7 +19,7 @@ AiTask is a Kotlin/Compose Desktop application for task and project management w
 - Secondary: Tech leads managing small backlogs, wanting quick task setup and rule enforcement.
 
 ## 5. Assumptions and Constraints
-- Kotlin 2.0+, JVM 21, Maven 3.9+, Compose Desktop 1.6+.
+- Kotlin 2.0+, JVM 21, Maven 3.9+, Compose Multiplatform for Desktop (org.jetbrains.compose) 1.6+.
 - PostgreSQL 16+, Exposed ORM, HikariCP, Flyway for migrations.
 - Docker required for DB and optional app container; jpackage for installers.
 - Performance targets: app start ≤ 3s, task list load ≤ 500ms with 1k tasks, DB queries ≤ 100ms typical.
@@ -74,7 +74,7 @@ AiTask is a Kotlin/Compose Desktop application for task and project management w
 - Indexes: name, status, type, created_at/updated_at, GIN search for text fields.
 
 ## 9. UX Requirements
-- Compose Desktop with Material 3 styling.
+- Compose Multiplatform for Desktop (org.jetbrains.compose) with Material 3 styling.
 - Screens: Task List, Task Detail/Edit dialog, Filters panel, Dashboard overview.
 - States: loading, empty, populated, error; toasts for success/error; inline validation.
 - Keyboard: tab order, Enter submit, Esc cancel dialogs.

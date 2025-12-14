@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TasK Manager – Settings / Integrations Stub</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --border: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --primary: #2f5fff;
+      --focus: #f59e0b;
+    }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      max-width: 760px;
+      margin: auto;
+    }
+    h1 { margin-top: 0; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    .card h2 { margin: 0 0 6px; font-size: 14px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .chip {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      margin-right: 6px;
+    }
+    button {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #111827;
+      color: var(--text);
+    }
+    button:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1>Settings / Integrations Stub</h1>
+    <p class="muted">Read-only stubs for Git intent logger, IDE launcher, Slack linkage. Future outbound calls will replace stubs.</p>
+
+    <div class="card">
+      <h2>Git Intent Logger</h2>
+      <p class="muted">Stores repositoryUrl and planned branch names. No network calls yet.</p>
+      <div class="chip">Status: Stub</div>
+      <div class="chip">Branch Template: <code>task-{taskId}</code></div>
+      <button>Log Intent (disabled in stub)</button>
+    </div>
+
+    <div class="card">
+      <h2>IDE Launcher</h2>
+      <p class="muted">Invokes local IDE with workspacePath. Cursor stub wired; JetBrains later.</p>
+      <div class="chip">Status: Stub</div>
+      <div class="chip">WorkspacePath: `/base/Project-Alpha/task-12ab`</div>
+      <button>Launch (disabled in stub)</button>
+    </div>
+
+    <div class="card">
+      <h2>Slack Channel Linkage</h2>
+      <p class="muted">Persists channel linkage only. No outbound calls.</p>
+      <div class="chip">Status: Stub</div>
+      <button>Save (no-op)</button>
+    </div>
+  </div>
+</body>
+</html>
+

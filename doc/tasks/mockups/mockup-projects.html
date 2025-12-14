@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TasK Manager – Projects List & Create/Edit</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --border: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --primary: #2f5fff;
+      --error: #dc2626;
+      --focus: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100vh;
+    }
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    h1 { margin: 0; font-size: 16px; }
+    button {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #111827;
+      color: var(--text);
+    }
+    button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    button:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+    main { padding: 12px; display: grid; gap: 12px; }
+    .list {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0;
+    }
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .items { max-height: calc(100vh - 180px); overflow: auto; }
+    .item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .item:last-child { border-bottom: 0; }
+    .meta { color: var(--muted); font-size: 12px; }
+    .toolbar { display: flex; gap: 8px; }
+    .dialog-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center;
+    }
+    .dialog {
+      width: 520px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; box-shadow: 0 18px 60px rgba(0,0,0,0.5);
+    }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    input {
+      width: 100%; padding: 10px 12px; border-radius: 8px;
+      border: 1px solid var(--border); background: #111827; color: var(--text);
+      font-size: 14px;
+    }
+    input:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+    .row { display: grid; gap: 10px; margin-bottom: 10px; }
+    .error {
+      background: #3b0a0a; color: #fff; border: 1px solid #7f1d1d;
+      padding: 8px 10px; border-radius: 8px; font-size: 13px;
+    }
+    .danger { color: #fff; background: var(--error); border: 1px solid #7f1d1d; }
+    .toast {
+      position: fixed; bottom: 16px; right: 16px;
+      background: var(--card); border: 1px solid var(--border);
+      padding: 12px 14px; border-radius: 8px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.45);
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Projects (List / Create / Edit / Delete)</h1>
+    <div class="toolbar">
+      <button onclick="setState('loading')">Loading</button>
+      <button onclick="setState('empty')">Empty</button>
+      <button onclick="setState('error')">Error</button>
+      <button onclick="setState('success')">Success</button>
+      <button class="primary" onclick="openDialog()">Create Project</button>
+    </div>
+  </header>
+  <main>
+    <section class="list" aria-label="Projects list">
+      <div class="list-header">
+        <div id="list-title">Projects</div>
+        <div class="toolbar">
+          <button onclick="openDialog()">Create</button>
+        </div>
+      </div>
+      <div id="items" class="items"></div>
+    </section>
+  </main>
+
+  <div id="dialog" class="dialog-backdrop" role="dialog" aria-modal="true" aria-label="Project form">
+    <div class="dialog">
+      <h2 style="margin-top:0;">Project</h2>
+      <div class="row">
+        <label for="name">Name (unique)</label>
+        <input id="name" placeholder="Project name" value="Project Alpha" autofocus>
+        <div class="muted" style="font-size:12px;">Must be unique; shows inline error on duplicate.</div>
+        <div class="error" id="name-error" style="display:none;">Name already exists. Choose a different name.</div>
+      </div>
+      <div class="row">
+        <label for="url">repositoryUrl (regex validated)</label>
+        <input id="url" placeholder="https://github.com/org/repo" value="https://github.com/example/project-alpha">
+        <div class="muted" style="font-size:12px;">Must start with http(s):// and include host/path.</div>
+        <div class="error" id="url-error" style="display:none;">Invalid repository URL format.</div>
+      </div>
+      <div class="row">
+        <label for="branch">branchTemplate</label>
+        <input id="branch" placeholder="task-{taskId}" value="task-{taskId}">
+        <div class="muted" style="font-size:12px;">Supports tokens like {taskId}; default is task-{taskId}.</div>
+      </div>
+      <div class="toolbar" style="justify-content: flex-end;">
+        <button onclick="closeDialog()">Cancel (Esc)</button>
+        <button class="primary" onclick="save()">Save (Enter)</button>
+      </div>
+      <div class="toolbar" style="margin-top:10px; justify-content: space-between;">
+        <div style="color:var(--muted);font-size:12px;">Tab order: name → url → branch → actions. Esc guarded if unsaved.</div>
+        <button class="danger" onclick="confirmDelete()">Delete (cascade warning)</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status">Saved. List refreshed.</div>
+
+  <script>
+    const items = document.getElementById('items');
+    const dialog = document.getElementById('dialog');
+    const urlError = document.getElementById('url-error');
+    const nameError = document.getElementById('name-error');
+    const toast = document.getElementById('toast');
+
+    let state = 'success';
+    let projects = [
+      { name: 'Project Alpha', repo: 'https://git.example.com/project-alpha', template: 'task-{taskId}' },
+      { name: 'Project Beta', repo: 'https://git.example.com/project-beta', template: 'task-{taskId}' }
+    ];
+    let editingIndex = null;
+
+    function renderSuccess() {
+      if (!projects.length) return renderEmpty();
+      items.innerHTML = '';
+      projects.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.className = 'item';
+        row.tabIndex = 0;
+        row.innerHTML = `
+          <div>
+            <div><strong>${p.name}</strong></div>
+            <div class="meta">repo: ${p.repo} • branch template: ${p.template}</div>
+          </div>
+          <div class="toolbar">
+            <button onclick="openDialog(${idx})">Edit</button>
+            <button onclick="confirmDelete(${idx})">Delete</button>
+          </div>
+        `;
+        items.appendChild(row);
+      });
+    }
+
+    function renderLoading() {
+      items.innerHTML = `<div style="padding:14px;color:var(--muted);">Loading projects…</div>`;
+    }
+
+    function renderEmpty() {
+      items.innerHTML = `<div style="padding:14px;color:var(--muted);">No projects yet. Create one to enable tasks.</div>`;
+    }
+
+    function renderError() {
+      items.innerHTML = `<div style="padding:14px;" role="alert" class="error">Error loading projects. <button onclick="setState('success')">Retry</button></div>`;
+    }
+
+    function setState(next) {
+      state = next;
+      document.getElementById('list-title').textContent = `Projects (${state})`;
+      if (state === 'loading') return renderLoading();
+      if (state === 'empty') return renderEmpty();
+      if (state === 'error') return renderError();
+      return renderSuccess();
+    }
+
+    function openDialog(index = null) {
+      editingIndex = index;
+      const isEdit = index !== null;
+      const nameField = document.getElementById('name');
+      const urlField = document.getElementById('url');
+      const branchField = document.getElementById('branch');
+      if (isEdit) {
+        const p = projects[index];
+        nameField.value = p.name;
+        urlField.value = p.repo;
+        branchField.value = p.template;
+      } else {
+        nameField.value = '';
+        urlField.value = '';
+        branchField.value = 'task-{taskId}';
+      }
+      nameError.style.display = 'none';
+      urlError.style.display = 'none';
+      dialog.style.display = 'flex';
+      nameField.focus();
+    }
+
+    function closeDialog() {
+      dialog.style.display = 'none';
+      editingIndex = null;
+    }
+
+    function confirmDelete(index = editingIndex) {
+      if (index === null || index === undefined) return;
+      const ok = confirm('Deleting a project will also delete its tasks (cascade). Continue?');
+      if (!ok) return;
+      projects.splice(index, 1);
+      closeDialog();
+      setState(projects.length ? 'success' : 'empty');
+      showToast('Project deleted. Tasks will cascade.');
+    }
+
+    function save() {
+      const url = document.getElementById('url').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const template = document.getElementById('branch').value.trim() || 'task-{taskId}';
+      const isValidUrl = /^https?:\/\/.+/i.test(url);
+      const lower = name.toLowerCase();
+      const duplicate = projects.some((p, idx) => p.name.toLowerCase() === lower && idx !== editingIndex);
+
+      nameError.style.display = duplicate ? 'block' : 'none';
+      urlError.style.display = isValidUrl ? 'none' : 'block';
+
+      if (duplicate || !isValidUrl || !name) {
+        if (!name) { nameError.style.display = 'block'; nameError.textContent = 'Name is required.'; }
+        return;
+      }
+
+      const payload = { name, repo: url, template };
+      if (editingIndex !== null) {
+        projects[editingIndex] = payload;
+      } else {
+        projects.push(payload);
+      }
+      closeDialog();
+      setState('success');
+      showToast('Saved. List refreshed.');
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDialog();
+      if (e.key === 'Enter' && dialog.style.display === 'flex') {
+        e.preventDefault();
+        save();
+      }
+    });
+
+    setState('success');
+  </script>
+</body>
+</html>
+

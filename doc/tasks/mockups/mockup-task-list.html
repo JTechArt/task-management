@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TasK Manager – Task List + Filters Mockup</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --border: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --primary: #2f5fff;
+      --success: #16a34a;
+      --warning: #d97706;
+      --error: #dc2626;
+      --accent: #f59e0b;
+      --focus: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100vh;
+    }
+    header {
+      padding: 12px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { margin: 0; font-size: 16px; letter-spacing: 0.2px; }
+    button, select, input {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    button:focus, select:focus, input:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+    main {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .filters { display: grid; gap: 10px; }
+    .filters label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+    .list {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .items { overflow: auto; }
+    .item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      padding: 12px;
+      gap: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .item:hover { background: #162033; }
+    .item .meta { color: var(--muted); font-size: 12px; }
+    .pill {
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .status-open { background: var(--accent); }
+    .status-done { background: var(--success); }
+    .status-blocked { background: var(--error); color: #fff; }
+    .state {
+      padding: 16px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .toast {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+      display: none;
+    }
+    .toast.success { border-color: var(--success); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+    .kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .legend { font-size: 12px; color: var(--muted); padding: 8px 0 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Task List + Filters (Loading / Empty / Error / Success)</h1>
+    <div class="toolbar" aria-label="State toggles">
+      <button onclick="setState('loading')">Loading</button>
+      <button onclick="setState('empty')">Empty</button>
+      <button onclick="setState('error')">Error</button>
+      <button class="primary" onclick="setState('success')">Success</button>
+      <span class="legend">Shortcuts: <span class="kbd">Cmd/Ctrl+F</span> focus filters</span>
+    </div>
+  </header>
+  <main>
+    <section class="panel filters" aria-label="Filters panel">
+      <div>
+        <label for="status">Status</label>
+        <select id="status">
+          <option>All</option>
+          <option>Open</option>
+          <option>In Progress</option>
+          <option>Blocked</option>
+          <option>Done</option>
+        </select>
+      </div>
+      <div>
+        <label for="type">Type</label>
+        <select id="type">
+          <option>All</option>
+          <option>Feature</option>
+          <option>Bug</option>
+          <option>Chore</option>
+        </select>
+      </div>
+      <div>
+        <label for="search">Search</label>
+        <input id="search" type="search" placeholder="Filter tasks..." />
+      </div>
+      <div class="toolbar">
+        <button class="primary">Apply</button>
+        <button onclick="setState('empty')">Reset</button>
+      </div>
+    </section>
+    <section class="list" aria-label="Task list">
+      <div class="list-header">
+        <div>12 tasks • Filters preserved</div>
+        <div class="toolbar">
+          <button onclick="showToast()">Refresh</button>
+          <button class="primary">New Task</button>
+        </div>
+      </div>
+      <div id="items" class="items"></div>
+    </section>
+  </main>
+  <div id="toast" class="toast success" role="status">Task saved. List refreshed. Item highlighted.</div>
+  <script>
+    const items = document.getElementById('items');
+    const toast = document.getElementById('toast');
+
+    function renderSuccess() {
+      items.innerHTML = '';
+      for (let i = 1; i <= 6; i++) {
+        const row = document.createElement('div');
+        row.className = 'item';
+        row.tabIndex = 0;
+        row.innerHTML = `
+          <div>
+            <div><strong>Task ${i}</strong> – Improve filters debouncing</div>
+            <div class="meta">Project Alpha • Updated moments ago • Owner: Taylor</div>
+          </div>
+          <div class="pill status-open">OPEN</div>
+        `;
+        items.appendChild(row);
+      }
+    }
+
+    function renderLoading() {
+      items.innerHTML = `<div class="state">Loading… skeleton shimmer shown in app</div>`;
+    }
+
+    function renderEmpty() {
+      items.innerHTML = `<div class="state">No tasks. If no projects exist, create a project first. <button onclick="setState('success')">Reset filters</button></div>`;
+    }
+
+    function renderError() {
+      items.innerHTML = `<div class="state" role="alert">Error loading tasks. <button onclick="setState('success')">Retry</button></div>`;
+    }
+
+    function setState(state) {
+      if (state === 'loading') return renderLoading();
+      if (state === 'empty') return renderEmpty();
+      if (state === 'error') return renderError();
+      return renderSuccess();
+    }
+
+    function showToast() {
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 2000);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        document.getElementById('search').focus();
+      }
+    });
+
+    setState('success');
+  </script>
+</body>
+</html>
+

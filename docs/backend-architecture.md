@@ -8,7 +8,7 @@ This document outlines the overall project architecture for TasK Manager, includ
 ### Starter Template or Existing Project
 - Starter template or existing codebase: not identified.
 - Inputs reviewed: docs/prd.md. No repository or starter links provided.
-- Decision: proceed as greenfield; expect manual setup for tooling. A Kotlin/JVM 21 + Compose Desktop starter (e.g., Maven multi-module) can be suggested later if desired.
+- Decision: proceed as greenfield; expect manual setup for tooling. A Kotlin/JVM 21 + Compose Multiplatform for Desktop (org.jetbrains.compose) starter (e.g., Maven multi-module) can be suggested later if desired.
 
 ### Change Log
 | Date | Version | Description | Author |
@@ -17,7 +17,7 @@ This document outlines the overall project architecture for TasK Manager, includ
 ## High Level Architecture
 
 ### Technical Summary
-- Kotlin/JVM 21 Compose Desktop modular monolith using Hexagonal ports/adapters; modules for UI, application services, domain, infrastructure; adapters: Exposed/Hikari to PostgreSQL 16 (Docker), JGit for Git intents, Ktor client for Slack, IDE launcher stub.
+- Kotlin/JVM 21 Compose Multiplatform for Desktop (org.jetbrains.compose) modular monolith using Hexagonal ports/adapters; modules for UI, application services, domain, infrastructure; adapters: Exposed/Hikari to PostgreSQL 16 (Docker), JGit for Git intents, Ktor client for Slack, IDE launcher stub.
 - Maven multi-module build; Flyway migrations at startup; jpackage installers. Performance guardrails: lazy IO init, index-backed queries, pagination-ready list rendering.
 - Integration points: JGit (repo intents now, full Git ops later), Slack via Ktor client, IDE launcher stub (Cursor now; JetBrains/Augment later).
 - Local PostgreSQL 16 in Docker; app connects via HikariCP; configuration can point to remote DB later.
@@ -33,7 +33,7 @@ This document outlines the overall project architecture for TasK Manager, includ
 ### High Level Project Diagram
 ```mermaid
 graph TD
-  UI[Compose Desktop UI] --> VM[ViewModels / Use Cases]
+  UI[Compose Desktop UI (org.jetbrains.compose)] --> VM[ViewModels / Use Cases]
   VM --> Domain[Domain Layer]
   Domain --> Repo[Repositories (Ports)]
   Repo -->|Exposed/Hikari| DB[(PostgreSQL 16 in Docker)]
@@ -49,4 +49,6 @@ graph TD
 - Data patterns options: {Repository per aggregate, DAO, Event Sourcing (future)}. **Recommendation: Repository per aggregate** using Exposed; no event sourcing in R1.
 - Communication options: {In-process calls, REST/HTTP local service, gRPC}. **Recommendation: In-process calls** (desktop monolith); expose HTTP only if future plugins need IPC.
 - Integration resilience options: {Retry/backoff + circuit breakers, fire-and-forget}. **Recommendation: Retry/backoff with circuit breaker for Slack/Git when added, configurable}.
+
+
 

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TasK Manager – Task Detail/Edit Dialog Mockup</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1f2937;
+      --border: #334155;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --primary: #2f5fff;
+      --success: #16a34a;
+      --error: #dc2626;
+      --warning: #d97706;
+      --focus: #f59e0b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: rgba(0,0,0,0.8);
+      color: var(--text);
+      height: 100vh;
+      display: grid;
+      place-items: center;
+    }
+    .dialog {
+      width: 640px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.5);
+    }
+    h1 { margin: 0 0 12px; font-size: 18px; }
+    .row { display: grid; gap: 12px; margin-bottom: 12px; }
+    label { font-size: 12px; color: var(--muted); }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: #111827;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--focus); outline-offset: 2px; }
+    .inline {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; }
+    button {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #111827;
+      color: var(--text);
+      font-size: 14px;
+    }
+    button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    button.ghost { background: transparent; }
+    .hint { font-size: 12px; color: var(--muted); }
+    .error { color: #fff; background: var(--error); padding: 8px 10px; border-radius: 8px; border: 1px solid #7f1d1d; }
+    .success { color: #0f172a; background: var(--success); padding: 8px 10px; border-radius: 8px; border: 1px solid #065f46; }
+    .focus-ring { box-shadow: 0 0 0 2px var(--focus); }
+    .status {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #0b1220;
+      border: 1px solid var(--border);
+      margin-right: 6px;
+    }
+    .kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      background: #111827;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="dialog" role="dialog" aria-modal="true" aria-label="Task Detail Edit">
+    <h1>Edit Task — Focus trapped. Esc prompts if unsaved.</h1>
+    <div class="row inline">
+      <div>
+        <label for="title">Title</label>
+        <input id="title" value="Refine filters debouncing" autofocus />
+        <div class="hint">Shortcut: <span class="kbd">Cmd/Ctrl+S</span> to save</div>
+      </div>
+      <div>
+        <label for="assignee">Assignee</label>
+        <input id="assignee" value="Taylor Chen" />
+      </div>
+    </div>
+    <div class="row inline">
+      <div>
+        <label for="status">Status</label>
+        <select id="status">
+          <option>Open</option>
+          <option>In Progress</option>
+          <option>Blocked</option>
+          <option>Done</option>
+        </select>
+      </div>
+      <div>
+        <label for="type">Type</label>
+        <select id="type">
+          <option>Feature</option>
+          <option>Bug</option>
+          <option>Chore</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <label for="description">Description</label>
+      <textarea id="description" rows="3">Debounce filter changes to stay under 500ms refresh at 1k tasks. Keep inline errors visible on failure.</textarea>
+    </div>
+    <div class="row inline">
+      <div>
+        <label for="workspace">workspacePath (deterministic)</label>
+        <input id="workspace" class="focus-ring" value="/base/Project-Alpha/task-12ab" />
+        <div class="hint">Generated from base + sanitized project name + short taskId</div>
+      </div>
+      <div>
+        <label for="branch">branchName</label>
+        <input id="branch" value="task-12ab" />
+        <div class="hint">Default template: <code>task-{taskId}</code></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="status">Focus visible</div>
+      <div class="status">Inline errors</div>
+      <div class="status">Reduced motion respected</div>
+    </div>
+    <div class="row">
+      <div class="error" aria-live="assertive">Validation failed on save. “Status transition requires rationale.”</div>
+      <div class="success" aria-live="polite">Success toast: Task saved, list refreshed, item highlighted.</div>
+    </div>
+    <div class="actions">
+      <div class="hint">Tab order: fields → status/type → workspace/branch → primary actions. Esc asks before closing if unsaved.</div>
+      <div class="toolbar">
+        <button class="ghost">Cancel (Esc)</button>
+        <button class="primary">Save (Enter / Cmd/Ctrl+S)</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

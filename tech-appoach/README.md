@@ -1,7 +1,7 @@
 # AiTask - Maven/Kotlin/PostgreSQL Standalone Application
 
 ## Overview
-This directory contains technical specifications for implementing AiTask as a standalone application using **Maven**, **Kotlin**, **Jetpack Compose Desktop** for UI, and **PostgreSQL** for the database. 
+This directory contains technical specifications for implementing AiTask as a standalone application using **Maven**, **Kotlin**, **JetBrains Compose Multiplatform for Desktop (org.jetbrains.compose)** for UI, and **PostgreSQL** for the database.
 
 ## Architecture Transformation
 
@@ -17,7 +17,7 @@ Desktop Application (Electron)
 ### New Architecture (Maven/Kotlin Standalone)
 ```
 Standalone Desktop Application
-├── Jetpack Compose Desktop (UI Framework)
+├── JetBrains Compose Multiplatform for Desktop (UI Framework)
 ├── Kotlin (Application Logic)
 ├── Exposed ORM (Database Access)
 ├── PostgreSQL (Database)
@@ -29,7 +29,7 @@ Standalone Desktop Application
 
 ### Application Framework
 - **Kotlin 2.0+** - Modern JVM language with null safety and coroutines
-- **Jetpack Compose Desktop 1.6+** - Declarative UI framework
+- **JetBrains Compose Multiplatform for Desktop 1.6+ (org.jetbrains.compose)** - Declarative UI framework
 - **Compose Multiplatform** - Cross-platform desktop support (Windows, macOS, Linux)
 - **Maven 3.9+** - Build automation and dependency management
 
@@ -40,7 +40,7 @@ Standalone Desktop Application
 - **Flyway 10+** - Database migration management
 
 ### UI & Desktop Integration
-- **Compose Desktop** - Native desktop UI toolkit
+- **Compose Desktop (org.jetbrains.compose)** - Native desktop UI toolkit
 - **Material Design 3** - Modern UI components
 - **kotlinx.coroutines** - Structured concurrency
 - **Ktor Client 2.3+** - Async HTTP client for API calls
