@@ -3,5 +3,6 @@
     "files.associations": {
         "*.kt": "kotlin",
         "*.kts": "kotlin"
-    }
+    },
+    "maven.view": "flat"
 }

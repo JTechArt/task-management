@@ -31,6 +31,20 @@
         <coroutines.version>1.8.1</coroutines.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>jetbrains-compose-dev</id>
+            <url>https://maven.pkg.jetbrains.space/public/p/compose/dev</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>jetbrains-compose-dev-plugins</id>
+            <url>https://maven.pkg.jetbrains.space/public/p/compose/dev</url>
+        </pluginRepository>
+    </pluginRepositories>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
