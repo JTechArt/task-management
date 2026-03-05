@@ -1,0 +1,110 @@
+# OS & file system
+.DS_Store
+Thumbs.db
+
+# IDEs & editors
+.idea/
+*.iml
+*.ipr
+*.iws
+.fleet/
+.cursor/
+.cursorignore
+.vscode/
+*.code-workspace
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+.metadata/
+.factorypath
+.vs/
+*~
+.#*
+
+# Build outputs
+target/
+**/target/
+build/
+**/build/
+out/
+**/out/
+bin/
+**/bin/
+classes/
+**/classes/
+
+# JVM/Kotlin artifacts
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.kotlin_module
+kotlin-js-store/
+
+# Logs & runtime dumps
+*.log
+logs/
+*.tmp
+*.pid
+hs_err_pid*
+replay_pid*
+*.hprof
+
+# Maven
+.mvn/timing.properties
+.settings/
+dependency-reduced-pom.xml
+release.properties
+
+# Gradle (for safety in mixed builds)
+.gradle/
+gradle-app.setting
+gradle-app.properties
+!gradle/wrapper/gradle-wrapper.jar
+
+# Coverage & reports
+coverage/
+**/coverage/
+jacoco.exec
+*.ec
+*.lcov
+*.coverage
+*.coverage.*
+reports/
+**/reports/
+
+# Environment & local overrides
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.local
+*.override
+
+# Node/JS (if present)
+node_modules/
+dist/
+.parcel-cache/
+.next/
+.nuxt/
+.turbo/
+
+# Databases & generated data
+*.db
+*.sqlite
+*.mv.db
+*.trace.db
+*.db-journal
+
+# Temporary files
+tmp/
+**/tmp/
