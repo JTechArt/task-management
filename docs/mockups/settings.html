@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Settings</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Settings & backup</span><span>Import/export and application preferences</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>System preferences</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Primary</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>⌘1</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>⌘2</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>⌘3</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>⌘4</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>⌘5</small></a>
+            <a class="nav-item active" href="./settings.html"><span>Settings</span><small>⌘6</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>The settings page treats import/export and backup as first-class safety features, not buried utilities. Destructive operations remain visually separated from routine preferences.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Preferences and safeguards</span>
+              <h2>Configure the environment without risking user data</h2>
+              <p>This screen covers application-wide preferences, backup cadence, data portability, and destructive confirmations. It is designed for clarity over compactness because many actions here are irreversible or high-stakes.</p>
+            </div>
+            <div class="actions">
+              <span class="btn primary">Save settings</span>
+              <span class="btn">Restore defaults</span>
+            </div>
+          </div>
+
+          <section class="grid cols-3">
+            <article class="card">
+              <h3>Backup and restore</h3>
+              <p>Nightly JSON export with manual restore support.</p>
+              <div class="field-grid" style="margin-top:16px; grid-template-columns:1fr;">
+                <div class="field"><span>Backup path</span><strong>/Users/arthurho/backups/aitask</strong></div>
+                <div class="field"><span>Schedule</span><strong>Daily at 06:00</strong></div>
+                <div class="field"><span>Last result</span><strong>Success • 2026-03-11 06:00</strong></div>
+              </div>
+              <div class="actions" style="margin-top:16px;">
+                <span class="btn primary">Run backup now</span>
+                <span class="btn">Restore from file</span>
+              </div>
+            </article>
+
+            <article class="card">
+              <h3>Import and export</h3>
+              <p>Data portability for projects, tasks, and rules between installations.</p>
+              <div class="row-list" style="margin-top:16px;">
+                <div class="row"><div><strong>Export selected projects</strong><p>Bundle project metadata, repositories, rules, and Slack configuration</p></div><span class="badge info">JSON</span></div>
+                <div class="row"><div><strong>Import archive</strong><p>Validate schema version before writing to the database</p></div><span class="badge ready">Safe</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <h3>Environment preferences</h3>
+              <p>Global defaults for new projects and launches.</p>
+              <div class="field-grid" style="margin-top:16px; grid-template-columns:1fr;">
+                <div class="field"><span>Default IDE</span><strong>Cursor</strong></div>
+                <div class="field"><span>Default clone depth</span><strong>1</strong></div>
+                <div class="field"><span>Reduce motion</span><strong>Follow system</strong></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="split" style="margin-top:18px;">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Advanced operations</h3>
+                  <p>Rare but important administrative controls</p>
+                </div>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>Validate all project workspace paths</strong><p>Checks permissions and missing directories before launch failures happen</p></div><span class="badge info">Audit</span></div>
+                <div class="row"><div><strong>Re-run health checks on startup</strong><p>Useful after network or credential changes</p></div><span class="badge ready">Enabled</span></div>
+                <div class="row"><div><strong>Prune archived task workspaces</strong><p>Destructive cleanup with repository count preview before execution</p></div><span class="badge warning">Confirm</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Destructive action confirmation</h3>
+                  <p>Example of high-friction safeguard pattern</p>
+                </div>
+              </div>
+              <div class="code-panel">Delete archived workspaces?
+
+This will remove 142 local directories.
+Repositories will not be deleted remotely.
+
+Type DELETE to continue.
+[ Cancel ]   [ Delete archived workspaces ]</div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

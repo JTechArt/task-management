@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Integrations</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Integrations & health</span><span>Credentials, OAuth, diagnostics</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Credentials and monitoring</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Primary</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>⌘1</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>⌘2</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>⌘3</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>⌘4</small></a>
+            <a class="nav-item active" href="./integrations.html"><span>Integrations</span><small>⌘5</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>⌘6</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>Credential safety drives the composition: secrets stay masked, destructive actions are visually separated, and live health remains visible without exposing raw tokens.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Connections and status</span>
+              <h2>Keep providers healthy before launch workflows break</h2>
+              <p>This screen combines secure credential management with operational health. It is structured to help administrators fix auth problems quickly while still supporting daily self-service for developers.</p>
+            </div>
+            <div class="actions">
+              <span class="btn primary">Connect provider</span>
+              <span class="btn">Run health checks</span>
+            </div>
+          </div>
+
+          <section class="split">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Credential vault</h3>
+                  <p>OAuth, SSH, and HTTPS records</p>
+                </div>
+                <span class="badge warning">1 expiring</span>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>GitHub OAuth</strong><p>Connected for `arthurho` • scopes validated • token masked</p></div><span class="badge ready">Healthy</span></div>
+                <div class="row"><div><strong>GitLab HTTPS</strong><p>Username stored • password encrypted • expires in 3 days</p></div><span class="badge warning">Refresh</span></div>
+                <div class="row"><div><strong>Bitbucket SSH</strong><p>Uses host alias from `~/.ssh/config` • key path verified</p></div><span class="badge ready">Healthy</span></div>
+                <div class="row"><div><strong>Slack OAuth</strong><p>Workspace `company.slack.com` • channel access granted</p></div><span class="badge ready">Healthy</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Connection health</h3>
+                  <p>Status messaging mirrors the dashboard but with more detail</p>
+                </div>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>Database</strong><p>Connected to PostgreSQL 16 via HikariCP • migrations current</p></div><span class="badge ready">14 ms</span></div>
+                <div class="row"><div><strong>Git executable / JGit</strong><p>Repository validation passing for 23 of 24 projects</p></div><span class="badge warning">1 issue</span></div>
+                <div class="row"><div><strong>Slack API</strong><p>Message send and channel lookup healthy</p></div><span class="badge ready">OK</span></div>
+                <div class="row"><div><strong>IDE discovery</strong><p>Cursor, VS Code, WebStorm, IntelliJ detected locally</p></div><span class="badge ready">4 found</span></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="split" style="margin-top:18px;">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Connect provider</h3>
+                  <p>Safe masked entry form posture</p>
+                </div>
+              </div>
+              <div class="field-grid">
+                <div class="field"><span>Provider</span><strong>GitLab</strong></div>
+                <div class="field"><span>Auth type</span><strong>HTTPS credential</strong></div>
+                <div class="field"><span>Username</span><strong>arthur.ho</strong></div>
+                <div class="field"><span>Password</span><strong>••••••••••••••••</strong></div>
+              </div>
+              <div class="actions" style="margin-top:18px;">
+                <span class="btn primary">Save encrypted credential</span>
+                <span class="btn">Test connection</span>
+                <span class="btn">Disconnect</span>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Incident panel</h3>
+                  <p>When failures occur, guidance must be explicit</p>
+                </div>
+              </div>
+              <div class="row">
+                <div>
+                  <strong>Project Nimbus clone failures</strong>
+                  <p>Bitbucket SSH alias `bb-nimbus` resolved to a missing private key. Open SSH settings or switch repository auth to HTTPS.</p>
+                </div>
+                <span class="badge warning">Investigate</span>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

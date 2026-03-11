@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Dashboard</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Dashboard</span><span>Recent activity + system health</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Developer control center</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Primary</p>
+            <a class="nav-item active" href="./dashboard.html"><span>Dashboard</span><small>⌘1</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>24</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>108</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>17</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>6</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>•</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Quick launch</h2>
+            <p>One-click access to the most recent task workspaces is intentionally prominent because it is the main speed path in the UX spec.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Today at a glance</span>
+              <h2>Start work without hunting for context</h2>
+              <p>The dashboard prioritizes orientation and momentum: favorite tasks, active projects, recent workspace events, and system readiness for clone, branch, and IDE launch operations.</p>
+            </div>
+            <div class="actions">
+              <a class="btn primary" href="./task-launch.html">Open last workspace</a>
+              <a class="btn" href="./tasks.html">View all tasks</a>
+            </div>
+          </div>
+
+          <section class="grid cols-4">
+            <article class="card">
+              <h3>Open tasks</h3>
+              <div class="stat-value">108</div>
+              <div class="stat-trend">+14 this week</div>
+            </article>
+            <article class="card">
+              <h3>Workspaces launched</h3>
+              <div class="stat-value">39</div>
+              <div class="stat-trend">Median prep time 41s</div>
+            </article>
+            <article class="card">
+              <h3>Projects healthy</h3>
+              <div class="stat-value">22/24</div>
+              <div class="stat-trend">2 need credential refresh</div>
+            </article>
+            <article class="card">
+              <h3>Rules attached</h3>
+              <div class="stat-value">51</div>
+              <div class="stat-trend">Across Cursor, VS Code, JetBrains</div>
+            </article>
+          </section>
+
+          <section class="split" style="margin-top:18px;">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Quick open</h3>
+                  <p>Pin recent tasks and jump directly to launch</p>
+                </div>
+                <a class="btn ghost" href="./tasks.html">Manage queue</a>
+              </div>
+              <div class="row-list">
+                <div class="row">
+                  <div>
+                    <strong>TM-482 • Rules sync for Cursor and VS Code</strong>
+                    <p>Project Atlas • Multi-repo workspace • Opened 12 minutes ago</p>
+                  </div>
+                  <span class="badge ready">Ready</span>
+                </div>
+                <div class="row">
+                  <div>
+                    <strong>TM-477 • Improve branch template validation</strong>
+                    <p>Project Nimbus • Single repo • Waiting on IDE selection</p>
+                  </div>
+                  <span class="badge sync">In prep</span>
+                </div>
+                <div class="row">
+                  <div>
+                    <strong>TM-470 • Slack notification fallback states</strong>
+                    <p>Project Forge • Last launched yesterday • Team lead favorite</p>
+                  </div>
+                  <span class="badge info">Pinned</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>System health</h3>
+                  <p>High-signal statuses only</p>
+                </div>
+                <a class="btn ghost" href="./integrations.html">Open diagnostics</a>
+              </div>
+              <div class="row-list">
+                <div class="row">
+                  <div><strong>PostgreSQL</strong><p>Connected to local container • 14 ms latency</p></div>
+                  <span class="badge ready">Healthy</span>
+                </div>
+                <div class="row">
+                  <div><strong>Git providers</strong><p>GitHub and GitLab pass; Bitbucket token nearing expiry</p></div>
+                  <span class="badge warning">Action</span>
+                </div>
+                <div class="row">
+                  <div><strong>IDE discovery</strong><p>Cursor, VS Code, WebStorm, IntelliJ detected</p></div>
+                  <span class="badge ready">4 found</span>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="split" style="margin-top:18px;">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Recent activity</h3>
+                  <p>Workspace opens, task status changes, and setup failures</p>
+                </div>
+                <span class="badge info">Live feed</span>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>TM-482 workspace launched</strong><p>Cursor opened for `payments-ui` and `design-system` • branch `task-TM-482`</p></div><span class="badge ready">2m ago</span></div>
+                <div class="row"><div><strong>Project Nimbus repo validation failed</strong><p>HTTPS credential rejected during shallow clone • retry suggested</p></div><span class="badge warning">7m ago</span></div>
+                <div class="row"><div><strong>Slack message sent</strong><p>#dev-squad notified that TM-470 moved to Completed</p></div><span class="badge info">11m ago</span></div>
+                <div class="row"><div><strong>Backup archive created</strong><p>Nightly export saved to `/backups/aitask/2026-03-11.json`</p></div><span class="badge ready">06:00</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Projects in motion</h3>
+                  <p>Team-level situational awareness</p>
+                </div>
+              </div>
+              <div class="metric-strip">
+                <div class="metric"><span>Atlas</span><strong>18</strong><span>Tasks in progress</span></div>
+                <div class="metric"><span>Nimbus</span><strong>7</strong><span>Recent launch failures</span></div>
+                <div class="metric"><span>Forge</span><strong>92%</strong><span>Health score</span></div>
+              </div>
+              <div class="footer-note">Expanded layouts can show this alongside the activity feed; compact layouts collapse to stacked cards.</div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

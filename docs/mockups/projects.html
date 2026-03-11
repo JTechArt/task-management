@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Projects</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Projects</span><span>Workspace configuration hub</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Project management</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Primary</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>⌘1</small></a>
+            <a class="nav-item active" href="./projects.html"><span>Projects</span><small>⌘2</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>⌘3</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>⌘4</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>⌘5</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>⌘6</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>This page stays focused on discovery, filtering, and creation. Detailed repo configuration moves into project detail to preserve progressive disclosure.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Project inventory</span>
+              <h2>Manage multi-repository projects without burying the happy path</h2>
+              <p>The list screen supports both casual and power users: searchable cards for quick scanning, with enough metadata to spot broken paths, credential mismatches, or repo-heavy projects before opening them.</p>
+            </div>
+            <div class="actions">
+              <a class="btn primary" href="./project-detail.html">Open selected project</a>
+              <span class="btn">New project</span>
+            </div>
+          </div>
+
+          <section class="master-detail">
+            <article class="list-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Project list</h3>
+                  <p>24 projects • sorted by recent activity</p>
+                </div>
+              </div>
+              <div class="searchbar">Search by name, team, tag, repo provider, workspace path</div>
+              <div class="tabs" style="margin-top:14px;">
+                <span class="tab active">All</span>
+                <span class="tab">Healthy</span>
+                <span class="tab">Needs attention</span>
+              </div>
+              <div class="list-item selected">
+                <h4>Project Atlas</h4>
+                <p>6 repositories • Workspace `/Users/arthurho/workspaces/atlas` • Branch template `task-{taskId}`</p>
+              </div>
+              <div class="list-item">
+                <h4>Project Nimbus</h4>
+                <p>2 repositories • GitLab + Bitbucket • 1 credential warning</p>
+              </div>
+              <div class="list-item">
+                <h4>Project Forge</h4>
+                <p>4 repositories • Slack connected • WebStorm + Cursor preferred</p>
+              </div>
+              <div class="list-item">
+                <h4>Project Ember</h4>
+                <p>1 repository • Solo developer setup • backup enabled</p>
+              </div>
+            </article>
+
+            <article class="detail-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Create or edit project</h3>
+                  <p>Form layout for new project flow</p>
+                </div>
+                <span class="badge warning">Validation visible</span>
+              </div>
+              <div class="field-grid">
+                <div class="field"><span>Project name</span><strong>Project Atlas</strong></div>
+                <div class="field"><span>Team / tags</span><strong>Platform • payments • frontend</strong></div>
+                <div class="field"><span>Workspace path</span><strong>/Users/arthurho/workspaces/atlas</strong></div>
+                <div class="field"><span>Branch template</span><strong>task-{taskId}</strong></div>
+                <div class="field"><span>Default IDE</span><strong>Cursor + WebStorm</strong></div>
+                <div class="field"><span>Slack channel</span><strong>#atlas-delivery</strong></div>
+              </div>
+
+              <div class="card" style="margin-top:18px;">
+                <div class="panel-header">
+                  <div>
+                    <h3>Repository summary</h3>
+                    <p>Preview attached repositories before saving</p>
+                  </div>
+                  <span class="btn ghost">Add repository</span>
+                </div>
+                <div class="row-list">
+                  <div class="row"><div><strong>payments-ui</strong><p>GitHub • SSH • IDEs: Cursor, WebStorm • AI rules: Cursor, Augment</p></div><span class="badge ready">Validated</span></div>
+                  <div class="row"><div><strong>design-system</strong><p>GitHub • SSH • IDEs: VS Code, Cursor • shallow clone enabled</p></div><span class="badge ready">Validated</span></div>
+                  <div class="row"><div><strong>checkout-service</strong><p>GitLab • HTTPS • branch prefix set • local path not writable</p></div><span class="badge warning">Fix path</span></div>
+                </div>
+              </div>
+
+              <div class="actions" style="margin-top:18px;">
+                <span class="btn primary">Save project</span>
+                <span class="btn">Test repository URLs</span>
+                <span class="btn">Archive project</span>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

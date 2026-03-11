@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Rules</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Rule management</span><span>Reusable AI and IDE rule sets</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Rule library</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Primary</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>⌘1</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>⌘2</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>⌘3</small></a>
+            <a class="nav-item active" href="./rules.html"><span>Rules</span><small>⌘4</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>⌘5</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>⌘6</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>The editor is presented as a utilitarian workspace, with attachments and previews adjacent so users can reason about scope before saving.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Reusable rules</span>
+              <h2>Author once, attach many times</h2>
+              <p>The rule page balances library browsing with editing. Users need to see where a rule applies, what tool it targets, and how it will render into IDE-specific files before they trust automation.</p>
+            </div>
+            <div class="actions">
+              <span class="btn primary">New rule</span>
+              <span class="btn">Import rule pack</span>
+            </div>
+          </div>
+
+          <section class="master-detail">
+            <article class="list-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Rule list</h3>
+                  <p>17 rule sets • grouped by target scope</p>
+                </div>
+              </div>
+              <div class="list-item selected">
+                <h4>Frontend strict</h4>
+                <p>Targets Cursor, VS Code, Augment • attached to 8 repositories</p>
+              </div>
+              <div class="list-item">
+                <h4>Kotlin backend baseline</h4>
+                <p>Targets IntelliJ + Cursor • attached to 3 repositories</p>
+              </div>
+              <div class="list-item">
+                <h4>Atlas conventions</h4>
+                <p>Project-specific overlay • attached to all Atlas repositories</p>
+              </div>
+              <div class="list-item">
+                <h4>Security review checklist</h4>
+                <p>Global rule • launch-only reminder • no file injection</p>
+              </div>
+            </article>
+
+            <article class="detail-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Frontend strict</h3>
+                  <p>Rule editor with attachment context</p>
+                </div>
+                <span class="badge info">Cursor + VS Code</span>
+              </div>
+              <div class="field-grid">
+                <div class="field"><span>Scope</span><strong>Global reusable rule</strong></div>
+                <div class="field"><span>Attached to</span><strong>8 repositories</strong></div>
+                <div class="field"><span>Last updated</span><strong>Today at 09:12</strong></div>
+                <div class="field"><span>Validation</span><strong>No syntax conflicts</strong></div>
+              </div>
+              <div class="code-panel" style="margin-top:18px;">
+You are working in a frontend repository.
+Prefer typed APIs, visible loading states, and WCAG AA contrast.
+Do not add UI-only abstractions that hide user-facing behavior.
+When launching from AiTask, preserve repository-specific rule overlays.
+              </div>
+              <div class="split" style="margin-top:18px;">
+                <article class="card">
+                  <div class="panel-header">
+                    <div>
+                      <h3>Attachments</h3>
+                      <p>Where this rule currently applies</p>
+                    </div>
+                  </div>
+                  <div class="row-list">
+                    <div class="row"><div><strong>Atlas / payments-ui</strong><p>Combined with Atlas conventions</p></div><span class="badge ready">Attached</span></div>
+                    <div class="row"><div><strong>Atlas / design-system</strong><p>Combined with design-system local override</p></div><span class="badge ready">Attached</span></div>
+                    <div class="row"><div><strong>Forge / admin-portal</strong><p>Applied without overrides</p></div><span class="badge info">Default</span></div>
+                  </div>
+                </article>
+                <article class="card">
+                  <div class="panel-header">
+                    <div>
+                      <h3>Rendered preview</h3>
+                      <p>How export will look in target tool files</p>
+                    </div>
+                  </div>
+                  <div class="code-panel">cursor.rules
+
+frontend-strict:
+  typed-apis: true
+  loading-states: required
+  accessibility: wcag-aa
+  overlays:
+    - atlas-conventions</div>
+                </article>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

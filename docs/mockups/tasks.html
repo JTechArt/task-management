@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Tasks</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Tasks</span><span>Global queue + detail panel</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Task management</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Primary</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>⌘1</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>⌘2</small></a>
+            <a class="nav-item active" href="./tasks.html"><span>Tasks</span><small>⌘3</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>⌘4</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>⌘5</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>⌘6</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>This screen merges task list and task detail so the IA’s task detail page can exist as a selected state rather than a disruptive route transition.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Global task queue</span>
+              <h2>Filter hard, inspect quickly, launch fast</h2>
+              <p>The task page gives team leads and individual developers the same core pattern: filter rail on the left, prioritized tasks in the middle, actionable detail on the right. New task creation can slide in as a modal or sheet from this base.</p>
+            </div>
+            <div class="actions">
+              <span class="btn primary">New task</span>
+              <a class="btn" href="./task-launch.html">Open selected workspace</a>
+            </div>
+          </div>
+
+          <section class="master-detail" style="grid-template-columns: 300px 1fr 420px;">
+            <article class="list-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Filters</h3>
+                  <p>Persistent and keyboard-friendly</p>
+                </div>
+              </div>
+              <div class="field"><span>Status</span><strong>In Progress, Pending</strong></div>
+              <div class="field" style="margin-top:10px;"><span>Type</span><strong>Feature, Bug Fix, Research</strong></div>
+              <div class="field" style="margin-top:10px;"><span>Project</span><strong>Atlas, Nimbus</strong></div>
+              <div class="field" style="margin-top:10px;"><span>Search</span><strong>rule sync</strong></div>
+              <div class="actions" style="margin-top:14px;">
+                <span class="btn primary">Apply</span>
+                <span class="btn">Reset</span>
+              </div>
+            </article>
+
+            <article class="list-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Task list</h3>
+                  <p>108 results • sorted by urgency and recency</p>
+                </div>
+                <span class="badge info">Saved view</span>
+              </div>
+              <div class="list-item selected">
+                <h4>TM-482 • Rules sync for Cursor and VS Code</h4>
+                <p>Atlas • Feature • Updated 12 minutes ago • Multi-repo launch required</p>
+              </div>
+              <div class="list-item">
+                <h4>TM-477 • Branch template validation</h4>
+                <p>Nimbus • Bug Fix • Path validation blocker • No workspace yet</p>
+              </div>
+              <div class="list-item">
+                <h4>TM-470 • Slack fallback states</h4>
+                <p>Forge • Feature • Last launch completed • Ready for review</p>
+              </div>
+              <div class="list-item">
+                <h4>TM-465 • HTTPS credential replacement flow</h4>
+                <p>Atlas • Enhancement • Destructive confirmation requirement</p>
+              </div>
+            </article>
+
+            <article class="detail-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Task detail</h3>
+                  <p>Selected task as a persistent side pane</p>
+                </div>
+                <span class="badge sync">Workspace active</span>
+              </div>
+              <div class="detail-hero">
+                <h3>TM-482 • Rules sync for Cursor and VS Code</h3>
+                <p>Align project-level rule application so repository launch always copies the right instructions into Cursor, VS Code, and Augment contexts without duplication.</p>
+              </div>
+              <div class="kv">
+                <div><span>Status</span><strong>In Progress</strong></div>
+                <div><span>Type</span><strong>Feature</strong></div>
+                <div><span>Project</span><strong>Atlas</strong></div>
+                <div><span>Repositories</span><strong>payments-ui, design-system</strong></div>
+                <div><span>Suggested IDE</span><strong>Cursor</strong></div>
+                <div><span>Branch</span><strong>task-TM-482</strong></div>
+              </div>
+              <div class="card" style="margin-top:18px;">
+                <h3>Launch readiness</h3>
+                <p>Both repositories validated. Rule pack selected. Cursor detected. Estimated prep time 32 seconds.</p>
+              </div>
+              <div class="actions" style="margin-top:18px;">
+                <a class="btn primary" href="./task-launch.html">Open workspace</a>
+                <span class="btn">Edit task</span>
+                <span class="btn">Archive</span>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

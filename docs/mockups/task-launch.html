@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Task Launch Flow</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Task launch flow</span><span>Repo selection → prep → IDE</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Primary MVP flow</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Primary</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>⌘1</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>⌘2</small></a>
+            <a class="nav-item active" href="./task-launch.html"><span>Launch flow</span><small>⌘↩</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>The stepper is intentionally explicit. Clone, branch, and IDE selection are slow or failure-prone enough that the UI must narrate progress and recovery clearly.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Primary MVP flow</span>
+              <h2>Launch TM-482 workspace</h2>
+              <p>This mockup shows the guided modal or page state for the key journey in the spec. The visual hierarchy keeps users grounded through repo inclusion, prep progress, and final IDE launch.</p>
+            </div>
+            <div class="actions">
+              <span class="btn">Cancel</span>
+              <span class="btn primary">Launch in Cursor</span>
+            </div>
+          </div>
+
+          <section class="stepper">
+            <div class="step done">
+              <span>Step 1</span>
+              <strong>Select repositories</strong>
+              <p>Choose one or many repositories to include in the task workspace.</p>
+            </div>
+            <div class="step active">
+              <span>Step 2</span>
+              <strong>Prepare workspace</strong>
+              <p>Shallow clone, create branch, and apply task context files.</p>
+            </div>
+            <div class="step">
+              <span>Step 3</span>
+              <strong>Choose IDE</strong>
+              <p>Offer only detected IDEs permitted by repository preferences.</p>
+            </div>
+            <div class="step">
+              <span>Step 4</span>
+              <strong>Launch</strong>
+              <p>Open the selected workspace and surface any warnings inline.</p>
+            </div>
+          </section>
+
+          <section class="split">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Repository inclusion</h3>
+                  <p>Multi-select checklist state</p>
+                </div>
+                <span class="badge info">2 selected</span>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>payments-ui</strong><p>Frontend app • Cursor / WebStorm • Required for this task</p></div><span class="badge ready">Selected</span></div>
+                <div class="row"><div><strong>design-system</strong><p>Shared components • VS Code / Cursor • Recommended</p></div><span class="badge ready">Selected</span></div>
+                <div class="row"><div><strong>checkout-service</strong><p>Backend service • IntelliJ • Not needed for this task</p></div><span class="badge info">Optional</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Workspace prep status</h3>
+                  <p>Visible progress with actionable failures</p>
+                </div>
+                <span class="badge sync">32s elapsed</span>
+              </div>
+              <div class="progress-stack">
+                <div class="progress-item">
+                  <strong>Clone payments-ui</strong>
+                  <div class="bar"><span style="width:100%"></span></div>
+                </div>
+                <div class="progress-item">
+                  <strong>Clone design-system</strong>
+                  <div class="bar"><span style="width:82%"></span></div>
+                </div>
+                <div class="progress-item">
+                  <strong>Create branch task-TM-482</strong>
+                  <div class="bar"><span style="width:64%"></span></div>
+                </div>
+                <div class="progress-item">
+                  <strong>Write Cursor and VS Code rule files</strong>
+                  <div class="bar"><span style="width:28%"></span></div>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="split" style="margin-top:18px;">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>IDE selection</h3>
+                  <p>Displayed once prep is complete or nearly complete</p>
+                </div>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>Cursor</strong><p>Recommended because both repositories allow it and rule sync is task focus</p></div><span class="badge ready">Recommended</span></div>
+                <div class="row"><div><strong>VS Code</strong><p>Available for both repositories • rules will be copied on launch</p></div><span class="badge info">Available</span></div>
+                <div class="row"><div><strong>WebStorm</strong><p>Only supports `payments-ui`; disabled for multi-repo launch</p></div><span class="badge warning">Unavailable</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Failure messaging sample</h3>
+                  <p>Actionable, not generic</p>
+                </div>
+              </div>
+              <div class="row">
+                <div>
+                  <strong>Clone failed for `design-system`</strong>
+                  <p>HTTPS credentials for GitHub were rejected. Retry with refreshed credentials, or switch this repo to SSH in project settings.</p>
+                </div>
+                <span class="badge warning">Retry</span>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

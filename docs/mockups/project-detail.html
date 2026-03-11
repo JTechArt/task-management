@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Project Detail</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Project Detail</span><span>Repositories • Tasks • Slack</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Master-detail view</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Primary</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>⌘1</small></a>
+            <a class="nav-item active" href="./projects.html"><span>Projects</span><small>⌘2</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>⌘3</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>⌘4</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>⌘5</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>⌘6</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>The left rail stays stable while the content tabs switch. That preserves orientation while reducing breadcrumbs and avoids deep nesting.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Project workspace</span>
+              <h2>Project Atlas</h2>
+              <p>Header information surfaces the fields users revisit most: workspace path, branch template, preferred IDE posture, and health state. Secondary details move into tabs beneath.</p>
+            </div>
+            <div class="actions">
+              <span class="btn primary">Add task</span>
+              <span class="btn">Open workspace</span>
+            </div>
+          </div>
+
+          <section class="detail-hero">
+            <h3>Platform team project with six repositories</h3>
+            <p>Workspace path `/Users/arthurho/workspaces/atlas` • Branch template `task-{taskId}` • Slack channel `#atlas-delivery` • Last backup today at 06:00</p>
+          </section>
+
+          <section class="tabs">
+            <span class="tab active">Repositories</span>
+            <span class="tab">Tasks</span>
+            <span class="tab">Slack</span>
+          </section>
+
+          <section class="master-detail">
+            <article class="list-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Repositories</h3>
+                  <p>Select a repository to inspect its IDE and AI-rule setup</p>
+                </div>
+              </div>
+              <div class="list-item selected">
+                <h4>payments-ui</h4>
+                <p>GitHub • SSH • WebStorm + Cursor • Active in 8 tasks</p>
+              </div>
+              <div class="list-item">
+                <h4>design-system</h4>
+                <p>GitHub • SSH • VS Code + Cursor • Shared across 3 projects</p>
+              </div>
+              <div class="list-item">
+                <h4>checkout-service</h4>
+                <p>GitLab • HTTPS • IntelliJ + Cursor • Path warning</p>
+              </div>
+              <div class="list-item">
+                <h4>notifications-worker</h4>
+                <p>Bitbucket • SSH • IntelliJ • No IDE rule conflicts</p>
+              </div>
+            </article>
+
+            <article class="detail-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>payments-ui configuration</h3>
+                  <p>Inline editing posture with strong read-only defaults</p>
+                </div>
+                <span class="badge ready">Ready to launch</span>
+              </div>
+
+              <div class="kv">
+                <div><span>Clone URL</span><strong>git@github.com:company/payments-ui.git</strong></div>
+                <div><span>Auth</span><strong>SSH via ~/.ssh/config</strong></div>
+                <div><span>Shallow clone</span><strong>Depth 1 enabled</strong></div>
+                <div><span>Preferred IDEs</span><strong>Cursor, WebStorm</strong></div>
+                <div><span>AI products</span><strong>Cursor, Augment</strong></div>
+                <div><span>Rule pack</span><strong>Frontend strict + Atlas conventions</strong></div>
+              </div>
+
+              <div class="card" style="margin-top:18px;">
+                <div class="panel-header">
+                  <div>
+                    <h3>Recent task usage</h3>
+                    <p>Contextual evidence for whether this repo should be included by default</p>
+                  </div>
+                </div>
+                <div class="row-list">
+                  <div class="row"><div><strong>TM-482</strong><p>Included with `design-system` for rule synchronization work</p></div><span class="badge info">Recent</span></div>
+                  <div class="row"><div><strong>TM-471</strong><p>Standalone workspace launch in Cursor • completed yesterday</p></div><span class="badge ready">Done</span></div>
+                  <div class="row"><div><strong>TM-459</strong><p>Launch failed once due to stale SSH host alias • fixed</p></div><span class="badge warning">History</span></div>
+                </div>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
