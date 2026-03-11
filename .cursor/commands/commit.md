@@ -1,1 +1,0 @@
-Always analyse changes and suggest meaningfull message but not more then 500 symbol.
