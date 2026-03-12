@@ -1,8 +1,8 @@
 schema: 1
 story: "1.3"
 story_title: "Task Management for the Core Workflow"
-gate: PARTIAL_PASS
-status_reason: "Backend implementation complete with comprehensive tests (25 tests for task functionality, 44 total tests, 100% passing). Domain models, validators, use cases, and repository layer fully functional. UI implementation blocked by Compose compiler compatibility issue. Backend ready for integration."
+gate: FAIL
+status_reason: "Backend complete with 25 task tests (validators, all use cases). No desktop UI—TasksView remains placeholder. Users cannot create, view, edit, archive, or delete tasks. AC1–AC5 require user-facing functionality."
 reviewer: "Quinn (Test Architect)"
 updated: "2026-03-12T00:00:00Z"
 waiver: { active: false }
@@ -11,26 +11,18 @@ top_issues:
     severity: high
     finding: "No task management UI; TasksView shows 'Coming Soon' placeholder instead of task list and CRUD flow."
     suggested_action: "Implement TasksView with list, create, edit, archive, and delete capabilities per AC1."
-    status: BLOCKED
-    blocker: "Compose compiler compatibility issue (Kotlin 1.9.22 vs Compose 1.6.0)"
   - id: REQ-002
     severity: high
     finding: "Task use cases (Create, Update, Delete, Get) not wired to desktop app; no DI or viewmodels."
     suggested_action: "Wire task use cases to desktop-app; add DI/bootstrap for TaskRepository, ProjectRepository, validators; connect UI to use cases."
-    status: BLOCKED
-    blocker: "Compose compiler compatibility issue (Kotlin 1.9.22 vs Compose 1.6.0)"
   - id: REQ-003
     severity: high
     finding: "No UI for filtering tasks by project and status (AC5)."
     suggested_action: "Add project and status filter controls to TasksView; wire to GetTasksUseCase(projectId, status)."
-    status: BLOCKED
-    blocker: "Compose compiler compatibility issue (Kotlin 1.9.22 vs Compose 1.6.0)"
   - id: TEST-001
     severity: low
-    finding: "UpdateTaskUseCase and DeleteTaskUseCase lack unit tests; TaskRepositoryImpl lacks integration tests."
-    suggested_action: "Add unit tests for UpdateTaskUseCase and DeleteTaskUseCase; integration tests for persistence when infra permits."
-    status: RESOLVED
-    resolution: "Added UpdateTaskUseCaseTest (5 tests) and DeleteTaskUseCaseTest (4 tests). Total: 44 tests passing. Commit: [pending]"
+    finding: "TaskRepositoryImpl lacks integration tests."
+    suggested_action: "Add integration tests for TaskRepositoryImpl when DB test infra permits."
 evidence:
   tests_reviewed: 25
   risks_identified: 3
@@ -55,7 +47,7 @@ nfr_validation:
     notes: "Persistence layer exists but not exercised through app."
   maintainability:
     status: PASS
-    notes: "TaskValidator, CreateTaskUseCase, GetTasksUseCase have unit test coverage."
+    notes: "All task use cases and TaskValidator have unit tests (25 tests): TaskValidatorTest (8), CreateTaskUseCaseTest (4), UpdateTaskUseCaseTest (5), DeleteTaskUseCaseTest (4), GetTasksUseCaseTest (4)."
 risk_summary:
   totals: { critical: 0, high: 3, medium: 0, low: 1 }
   recommendations:
@@ -64,4 +56,4 @@ risk_summary:
       - "Wire CreateTaskUseCase, UpdateTaskUseCase, DeleteTaskUseCase, GetTasksUseCase to desktop app"
       - "Add project and status filter UI for task lists"
     monitor:
-      - "Add UpdateTaskUseCase, DeleteTaskUseCase, and TaskRepositoryImpl tests"
+      - "Add TaskRepositoryImpl integration tests when DB test infra available"
