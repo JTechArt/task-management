@@ -42,7 +42,7 @@ class ProjectRepositoryImpl : ProjectRepository {
             it[description] = project.description
             it[workspacePath] = project.workspacePath
             it[branchTemplate] = project.branchTemplate
-            it[tags] = project.tags.toTypedArray()
+            it[tags] = project.tags
             it[team] = project.team
             it[createdAt] = project.createdAt
             it[updatedAt] = project.updatedAt
@@ -57,7 +57,7 @@ class ProjectRepositoryImpl : ProjectRepository {
             it[description] = project.description
             it[workspacePath] = project.workspacePath
             it[branchTemplate] = project.branchTemplate
-            it[tags] = project.tags.toTypedArray()
+            it[tags] = project.tags
             it[team] = project.team
             it[updatedAt] = Instant.now()
             it[archivedAt] = project.archivedAt
@@ -85,7 +85,7 @@ class ProjectRepositoryImpl : ProjectRepository {
         description = this[Projects.description],
         workspacePath = this[Projects.workspacePath],
         branchTemplate = this[Projects.branchTemplate],
-        tags = this[Projects.tags]?.toList() ?: emptyList(),
+        tags = this[Projects.tags] ?: emptyList(),
         team = this[Projects.team],
         createdAt = this[Projects.createdAt],
         updatedAt = this[Projects.updatedAt],

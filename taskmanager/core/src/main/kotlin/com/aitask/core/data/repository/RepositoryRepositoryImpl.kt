@@ -42,7 +42,7 @@ class RepositoryRepositoryImpl : RepositoryRepository {
             it[cloneUrl] = repository.cloneUrl
             it[provider] = repository.provider.name
             it[authType] = repository.authType.name
-            it[preferredIDEs] = repository.preferredIDEs.map { ide -> ide.name }.toTypedArray()
+            it[preferredIDEs] = repository.preferredIDEs.map { ide -> ide.name }
             it[isPrimary] = repository.isPrimary
             it[createdAt] = repository.createdAt
             it[updatedAt] = repository.updatedAt
@@ -56,7 +56,7 @@ class RepositoryRepositoryImpl : RepositoryRepository {
             it[cloneUrl] = repository.cloneUrl
             it[provider] = repository.provider.name
             it[authType] = repository.authType.name
-            it[preferredIDEs] = repository.preferredIDEs.map { ide -> ide.name }.toTypedArray()
+            it[preferredIDEs] = repository.preferredIDEs.map { ide -> ide.name }
             it[isPrimary] = repository.isPrimary
             it[updatedAt] = Instant.now()
         }
@@ -75,7 +75,7 @@ class RepositoryRepositoryImpl : RepositoryRepository {
         cloneUrl = this[Repositories.cloneUrl],
         provider = GitProvider.valueOf(this[Repositories.provider]),
         authType = AuthType.valueOf(this[Repositories.authType]),
-        preferredIDEs = this[Repositories.preferredIDEs]?.map { IDEType.valueOf(it) } ?: emptyList(),
+        preferredIDEs = (this[Repositories.preferredIDEs] ?: emptyList()).map { IDEType.valueOf(it) },
         isPrimary = this[Repositories.isPrimary],
         createdAt = this[Repositories.createdAt],
         updatedAt = this[Repositories.updatedAt]

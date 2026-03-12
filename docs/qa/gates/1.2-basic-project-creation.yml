@@ -1,0 +1,55 @@
+schema: 1
+story: "1.2"
+story_title: "Basic Project Creation with Single Repository Configuration"
+gate: FAIL
+status_reason: "Backend (domain, use cases, validators, persistence) exists but no desktop UI. ProjectsView is a placeholder. Users cannot create, edit, view, or archive projects. All acceptance criteria require user-facing functionality that is not implemented."
+reviewer: "Quinn (Test Architect)"
+updated: "2025-03-12T00:00:00Z"
+waiver: { active: false }
+top_issues:
+  - id: REQ-001
+    severity: high
+    finding: "No project creation UI; ProjectsView shows 'Coming Soon' placeholder instead of project list and creation flow."
+    suggested_action: "Implement ProjectsView with list, create, edit, view, and archive capabilities per AC1."
+  - id: REQ-002
+    severity: high
+    finding: "No repository attachment UI; users cannot attach primary repository with provider, clone URL, name (AC2)."
+    suggested_action: "Implement project detail/create form with repository section per AC2."
+  - id: REQ-003
+    severity: high
+    finding: "No preferred IDE selection UI; users cannot define IDE for repository (AC3)."
+    suggested_action: "Add IDE selection component using IDEType enum; wire to CreateRepositoryRequest."
+  - id: REQ-004
+    severity: high
+    finding: "Use cases (CreateProject, UpdateProject, etc.) not wired to desktop app; no DI or viewmodels."
+    suggested_action: "Wire use cases to desktop-app; add DI/bootstrap for ProjectRepository, RepositoryRepository, validators; connect UI to use cases."
+  - id: TEST-001
+    severity: medium
+    finding: "No tests for ProjectValidator, RepositoryValidator, CreateProjectUseCase, or repository implementations."
+    suggested_action: "Add unit tests for validators and use cases; integration tests for persistence where feasible."
+evidence:
+  tests_reviewed: 0
+  risks_identified: 5
+  trace:
+    ac_covered: []
+    ac_gaps: [1, 2, 3, 4, 5]
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Validators exist; no secrets in models. UI not implemented so no exposure surface yet."
+  performance:
+    status: PASS
+    notes: "Backend design is sound; no UI to measure."
+  reliability:
+    status: CONCERNS
+    notes: "Persistence layer exists but not exercised through app; Exposed/transaction usage not validated end-to-end."
+  maintainability:
+    status: CONCERNS
+    notes: "No tests for new project/repository code."
+risk_summary:
+  totals: { critical: 0, high: 4, medium: 1, low: 0 }
+  recommendations:
+    must_fix:
+      - "Implement ProjectsView with full CRUD and repository attachment (AC1, AC2, AC3)"
+      - "Wire CreateProjectUseCase, UpdateProjectUseCase, GetProjectsUseCase, ArchiveProjectUseCase to desktop app"
+    monitor: []

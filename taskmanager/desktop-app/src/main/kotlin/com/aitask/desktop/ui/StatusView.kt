@@ -92,11 +92,9 @@ fun StatusView(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                
-                InfoRow("Database Host", config.database.host)
-                InfoRow("Database Port", config.database.port.toString())
+
+                InfoRow("Database", "${config.database.host}:${config.database.port}")
                 InfoRow("Database Name", config.database.name)
-                InfoRow("Database User", config.database.user)
             }
         }
         
