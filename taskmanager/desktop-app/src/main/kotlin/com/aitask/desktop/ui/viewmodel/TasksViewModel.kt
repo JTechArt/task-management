@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.UUID
+import com.aitask.core.domain.service.IDEService
 
 /**
  * ViewModel for managing tasks UI state and operations
@@ -20,6 +21,10 @@ class TasksViewModel(
     private val updateTaskUseCase: UpdateTaskUseCase = DependencyContainer.updateTaskUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase = DependencyContainer.deleteTaskUseCase,
     private val getProjectsUseCase: GetProjectsUseCase = DependencyContainer.getProjectsUseCase,
+    private val generateWorkspaceUseCase: GenerateWorkspaceUseCase = DependencyContainer.generateWorkspaceUseCase,
+    private val launchIDEUseCase: LaunchIDEUseCase = DependencyContainer.launchIDEUseCase,
+    private val ideService: IDEService = DependencyContainer.ideService,
+    private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     var uiState by mutableStateOf(TasksUiState())
@@ -169,6 +174,85 @@ class TasksViewModel(
     fun clearError() {
         uiState = uiState.copy(error = null)
     }
+
+    fun generateWorkspace(taskId: UUID) {
+        uiState = uiState.copy(isGeneratingWorkspace = true, error = null)
+        scope.launch {
+            val result = generateWorkspaceUseCase(taskId)
+            result.fold(
+                onSuccess = { response ->
+                    uiState = uiState.copy(
+                        isGeneratingWorkspace = false,
+                        workspaceGenerationSuccess = "Workspace generated at: ${response.task.workspacePath}"
+                    )
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isGeneratingWorkspace = false,
+                        error = error.message ?: "Failed to generate workspace"
+                    )
+                }
+            )
+        }
+    }
+
+    fun launchIDE(taskId: UUID, ideType: IDEType) {
+        uiState = uiState.copy(isLaunchingIDE = true, error = null)
+        scope.launch {
+            val request = LaunchIDERequest(
+                taskId = taskId,
+                ideType = ideType,
+                updateTaskStatus = true
+            )
+
+            val result = launchIDEUseCase(request)
+            result.fold(
+                onSuccess = { response ->
+                    uiState = uiState.copy(
+                        isLaunchingIDE = false,
+                        ideLaunchSuccess = "Launched ${ideType.name} successfully"
+                    )
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isLaunchingIDE = false,
+                        error = error.message ?: "Failed to launch IDE"
+                    )
+                }
+            )
+        }
+    }
+
+    fun loadAvailableIDEs() {
+        scope.launch {
+            try {
+                val ides = ideService.detectInstalledIDEs()
+                uiState = uiState.copy(availableIDEs = ides)
+            } catch (e: Exception) {
+                // Silently fail - IDEs will be empty
+            }
+        }
+    }
+
+    fun loadProjectRepositories(projectId: UUID) {
+        scope.launch {
+            try {
+                val repositories = repositoryRepository.findByProject(projectId)
+                uiState = uiState.copy(projectRepositories = repositories)
+            } catch (e: Exception) {
+                // Silently fail
+            }
+        }
+    }
+
+    fun clearSuccessMessages() {
+        uiState = uiState.copy(
+            workspaceGenerationSuccess = null,
+            ideLaunchSuccess = null
+        )
+    }
 }
 
 data class TasksUiState(
@@ -180,6 +264,12 @@ data class TasksUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val showCreateDialog: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val isGeneratingWorkspace: Boolean = false,
+    val isLaunchingIDE: Boolean = false,
+    val workspaceGenerationSuccess: String? = null,
+    val ideLaunchSuccess: String? = null,
+    val availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
+    val projectRepositories: List<Repository> = emptyList()
 )
 

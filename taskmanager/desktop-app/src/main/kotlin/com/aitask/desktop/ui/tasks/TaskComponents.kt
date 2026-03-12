@@ -240,6 +240,12 @@ fun TaskDetailView(
     task: Task,
     onDelete: (UUID) -> Unit,
     onStatusChange: (UUID, TaskStatus) -> Unit,
+    onGenerateWorkspace: ((UUID) -> Unit)? = null,
+    onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
+    availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
+    preferredIDEs: List<IDEType> = emptyList(),
+    isGeneratingWorkspace: Boolean = false,
+    isLaunchingIDE: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -299,6 +305,90 @@ fun TaskDetailView(
 
         if (task.branchName != null) {
             DetailRow("Branch", task.branchName)
+        }
+
+        Divider()
+
+        // Workspace section
+        Text(
+            text = "Workspace",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        if (task.workspacePath == null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "No workspace generated yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                if (onGenerateWorkspace != null) {
+                    Button(
+                        onClick = { onGenerateWorkspace(task.id) },
+                        enabled = !isGeneratingWorkspace
+                    ) {
+                        if (isGeneratingWorkspace) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(if (isGeneratingWorkspace) "Generating..." else "Generate Workspace")
+                    }
+                }
+            }
+        } else {
+            // IDE Launch section
+            Text(
+                text = "Launch IDE",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            if (onLaunchIDE != null && preferredIDEs.isNotEmpty()) {
+                val installedPreferredIDEs = availableIDEs.filter { ide ->
+                    preferredIDEs.contains(ide.type)
+                }
+
+                if (installedPreferredIDEs.isEmpty()) {
+                    Text(
+                        text = "No preferred IDEs installed",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        installedPreferredIDEs.forEach { ide ->
+                            Button(
+                                onClick = { onLaunchIDE(task.id, ide.type) },
+                                enabled = !isLaunchingIDE,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                if (isLaunchingIDE) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                } else {
+                                    Text("Launch ${ide.type.name}")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         Divider()

@@ -23,6 +23,18 @@ fun TasksView(
     viewModel: TasksViewModel = remember { TasksViewModel() }
 ) {
     val uiState = viewModel.uiState
+
+    // Load available IDEs on first composition
+    LaunchedEffect(Unit) {
+        viewModel.loadAvailableIDEs()
+    }
+
+    // Load project repositories when task is selected
+    LaunchedEffect(uiState.selectedTask) {
+        uiState.selectedTask?.let { task ->
+            viewModel.loadProjectRepositories(task.projectId)
+        }
+    }
     
     Column(
         modifier = modifier
@@ -97,6 +109,55 @@ fun TasksView(
                 }
             }
         }
+
+        // Success messages
+        uiState.workspaceGenerationSuccess?.let { message ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { viewModel.clearSuccessMessages() }) {
+                        Text("Dismiss")
+                    }
+                }
+            }
+        }
+
+        uiState.ideLaunchSuccess?.let { message ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { viewModel.clearSuccessMessages() }) {
+                        Text("Dismiss")
+                    }
+                }
+            }
+        }
         
         // Loading state
         if (uiState.isLoading) {
@@ -153,7 +214,17 @@ fun TasksView(
                             onDelete = { viewModel.deleteTask(it) },
                             onStatusChange = { taskId, status ->
                                 viewModel.updateTaskStatus(taskId, status)
-                            }
+                            },
+                            onGenerateWorkspace = { taskId ->
+                                viewModel.generateWorkspace(taskId)
+                            },
+                            onLaunchIDE = { taskId, ideType ->
+                                viewModel.launchIDE(taskId, ideType)
+                            },
+                            availableIDEs = uiState.availableIDEs,
+                            preferredIDEs = uiState.projectRepositories.flatMap { it.preferredIDEs }.distinct(),
+                            isGeneratingWorkspace = uiState.isGeneratingWorkspace,
+                            isLaunchingIDE = uiState.isLaunchingIDE
                         )
                     }
                 }
