@@ -2,12 +2,14 @@ package com.aitask.desktop.di
 
 import com.aitask.core.data.repository.*
 import com.aitask.core.domain.repository.*
+import com.aitask.core.domain.service.GitService
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.WorkspaceService
 import com.aitask.core.domain.usecase.*
 import com.aitask.core.domain.validation.ProjectValidator
 import com.aitask.core.domain.validation.RepositoryValidator
 import com.aitask.core.domain.validation.TaskValidator
+import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.ide.DesktopIDEService
 import com.aitask.core.infrastructure.workspace.FileSystemWorkspaceService
 
@@ -48,12 +50,16 @@ object DependencyContainer {
     }
     
     // Services
+    val gitService: GitService by lazy {
+        JGitService()
+    }
+
     val ideService: IDEService by lazy {
         DesktopIDEService()
     }
-    
+
     val workspaceService: WorkspaceService by lazy {
-        FileSystemWorkspaceService()
+        FileSystemWorkspaceService(gitService)
     }
     
     // Project Use Cases

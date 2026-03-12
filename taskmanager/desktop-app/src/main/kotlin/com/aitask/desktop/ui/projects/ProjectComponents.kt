@@ -5,9 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -97,9 +95,9 @@ fun ProjectListItem(
                 fontWeight = FontWeight.Bold,
                 color = contentColor
             )
-            if (project.description != null) {
+            project.description?.let { desc ->
                 Text(
-                    text = project.description,
+                    text = desc,
                     style = MaterialTheme.typography.bodySmall,
                     color = contentColor.copy(alpha = 0.7f),
                     maxLines = 2
@@ -145,9 +143,9 @@ fun ProjectDetailView(
         }
         
         // Description
-        if (project.description != null) {
+        project.description?.let { desc ->
             Text(
-                text = project.description,
+                text = desc,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
@@ -162,9 +160,9 @@ fun ProjectDetailView(
         if (project.tags.isNotEmpty()) {
             DetailRow("Tags", project.tags.joinToString(", "))
         }
-        
-        if (project.team != null) {
-            DetailRow("Team", project.team)
+
+        project.team?.let { team ->
+            DetailRow("Team", team)
         }
 
         Divider()

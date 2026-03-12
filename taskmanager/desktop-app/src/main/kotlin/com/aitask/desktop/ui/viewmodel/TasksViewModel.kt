@@ -75,8 +75,7 @@ class TasksViewModel(
         title: String,
         description: String?,
         taskType: TaskType,
-        projectId: UUID,
-        priority: TaskPriority
+        projectId: UUID
     ) {
         uiState = uiState.copy(isSaving = true, error = null)
         scope.launch {
@@ -84,10 +83,9 @@ class TasksViewModel(
                 title = title,
                 description = description,
                 taskType = taskType,
-                projectId = projectId,
-                priority = priority
+                projectId = projectId
             )
-            
+
             val result = createTaskUseCase(request)
             result.fold(
                 onSuccess = { task ->
@@ -109,16 +107,11 @@ class TasksViewModel(
     
     fun updateTaskStatus(taskId: UUID, newStatus: TaskStatus) {
         scope.launch {
-            val task = uiState.tasks.find { it.id == taskId } ?: return@launch
             val request = UpdateTaskRequest(
-                taskId = taskId,
-                title = task.title,
-                description = task.description,
-                status = newStatus,
-                priority = task.priority
+                status = newStatus
             )
-            
-            val result = updateTaskUseCase(request)
+
+            val result = updateTaskUseCase(taskId, request)
             result.fold(
                 onSuccess = { loadTasks() },
                 onFailure = { error ->
@@ -178,12 +171,28 @@ class TasksViewModel(
     fun generateWorkspace(taskId: UUID) {
         uiState = uiState.copy(isGeneratingWorkspace = true, error = null)
         scope.launch {
-            val result = generateWorkspaceUseCase(taskId)
+            // Get the task to find the project ID
+            val task = uiState.tasks.find { it.id == taskId }
+            if (task == null) {
+                uiState = uiState.copy(
+                    isGeneratingWorkspace = false,
+                    error = "Task not found"
+                )
+                return@launch
+            }
+
+            val request = com.aitask.core.domain.model.CreateWorkspaceRequest(
+                taskId = taskId,
+                projectId = task.projectId,
+                selectedRepositories = emptyList() // Use all repositories
+            )
+
+            val result = generateWorkspaceUseCase(request)
             result.fold(
-                onSuccess = { response ->
+                onSuccess = { workspace ->
                     uiState = uiState.copy(
                         isGeneratingWorkspace = false,
-                        workspaceGenerationSuccess = "Workspace generated at: ${response.task.workspacePath}"
+                        workspaceGenerationSuccess = "Workspace generated at: ${workspace.path}"
                     )
                     loadTasks()
                 },

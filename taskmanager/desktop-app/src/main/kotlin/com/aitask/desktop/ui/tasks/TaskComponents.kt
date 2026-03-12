@@ -211,14 +211,11 @@ fun TaskListItem(
                         color = contentColor
                     )
                     TaskTypeBadge(task.taskType)
-                    if (task.priority != TaskPriority.MEDIUM) {
-                        TaskPriorityBadge(task.priority)
-                    }
                 }
 
-                if (task.description != null) {
+                task.description?.let { desc ->
                     Text(
-                        text = task.description,
+                        text = desc,
                         style = MaterialTheme.typography.bodySmall,
                         color = contentColor.copy(alpha = 0.7f),
                         maxLines = 2
@@ -277,13 +274,12 @@ fun TaskDetailView(
         ) {
             TaskStatusBadge(task.status)
             TaskTypeBadge(task.taskType)
-            TaskPriorityBadge(task.priority)
         }
 
         // Description
-        if (task.description != null) {
+        task.description?.let { desc ->
             Text(
-                text = task.description,
+                text = desc,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
@@ -295,16 +291,16 @@ fun TaskDetailView(
         DetailRow("Created", formatDate(task.createdAt))
         DetailRow("Updated", formatDate(task.updatedAt))
 
-        if (task.completedAt != null) {
-            DetailRow("Completed", formatDate(task.completedAt))
+        task.completedAt?.let { completed ->
+            DetailRow("Completed", formatDate(completed))
         }
 
-        if (task.workspacePath != null) {
-            DetailRow("Workspace", task.workspacePath)
+        task.workspacePath?.let { workspace ->
+            DetailRow("Workspace", workspace)
         }
 
-        if (task.branchName != null) {
-            DetailRow("Branch", task.branchName)
+        task.branchName?.let { branch ->
+            DetailRow("Branch", branch)
         }
 
         Divider()
@@ -448,7 +444,7 @@ fun TaskStatusBadge(status: TaskStatus) {
         TaskStatus.PENDING -> MaterialTheme.colorScheme.secondary
         TaskStatus.IN_PROGRESS -> MaterialTheme.colorScheme.primary
         TaskStatus.COMPLETED -> MaterialTheme.colorScheme.tertiary
-        TaskStatus.CANCELLED -> MaterialTheme.colorScheme.error
+        TaskStatus.ARCHIVED -> MaterialTheme.colorScheme.error
     }
 
     Surface(
@@ -474,26 +470,6 @@ fun TaskTypeBadge(type: TaskType) {
             text = type.name,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-        )
-    }
-}
-
-@Composable
-fun TaskPriorityBadge(priority: TaskPriority) {
-    val color = when (priority) {
-        TaskPriority.LOW -> MaterialTheme.colorScheme.surfaceVariant
-        TaskPriority.MEDIUM -> MaterialTheme.colorScheme.secondaryContainer
-        TaskPriority.HIGH -> MaterialTheme.colorScheme.errorContainer
-    }
-
-    Surface(
-        color = color,
-        shape = RoundedCornerShape(4.dp)
-    ) {
-        Text(
-            text = priority.name,
-            style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }

@@ -71,10 +71,23 @@
                     <jvmTarget>21</jvmTarget>
                     <args>
                         <arg>-Xjsr305=strict</arg>
-                        <arg>-Xplugin=${settings.localRepository}/org/jetbrains/compose/compiler/compiler/${compose.compiler.version}/compiler-${compose.compiler.version}.jar</arg>
+                        <arg>-P</arg>
+                        <arg>plugin:androidx.compose.compiler.plugins.kotlin:generateFunctionKeyMetaClasses=true</arg>
                     </args>
                 </configuration>
                 <executions>
+                    <execution>
+                        <id>compile</id>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>test-compile</id>
+                        <goals>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
                     <execution>
                         <id>default-kapt</id>
                         <phase>none</phase>
@@ -84,13 +97,6 @@
                         <phase>none</phase>
                     </execution>
                 </executions>
-                <dependencies>
-                    <dependency>
-                        <groupId>org.jetbrains.compose.compiler</groupId>
-                        <artifactId>compiler</artifactId>
-                        <version>${compose.compiler.version}</version>
-                    </dependency>
-                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.panteleyev</groupId>

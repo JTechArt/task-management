@@ -17,9 +17,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.9.22</kotlin.version>
-        <compose.version>1.6.11</compose.version>
-        <compose.compiler.version>1.5.8</compose.compiler.version>
+        <kotlin.version>2.1.0</kotlin.version>
+        <compose.version>1.8.0</compose.version>
         <junit.version>5.10.2</junit.version>
         <kotlin.logging.version>7.0.13</kotlin.logging.version>
         <logback.version>1.5.3</logback.version>

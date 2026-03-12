@@ -9,7 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.aitask.core.domain.model.Project
-import com.aitask.core.domain.model.TaskPriority
 import com.aitask.core.domain.model.TaskType
 import java.util.UUID
 
@@ -21,8 +20,7 @@ fun CreateTaskDialog(
         title: String,
         description: String?,
         taskType: TaskType,
-        projectId: UUID,
-        priority: TaskPriority
+        projectId: UUID
     ) -> Unit,
     isSaving: Boolean,
     modifier: Modifier = Modifier
@@ -31,7 +29,6 @@ fun CreateTaskDialog(
     var description by remember { mutableStateOf("") }
     var taskType by remember { mutableStateOf(TaskType.FEATURE) }
     var selectedProject by remember { mutableStateOf<Project?>(projects.firstOrNull()) }
-    var priority by remember { mutableStateOf(TaskPriority.MEDIUM) }
     
     Dialog(onDismissRequest = { if (!isSaving) onDismiss() }) {
         Card(
@@ -134,39 +131,6 @@ fun CreateTaskDialog(
                         }
                     }
                 }
-                
-                // Priority dropdown
-                var priorityExpanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = priorityExpanded,
-                    onExpandedChange = { if (!isSaving) priorityExpanded = it }
-                ) {
-                    OutlinedTextField(
-                        value = priority.name,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Priority *") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = priorityExpanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        enabled = !isSaving
-                    )
-                    ExposedDropdownMenu(
-                        expanded = priorityExpanded,
-                        onDismissRequest = { priorityExpanded = false }
-                    ) {
-                        TaskPriority.values().forEach { p ->
-                            DropdownMenuItem(
-                                text = { Text(p.name) },
-                                onClick = {
-                                    priority = p
-                                    priorityExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
 
                 Divider()
 
@@ -192,8 +156,7 @@ fun CreateTaskDialog(
                                     title.trim(),
                                     description.trim().takeIf { it.isNotEmpty() },
                                     taskType,
-                                    project.id,
-                                    priority
+                                    project.id
                                 )
                             }
                         },
