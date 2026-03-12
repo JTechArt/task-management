@@ -2,9 +2,9 @@ schema: 1
 story: "1.2"
 story_title: "Basic Project Creation with Single Repository Configuration"
 gate: FAIL
-status_reason: "Backend (domain, use cases, validators, persistence) exists but no desktop UI. ProjectsView is a placeholder. Users cannot create, edit, view, or archive projects. All acceptance criteria require user-facing functionality that is not implemented."
+status_reason: "Backend domain, validators, use cases, and tests are in place. No desktop UI—ProjectsView remains a placeholder. Users cannot create, edit, view, or archive projects. AC1–AC5 require user-facing functionality that is not implemented."
 reviewer: "Quinn (Test Architect)"
-updated: "2025-03-12T00:00:00Z"
+updated: "2025-03-12T12:00:00Z"
 waiver: { active: false }
 top_issues:
   - id: REQ-001
@@ -24,15 +24,19 @@ top_issues:
     finding: "Use cases (CreateProject, UpdateProject, etc.) not wired to desktop app; no DI or viewmodels."
     suggested_action: "Wire use cases to desktop-app; add DI/bootstrap for ProjectRepository, RepositoryRepository, validators; connect UI to use cases."
   - id: TEST-001
-    severity: medium
-    finding: "No tests for ProjectValidator, RepositoryValidator, CreateProjectUseCase, or repository implementations."
-    suggested_action: "Add unit tests for validators and use cases; integration tests for persistence where feasible."
+    severity: low
+    finding: "ProjectRepositoryImpl and RepositoryRepositoryImpl lack integration tests."
+    suggested_action: "Add integration tests for persistence layer when test infrastructure permits."
 evidence:
-  tests_reviewed: 0
+  tests_reviewed: 19
   risks_identified: 5
   trace:
     ac_covered: []
     ac_gaps: [1, 2, 3, 4, 5]
+  test_files:
+    - ProjectValidatorTest (8 tests)
+    - RepositoryValidatorTest (7 tests)
+    - CreateProjectUseCaseTest (4 tests)
 nfr_validation:
   security:
     status: PASS
@@ -44,12 +48,13 @@ nfr_validation:
     status: CONCERNS
     notes: "Persistence layer exists but not exercised through app; Exposed/transaction usage not validated end-to-end."
   maintainability:
-    status: CONCERNS
-    notes: "No tests for new project/repository code."
+    status: PASS
+    notes: "ProjectValidator, RepositoryValidator, CreateProjectUseCase have unit test coverage."
 risk_summary:
-  totals: { critical: 0, high: 4, medium: 1, low: 0 }
+  totals: { critical: 0, high: 4, medium: 0, low: 1 }
   recommendations:
     must_fix:
       - "Implement ProjectsView with full CRUD and repository attachment (AC1, AC2, AC3)"
       - "Wire CreateProjectUseCase, UpdateProjectUseCase, GetProjectsUseCase, ArchiveProjectUseCase to desktop app"
-    monitor: []
+    monitor:
+      - "Add repository impl integration tests when DB test infra available"
