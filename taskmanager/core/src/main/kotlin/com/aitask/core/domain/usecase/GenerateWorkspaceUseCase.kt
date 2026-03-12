@@ -84,16 +84,22 @@ class GenerateWorkspaceUseCase(
             }
             
             val preparedWorkspace = preparedWorkspaceResult.getOrThrow()
-            
-            // Update task with workspace path and status
-            val updatedTask = task.copy(
-                workspacePath = preparedWorkspace.path,
-                status = if (preparedWorkspace.isCompleted) TaskStatus.IN_PROGRESS else task.status
-            )
-            taskRepository.update(updatedTask)
-            
-            onProgress?.invoke("Workspace generation complete!")
-            
+
+            // Update task with workspace path and status only if workspace is completed
+            if (preparedWorkspace.isCompleted) {
+                val updatedTask = task.copy(
+                    workspacePath = preparedWorkspace.path,
+                    status = TaskStatus.IN_PROGRESS
+                )
+                taskRepository.update(updatedTask)
+                onProgress?.invoke("Workspace generation complete!")
+            } else if (preparedWorkspace.isFailed) {
+                onProgress?.invoke("Workspace generation failed: ${preparedWorkspace.errorMessage}")
+                return Result.failure(WorkspaceGenerationException(
+                    preparedWorkspace.errorMessage ?: "Workspace generation failed"
+                ))
+            }
+
             Result.success(preparedWorkspace)
         } catch (e: Exception) {
             onProgress?.invoke("Workspace generation failed: ${e.message}")
@@ -103,4 +109,5 @@ class GenerateWorkspaceUseCase(
 }
 
 class NoRepositoriesException(message: String) : Exception(message)
+class WorkspaceGenerationException(message: String) : Exception(message)
 
