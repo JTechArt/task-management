@@ -19,7 +19,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.version>1.9.22</kotlin.version>
         <compose.version>1.6.11</compose.version>
-        <compose.compiler.version>1.5.14</compose.compiler.version>
+        <compose.compiler.version>1.5.8</compose.compiler.version>
         <junit.version>5.10.2</junit.version>
         <kotlin.logging.version>7.0.13</kotlin.logging.version>
         <logback.version>1.5.3</logback.version>
@@ -71,7 +71,6 @@
                 <groupId>io.github.oshai</groupId>
                 <artifactId>kotlin-logging-jvm</artifactId>
                 <version>${kotlin.logging.version}</version>
-                <scope>runtime</scope>
             </dependency>
             <dependency>
                 <groupId>ch.qos.logback</groupId>

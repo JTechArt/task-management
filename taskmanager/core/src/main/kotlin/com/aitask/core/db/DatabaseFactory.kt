@@ -28,10 +28,13 @@ object DatabaseFactory {
 
     fun connect(dataSource: HikariDataSource): Database = Database.connect(dataSource)
 
-    fun migrate(dataSource: HikariDataSource): Int = Flyway.configure()
-        .dataSource(dataSource)
-        .locations("classpath:db/migration")
-        .load()
-        .migrate()
+    fun migrate(dataSource: HikariDataSource): Int {
+        val result = Flyway.configure()
+            .dataSource(dataSource)
+            .locations("classpath:db/migration")
+            .load()
+            .migrate()
+        return result.migrationsExecuted
+    }
 }
 

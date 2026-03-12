@@ -61,6 +61,8 @@
     </dependencies>
 
     <build>
+        <sourceDirectory>src/main/kotlin</sourceDirectory>
+        <testSourceDirectory>src/test/kotlin</testSourceDirectory>
         <plugins>
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
@@ -69,11 +71,19 @@
                     <jvmTarget>21</jvmTarget>
                     <args>
                         <arg>-Xjsr305=strict</arg>
+                        <arg>-Xplugin=${settings.localRepository}/org/jetbrains/compose/compiler/compiler/${compose.compiler.version}/compiler-${compose.compiler.version}.jar</arg>
                     </args>
-                    <compilerPlugins>
-                        <plugin>compose</plugin>
-                    </compilerPlugins>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>default-kapt</id>
+                        <phase>none</phase>
+                    </execution>
+                    <execution>
+                        <id>default-test-kapt</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
                 <dependencies>
                     <dependency>
                         <groupId>org.jetbrains.compose.compiler</groupId>
