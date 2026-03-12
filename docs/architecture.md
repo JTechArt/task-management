@@ -4,11 +4,12 @@
 
 | Property | Value |
 |----------|-------|
-| Version | 1.0 |
-| Date | 2026-03-11 |
+| Version | 1.1 |
+| Date | 2026-03-12 |
 | Status | Draft |
 | Author | Architecture Team |
 | Based On | [PRD v0.1](prd.md) |
+| Last Updated | 2026-03-12 - Kotlin 2.1.0 & Compose 1.8.0 upgrade |
 
 ## Table of Contents
 
@@ -1522,10 +1523,10 @@ class WorkspaceCreationException(reason: String) :
 
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
-| **Language** | Kotlin | 2.0+ | Primary development language |
+| **Language** | Kotlin | 2.1.0 | Primary development language with K2 compiler |
 | **Runtime** | JDK | 21 | Java Virtual Machine |
 | **Build Tool** | Maven | 3.9+ | Build automation and dependency management |
-| **UI Framework** | Compose Multiplatform | 1.6+ | Cross-platform desktop UI |
+| **UI Framework** | Compose Multiplatform | 1.8.0 | Cross-platform desktop UI |
 | **Database** | PostgreSQL | 16+ | Relational database |
 | **ORM** | Exposed | 0.50+ | Type-safe SQL DSL |
 | **Connection Pool** | HikariCP | 5.1+ | Database connection pooling |
@@ -1535,23 +1536,27 @@ class WorkspaceCreationException(reason: String) :
 | **Serialization** | kotlinx.serialization | 1.6+ | JSON serialization |
 | **Logging** | Logback + kotlin-logging | 1.4+ / 3.0+ | Structured logging |
 | **Testing** | JUnit 5 + Mockk | 5.10+ / 1.13+ | Unit and integration testing |
-| **Coroutines** | kotlinx.coroutines | 1.8+ | Async/concurrent programming |
+| **Coroutines** | kotlinx.coroutines | 1.8.1 | Async/concurrent programming |
 
 ### Technology Justification
 
-**Kotlin:**
+**Kotlin 2.1.0:**
 - Modern, concise syntax
 - Null safety built-in
+- K2 compiler with improved performance and stability
 - Excellent IDE support
 - Seamless Java interop
 - Strong coroutines support
+- Built-in Compose compiler (no separate plugin needed)
 
-**Compose Multiplatform:**
+**Compose Multiplatform 1.8.0:**
 - Single codebase for Windows, macOS, Linux
 - Declarative UI paradigm
 - Material 3 design system
 - Active development by JetBrains
 - Growing ecosystem
+- Fully compatible with Kotlin 2.1.0 and K2 compiler
+- Improved rendering and composition performance
 
 **PostgreSQL:**
 - ACID compliance
