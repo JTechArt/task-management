@@ -29,6 +29,7 @@
         <flyway.version>10.10.0</flyway.version>
         <postgres.version>42.7.3</postgres.version>
         <coroutines.version>1.8.1</coroutines.version>
+        <jgit.version>6.9.0.202403050737-r</jgit.version>
     </properties>
 
     <repositories>
@@ -155,6 +156,11 @@
                 <artifactId>kotlinx-coroutines-test</artifactId>
                 <version>${coroutines.version}</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jgit</groupId>
+                <artifactId>org.eclipse.jgit</artifactId>
+                <version>${jgit.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
