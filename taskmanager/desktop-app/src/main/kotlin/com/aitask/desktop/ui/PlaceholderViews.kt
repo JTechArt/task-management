@@ -70,14 +70,7 @@ fun PlaceholderView(
     }
 }
 
-@Composable
-fun ProjectsView(modifier: Modifier = Modifier) {
-    PlaceholderView(
-        title = "Projects",
-        description = "Manage multi-repository projects and workspace configurations",
-        modifier = modifier
-    )
-}
+// ProjectsView is now in projects/ProjectsView.kt
 
 @Composable
 fun TasksView(modifier: Modifier = Modifier) {
