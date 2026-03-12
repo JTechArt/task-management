@@ -25,4 +25,4 @@
 
 - [Flow 1: Task Launch (Primary MVP Flow)](../front-end-spec.md#flow-1-task-launch-primary-mvp-flow)
 - [Screen Layouts: Dashboard, Project Detail, Task Launch Flow](../front-end-spec.md#key-screen-layouts)
-
+- [Visual Mockup: Dashboard](../mockups/dashboard.html)

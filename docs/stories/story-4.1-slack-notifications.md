@@ -23,4 +23,5 @@
 
 - [Integrations & Health screen](../front-end-spec.md#5-integrations--health)
 - [Slack Channel Configuration View](../front-end-spec.md#slack-channel-configuration-view)
-
+- [Visual Mockup: Project Detail](../mockups/project-detail.html)
+- [Visual Mockup: Integrations & Health](../mockups/integrations.html)

@@ -22,4 +22,5 @@
 ## UX References
 
 - [Flow 3: Project and Repository Setup](../front-end-spec.md#flow-3-project-and-repository-setup)
-
+- [Visual Mockup: Projects List / Creation](../mockups/projects.html)
+- [Visual Mockup: Project Detail](../mockups/project-detail.html)

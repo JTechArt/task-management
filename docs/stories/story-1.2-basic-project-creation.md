@@ -23,4 +23,5 @@
 
 - [Flow 3: Project and Repository Setup](../front-end-spec.md#flow-3-project-and-repository-setup)
 - [Screen Layouts: Project Detail](../front-end-spec.md#key-screen-layouts)
-
+- [Visual Mockup: Projects List / Creation](../mockups/projects.html)
+- [Visual Mockup: Project Detail](../mockups/project-detail.html)
