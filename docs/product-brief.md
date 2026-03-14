@@ -132,7 +132,7 @@ AiTask automates the entire development task lifecycle from creation to completi
 ## Technical Architecture
 
 ### Build System
-- **Maven 3.9+**: Dependency management and build automation
+- **Gradle 8.5+**: Modern build system with superior Kotlin DSL support and dependency management
 
 ### Application Layer
 - **Kotlin 2.0+**: Modern JVM language with null safety and coroutines

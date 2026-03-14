@@ -92,7 +92,7 @@ Core Features
 Technology Stack Summary
 
 Build System
-•  Maven 3.9+: Industry-standard Java/Kotlin build system with comprehensive dependency management and plugin ecosystem
+•  Gradle 8.5+: Modern build system with superior Kotlin DSL support, better performance, and comprehensive dependency management for Kotlin projects
 
 Application Layer
 •  Kotlin 2.0+: Modern JVM language with null safety, coroutines

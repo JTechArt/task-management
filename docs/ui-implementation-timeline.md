@@ -39,8 +39,8 @@
 ```bash
 cd taskmanager
 docker-compose up -d
-mvn clean install
-mvn -pl desktop-app exec:java
+./gradlew clean build
+./gradlew :desktop-app:run
 ```
 
 ---
