@@ -1,9 +1,6 @@
 package com.aitask.core.domain.usecase
 
-import com.aitask.core.domain.model.CloneStatus
-import com.aitask.core.domain.model.CreateWorkspaceRequest
-import com.aitask.core.domain.model.TaskStatus
-import com.aitask.core.domain.model.Workspace
+import com.aitask.core.domain.model.*
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
@@ -14,7 +11,8 @@ class GenerateWorkspaceUseCase(
     private val taskRepository: TaskRepository,
     private val projectRepository: ProjectRepository,
     private val repositoryRepository: RepositoryRepository,
-    private val workspaceService: WorkspaceService
+    private val workspaceService: WorkspaceService,
+    private val applyRulesToWorkspaceUseCase: ApplyRulesToWorkspaceUseCase
 ) {
     suspend operator fun invoke(
         request: CreateWorkspaceRequest,
@@ -86,22 +84,59 @@ class GenerateWorkspaceUseCase(
             
             val preparedWorkspace = preparedWorkspaceResult.getOrThrow()
 
-            // Update task with workspace path, branch name, and status only if workspace is completed
+            // Apply rules to workspace if preparation was successful
+            var workspaceWithRules = preparedWorkspace
             if (preparedWorkspace.isCompleted) {
+                onProgress?.invoke("Applying rules to workspace...")
+
+                val applyRulesRequest = ApplyRulesRequest(
+                    workspacePath = preparedWorkspace.path,
+                    projectId = project.id,
+                    ideType = request.ideType,
+                    selectedRepositories = request.selectedRepositories
+                )
+
+                val rulesResult = applyRulesToWorkspaceUseCase(applyRulesRequest)
+
+                if (rulesResult.isSuccess) {
+                    val appliedRules = rulesResult.getOrThrow()
+                    workspaceWithRules = preparedWorkspace.copy(
+                        appliedRules = appliedRules.appliedRuleIds
+                    )
+
+                    // Report rule application results
+                    onProgress?.invoke("Applied ${appliedRules.totalRulesApplied} rules, skipped ${appliedRules.totalRulesSkipped}")
+
+                    if (appliedRules.skippedRules.isNotEmpty()) {
+                        val skippedSummary = appliedRules.skippedRules
+                            .groupBy { it.reason }
+                            .map { (reason, rules) -> "${reason.name}: ${rules.size}" }
+                            .joinToString(", ")
+                        onProgress?.invoke("Skipped rules: $skippedSummary")
+                    }
+                } else {
+                    // Rule application failed, but don't fail the entire workspace generation
+                    val error = rulesResult.exceptionOrNull()
+                    onProgress?.invoke("Warning: Failed to apply rules - ${error?.message}")
+                }
+            }
+
+            // Update task with workspace path, branch name, and status only if workspace is completed
+            if (workspaceWithRules.isCompleted) {
                 // Get branch name from first repository (all should have the same branch name)
-                val branchName = preparedWorkspace.repositories.firstOrNull()?.branchName
+                val branchName = workspaceWithRules.repositories.firstOrNull()?.branchName
 
                 val updatedTask = task.copy(
-                    workspacePath = preparedWorkspace.path,
+                    workspacePath = workspaceWithRules.path,
                     branchName = branchName,
                     status = TaskStatus.IN_PROGRESS
                 )
                 taskRepository.update(updatedTask)
                 onProgress?.invoke("Workspace generation complete!")
-            } else if (preparedWorkspace.isFailed) {
+            } else if (workspaceWithRules.isFailed) {
                 // Build detailed error message listing failed and successful repositories
-                val failedRepos = preparedWorkspace.repositories.filter { it.cloneStatus == CloneStatus.FAILED }
-                val successfulRepos = preparedWorkspace.repositories.filter { it.cloneStatus == CloneStatus.COMPLETED }
+                val failedRepos = workspaceWithRules.repositories.filter { it.cloneStatus == CloneStatus.FAILED }
+                val successfulRepos = workspaceWithRules.repositories.filter { it.cloneStatus == CloneStatus.COMPLETED }
 
                 val errorDetails = buildString {
                     append("Workspace generation partially failed. ")
@@ -122,7 +157,7 @@ class GenerateWorkspaceUseCase(
                             repoEntity?.name ?: "Unknown"
                         })
                         append(". ")
-                        append("Workspace path: ${preparedWorkspace.path}")
+                        append("Workspace path: ${workspaceWithRules.path}")
                     } else {
                         append("No repositories were successfully cloned.")
                     }
@@ -132,7 +167,7 @@ class GenerateWorkspaceUseCase(
                 return Result.failure(WorkspaceGenerationException(errorDetails))
             }
 
-            Result.success(preparedWorkspace)
+            Result.success(workspaceWithRules)
         } catch (e: Exception) {
             onProgress?.invoke("Workspace generation failed: ${e.message}")
             Result.failure(e)

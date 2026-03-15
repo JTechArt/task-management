@@ -4,6 +4,7 @@ import com.aitask.core.data.repository.*
 import com.aitask.core.domain.repository.*
 import com.aitask.core.domain.service.GitService
 import com.aitask.core.domain.service.IDEService
+import com.aitask.core.domain.service.RuleApplicationService
 import com.aitask.core.domain.service.WorkspaceService
 import com.aitask.core.domain.usecase.*
 import com.aitask.core.domain.validation.ProjectValidator
@@ -12,6 +13,7 @@ import com.aitask.core.domain.validation.RuleValidator
 import com.aitask.core.domain.validation.TaskValidator
 import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.ide.DesktopIDEService
+import com.aitask.core.infrastructure.rules.FileSystemRuleApplicationService
 import com.aitask.core.infrastructure.workspace.FileSystemWorkspaceService
 
 /**
@@ -70,7 +72,11 @@ object DependencyContainer {
     val workspaceService: WorkspaceService by lazy {
         FileSystemWorkspaceService(gitService)
     }
-    
+
+    val ruleApplicationService: RuleApplicationService by lazy {
+        FileSystemRuleApplicationService()
+    }
+
     // Project Use Cases
     val createProjectUseCase: CreateProjectUseCase by lazy {
         CreateProjectUseCase(
@@ -132,12 +138,21 @@ object DependencyContainer {
     }
     
     // Workspace Use Cases
+    val applyRulesToWorkspaceUseCase: ApplyRulesToWorkspaceUseCase by lazy {
+        ApplyRulesToWorkspaceUseCase(
+            ruleRepository,
+            projectRepository,
+            ruleApplicationService
+        )
+    }
+
     val generateWorkspaceUseCase: GenerateWorkspaceUseCase by lazy {
         GenerateWorkspaceUseCase(
             taskRepository,
             projectRepository,
             repositoryRepository,
-            workspaceService
+            workspaceService,
+            applyRulesToWorkspaceUseCase
         )
     }
     
