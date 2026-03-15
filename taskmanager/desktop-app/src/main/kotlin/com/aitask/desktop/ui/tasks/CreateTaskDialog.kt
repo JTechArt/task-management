@@ -29,8 +29,19 @@ fun CreateTaskDialog(
     var description by remember { mutableStateOf("") }
     var taskType by remember { mutableStateOf(TaskType.FEATURE) }
     var selectedProject by remember { mutableStateOf<Project?>(projects.firstOrNull()) }
-    
-    Dialog(onDismissRequest = { if (!isSaving) onDismiss() }) {
+    var showDiscardConfirm by remember { mutableStateOf(false) }
+    val hasUnsavedChanges = title.isNotBlank() || description.isNotBlank() ||
+        selectedProject != projects.firstOrNull() || taskType != TaskType.FEATURE
+    val requestDismiss: () -> Unit = {
+        if (hasUnsavedChanges) {
+            showDiscardConfirm = true
+        } else {
+            onDismiss()
+        }
+    }
+    Dialog(
+        onDismissRequest = { if (!isSaving) requestDismiss() }
+    ) {
         Card(
             modifier = modifier.width(500.dp)
         ) {
@@ -141,7 +152,7 @@ fun CreateTaskDialog(
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
                     TextButton(
-                        onClick = onDismiss,
+                        onClick = requestDismiss,
                         enabled = !isSaving
                     ) {
                         Text("Cancel")
@@ -176,6 +187,28 @@ fun CreateTaskDialog(
                 }
             }
         }
+    }
+    if (showDiscardConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDiscardConfirm = false },
+            title = { Text("Discard changes?") },
+            text = { Text("Your changes will be lost. Are you sure you want to close?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDiscardConfirm = false
+                        onDismiss()
+                    }
+                ) {
+                    Text("Discard")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardConfirm = false }) {
+                    Text("Keep Editing")
+                }
+            }
+        )
     }
 }
 

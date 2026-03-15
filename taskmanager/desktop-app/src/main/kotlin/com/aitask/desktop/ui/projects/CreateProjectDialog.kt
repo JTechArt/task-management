@@ -38,8 +38,22 @@ fun CreateProjectDialog(
     var provider by remember { mutableStateOf(GitProvider.GITHUB) }
     var authType by remember { mutableStateOf(AuthType.HTTPS) }
     var selectedIDEs by remember { mutableStateOf(setOf<IDEType>()) }
-    
-    Dialog(onDismissRequest = { if (!isSaving) onDismiss() }) {
+    var showDiscardConfirm by remember { mutableStateOf(false) }
+    val hasUnsavedChanges = name.isNotBlank() || description.isNotBlank() ||
+        workspacePath.isNotBlank() || branchTemplate != "task-{taskId}" ||
+        repositoryName.isNotBlank() || cloneUrl.isNotBlank() || selectedIDEs.isNotEmpty()
+    val requestDismiss: () -> Unit = {
+        if (hasUnsavedChanges) {
+            showDiscardConfirm = true
+        } else {
+            onDismiss()
+        }
+    }
+    Dialog(
+        onDismissRequest = {
+            if (!isSaving) requestDismiss()
+        }
+    ) {
         Card(
             modifier = modifier.width(600.dp)
         ) {
@@ -234,7 +248,7 @@ fun CreateProjectDialog(
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                 ) {
                     TextButton(
-                        onClick = onDismiss,
+                        onClick = requestDismiss,
                         enabled = !isSaving
                     ) {
                         Text("Cancel")
@@ -277,5 +291,19 @@ fun CreateProjectDialog(
             }
         }
     }
-}
-
+    if (showDiscardConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDiscardConfirm = false },
+            title = { Text("Discard changes?") },
+            text = { Text("Your changes will be lost. Are you sure you want to close?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardConfirm = false
+                    onDismiss()
+                }) {
+                    Text("Discard")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardConfirm = false }) {
+                    Text("Keep Editing")
