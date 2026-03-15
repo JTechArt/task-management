@@ -31,7 +31,11 @@ private class FakeConfigLoader : ConfigLoader {
 class AppLauncherTest {
     @Test
     fun `runStartupChecks should complete without errors`() {
-        val launcher = AppLauncher(FakeConfigLoader(), StartupBootstrapper(), emptyMap())
+        val launcher = AppLauncher(
+            FakeConfigLoader(),
+            StartupBootstrapper(),
+            mapOf("BOOTSTRAP_DATABASE" to "false")
+        )
         assertDoesNotThrow { launcher.runStartupChecks() }
     }
 

@@ -30,7 +30,7 @@ class AppLauncher(
     fun launch() {
         val config = configLoader.loadAppConfig()
         logStartup(config)
-        val bootstrapDatabase = environment["BOOTSTRAP_DATABASE"]?.equals("true", true) ?: false
+        val bootstrapDatabase = environment["BOOTSTRAP_DATABASE"]?.let { it.equals("false", true) } != true
         val bootstrapResult = bootstrapper.prepareInfrastructure(config, bootstrapDatabase)
         logger.info { "Bootstrap result databaseInitialized=${bootstrapResult.databaseInitialized}, migrationsApplied=${bootstrapResult.migrationsApplied}" }
         if (bootstrapResult.databaseError != null) {
@@ -49,7 +49,7 @@ class AppLauncher(
     fun runStartupChecks() {
         val config = configLoader.loadAppConfig()
         logStartup(config)
-        val bootstrapDatabase = environment["BOOTSTRAP_DATABASE"]?.equals("true", true) ?: false
+        val bootstrapDatabase = environment["BOOTSTRAP_DATABASE"]?.let { it.equals("false", true) } != true
         val bootstrapResult = bootstrapper.prepareInfrastructure(config, bootstrapDatabase)
         logger.info { "Startup check bootstrap databaseInitialized=${bootstrapResult.databaseInitialized}" }
         logger.info { "Startup check completed" }
