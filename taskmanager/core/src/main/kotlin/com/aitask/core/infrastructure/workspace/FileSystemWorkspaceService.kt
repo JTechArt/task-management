@@ -3,6 +3,7 @@ package com.aitask.core.infrastructure.workspace
 import com.aitask.core.domain.model.*
 import com.aitask.core.domain.service.*
 import com.aitask.core.domain.util.BranchTemplateExpander
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -17,6 +18,7 @@ import kotlin.io.path.deleteRecursively
 class FileSystemWorkspaceService(
     private val gitService: GitService
 ) : WorkspaceService {
+    private val logger = KotlinLogging.logger {}
     
     override suspend fun createWorkspace(
         task: Task,
@@ -126,13 +128,24 @@ class FileSystemWorkspaceService(
                     )
                     onProgress?.invoke("${repository.name}: Cloned successfully")
                 } else {
+                    val cloneError = cloneResult.exceptionOrNull()
+                    val cloneErrorMessage = cloneError?.rootCauseMessage() ?: "Unknown clone failure"
+                    val guidance = repository.authType.cloneGuidance()
+                    val detailedMessage = listOf(cloneErrorMessage, guidance)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" ")
+
+                    logger.error(cloneError) {
+                        "Clone failed for repository ${repository.name} (${repository.cloneUrl}) with authType=${repository.authType}: $detailedMessage"
+                    }
+
                     updatedRepos.add(
                         workspaceRepo.copy(
                             cloneStatus = CloneStatus.FAILED,
-                            errorMessage = cloneResult.exceptionOrNull()?.message
+                            errorMessage = detailedMessage
                         )
                     )
-                    onProgress?.invoke("${repository.name}: Clone failed")
+                    onProgress?.invoke("${repository.name}: Clone failed - $detailedMessage")
                 }
             }
             
@@ -162,6 +175,7 @@ class FileSystemWorkspaceService(
             
             Result.success(updatedWorkspace)
         } catch (e: Exception) {
+            logger.error(e) { "Failed to prepare workspace ${workspace.path}: ${e.rootCauseMessage()}" }
             Result.failure(WorkspacePreparationException("Failed to prepare workspace: ${e.message}", e))
         }
     }
@@ -246,12 +260,25 @@ class FileSystemWorkspaceService(
             metadataFile.writeText(json)
         } catch (e: Exception) {
             // Log error but don't fail workspace creation
-            println("Warning: Failed to save workspace metadata: ${e.message}")
+            logger.warn(e) { "Failed to save workspace metadata for ${workspace.path}: ${e.rootCauseMessage()}" }
         }
     }
+}
+
+private fun Throwable.rootCauseMessage(): String {
+    val rootCause = generateSequence(this) { it.cause }.last()
+    return rootCause.message ?: this.message ?: this.javaClass.simpleName
+}
+
+private fun AuthType.cloneGuidance(): String = when (this) {
+    AuthType.HTTPS ->
+        "Repository is configured for HTTPS auth, but this app does not yet persist HTTPS credentials. Use a public repo, embed credentials in the clone URL, or switch to SSH."
+    AuthType.TOKEN ->
+        "Repository is configured for token auth, but this app does not yet persist repository tokens. Use a public repo, embed credentials in the clone URL, or switch to SSH."
+    AuthType.SSH ->
+        "Check that your SSH key/agent is available to JGit and that the clone URL is valid."
 }
 
 class WorkspaceCreationException(message: String, cause: Throwable? = null) : Exception(message, cause)
 class WorkspacePreparationException(message: String, cause: Throwable? = null) : Exception(message, cause)
 class WorkspaceCleanupException(message: String, cause: Throwable? = null) : Exception(message, cause)
-

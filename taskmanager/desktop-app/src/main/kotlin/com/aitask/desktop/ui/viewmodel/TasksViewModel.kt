@@ -258,9 +258,13 @@ class TasksViewModel(
                     loadTasks()
                 },
                 onFailure = { error ->
+                    val errorMsg = error.message
+                        ?: error.cause?.message
+                        ?: error.javaClass.simpleName
+                        ?: "Failed to generate workspace"
                     uiState = uiState.copy(
                         isGeneratingWorkspace = false,
-                        error = error.message ?: "Failed to generate workspace",
+                        error = "$errorMsg See logs/taskmanager.log for details.",
                         workspaceGenerationProgress = null
                     )
                 }
@@ -348,4 +352,3 @@ data class TasksUiState(
     val availableRepositoriesForSelection: List<Repository> = emptyList(),
     val defaultRepositorySelection: List<UUID> = emptyList()
 )
-

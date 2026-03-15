@@ -198,10 +198,17 @@ class DesktopIDEService : IDEService {
         )
     }
 
+    private val userApplicationsDir: String
+        get() = "${System.getProperty("user.home")}/Applications"
+
     private fun getIntelliJPaths(): List<String> = when {
         isMacOS -> listOf(
             "/Applications/IntelliJ IDEA.app",
-            "/Applications/IntelliJ IDEA CE.app"
+            "/Applications/IntelliJ IDEA CE.app",
+            "/Applications/IntelliJ IDEA Ultimate.app",
+            "$userApplicationsDir/IntelliJ IDEA.app",
+            "$userApplicationsDir/IntelliJ IDEA CE.app",
+            "$userApplicationsDir/IntelliJ IDEA Ultimate.app"
         )
         isWindows -> listOf(
             "C:\\Program Files\\JetBrains\\IntelliJ IDEA\\bin\\idea64.exe",
@@ -216,7 +223,8 @@ class DesktopIDEService : IDEService {
 
     private fun getWebStormPaths(): List<String> = when {
         isMacOS -> listOf(
-            "/Applications/WebStorm.app"
+            "/Applications/WebStorm.app",
+            "$userApplicationsDir/WebStorm.app"
         )
         isWindows -> listOf(
             "C:\\Program Files\\JetBrains\\WebStorm\\bin\\webstorm64.exe",
@@ -232,7 +240,9 @@ class DesktopIDEService : IDEService {
     private fun getPyCharmPaths(): List<String> = when {
         isMacOS -> listOf(
             "/Applications/PyCharm.app",
-            "/Applications/PyCharm CE.app"
+            "/Applications/PyCharm CE.app",
+            "$userApplicationsDir/PyCharm.app",
+            "$userApplicationsDir/PyCharm CE.app"
         )
         isWindows -> listOf(
             "C:\\Program Files\\JetBrains\\PyCharm\\bin\\pycharm64.exe",
@@ -247,7 +257,8 @@ class DesktopIDEService : IDEService {
 
     private fun getGoLandPaths(): List<String> = when {
         isMacOS -> listOf(
-            "/Applications/GoLand.app"
+            "/Applications/GoLand.app",
+            "$userApplicationsDir/GoLand.app"
         )
         isWindows -> listOf(
             "C:\\Program Files\\JetBrains\\GoLand\\bin\\goland64.exe",

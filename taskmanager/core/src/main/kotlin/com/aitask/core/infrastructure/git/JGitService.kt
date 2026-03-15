@@ -4,15 +4,21 @@ import com.aitask.core.domain.model.AuthType
 import com.aitask.core.domain.service.CloneProgress
 import com.aitask.core.domain.service.GitAuthConfig
 import com.aitask.core.domain.service.GitService
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.TransportCommand
 import org.eclipse.jgit.api.TransportConfigCallback
 import org.eclipse.jgit.lib.ProgressMonitor
-import org.eclipse.jgit.transport.*
+import org.eclipse.jgit.transport.SshTransport
+import org.eclipse.jgit.transport.Transport
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.transport.sshd.SshdSessionFactoryBuilder
 import java.io.File
 
 class JGitService : GitService {
+    private val logger = KotlinLogging.logger {}
     
     override suspend fun cloneRepository(
         url: String,
@@ -23,6 +29,7 @@ class JGitService : GitService {
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val destFile = File(destination)
+            logger.info { "Starting clone for $url into $destination with authType=${authConfig.authType}" }
             
             // Ensure parent directory exists
             destFile.parentFile?.mkdirs()
@@ -35,22 +42,8 @@ class JGitService : GitService {
             if (shallow) {
                 cloneCommand.setDepth(1)
             }
-            
-            // Set up authentication
-            when (authConfig.authType) {
-                AuthType.HTTPS, AuthType.TOKEN -> {
-                    val credentialsProvider = UsernamePasswordCredentialsProvider(
-                        authConfig.username ?: "git",
-                        authConfig.password ?: authConfig.token ?: ""
-                    )
-                    cloneCommand.setCredentialsProvider(credentialsProvider)
-                }
-                AuthType.SSH -> {
-                    // SSH support requires additional configuration
-                    // For now, we'll use a simple approach
-                    // In production, this would use SSH keys from the system
-                }
-            }
+
+            configureTransportAuthentication(cloneCommand, authConfig)
             
             // Set up progress monitoring
             if (onProgress != null) {
@@ -93,10 +86,14 @@ class JGitService : GitService {
             cloneCommand.call().use { git ->
                 // Clone successful
             }
+
+            logger.info { "Clone completed for $url into $destination" }
             
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(GitCloneException("Failed to clone repository: ${e.message}", e))
+            val detailedMessage = e.rootCauseMessage()
+            logger.error(e) { "Clone failed for $url into $destination: $detailedMessage" }
+            Result.failure(GitCloneException("Failed to clone repository: $detailedMessage", e))
         }
     }
     
@@ -119,6 +116,7 @@ class JGitService : GitService {
             }
             Result.success(Unit)
         } catch (e: Exception) {
+            logger.error(e) { "Branch creation failed in $repositoryPath for $branchName: ${e.rootCauseMessage()}" }
             Result.failure(GitBranchException("Failed to create branch: ${e.message}", e))
         }
     }
@@ -142,27 +140,7 @@ class JGitService : GitService {
                 .setRemote(url)
                 .setHeads(true)
 
-            // Configure authentication (only HTTPS and TOKEN for now)
-            when (authConfig.authType) {
-                AuthType.HTTPS -> {
-                    if (authConfig.username != null && authConfig.password != null) {
-                        lsRemoteCommand.setCredentialsProvider(
-                            UsernamePasswordCredentialsProvider(authConfig.username, authConfig.password)
-                        )
-                    }
-                }
-                AuthType.TOKEN -> {
-                    if (authConfig.token != null) {
-                        lsRemoteCommand.setCredentialsProvider(
-                            UsernamePasswordCredentialsProvider("token", authConfig.token)
-                        )
-                    }
-                }
-                AuthType.SSH -> {
-                    // SSH validation not implemented yet
-                    // For now, assume SSH repositories are accessible
-                }
-            }
+            configureTransportAuthentication(lsRemoteCommand, authConfig)
 
             // Execute ls-remote
             val refs = lsRemoteCommand.call()
@@ -192,6 +170,55 @@ class JGitService : GitService {
 
 }
 
+internal fun <C : TransportCommand<C, *>> configureTransportAuthentication(
+    command: C,
+    authConfig: GitAuthConfig
+): C {
+    when (authConfig.authType) {
+        AuthType.HTTPS, AuthType.TOKEN -> {
+            val credentialsProvider = UsernamePasswordCredentialsProvider(
+                authConfig.username ?: "git",
+                authConfig.password ?: authConfig.token ?: ""
+            )
+            command.setCredentialsProvider(credentialsProvider)
+        }
+        AuthType.SSH -> {
+            command.setTransportConfigCallback(createSshTransportConfigCallback(authConfig))
+        }
+    }
+
+    return command
+}
+
+internal fun createSshTransportConfigCallback(authConfig: GitAuthConfig): TransportConfigCallback {
+    val sshSessionFactory = buildSshSessionFactory(authConfig)
+
+    return TransportConfigCallback { transport: Transport ->
+        if (transport is SshTransport) {
+            transport.sshSessionFactory = sshSessionFactory
+        }
+    }
+}
+
+internal fun buildSshSessionFactory(authConfig: GitAuthConfig) =
+    SshdSessionFactoryBuilder()
+        .apply {
+            val homeDirectory = File(System.getProperty("user.home", ".")).absoluteFile
+            setHomeDirectory(homeDirectory)
+            setSshDirectory(File(homeDirectory, ".ssh"))
+
+            authConfig.sshKeyPath?.let { sshKeyPath ->
+                val keyFile = File(sshKeyPath).absoluteFile
+                setPreferredAuthentications("publickey")
+                setDefaultIdentities { listOf(keyFile.toPath()) }
+            }
+        }
+        .build(null)
+
+private fun Throwable.rootCauseMessage(): String {
+    val rootCause = generateSequence(this) { it.cause }.last()
+    return rootCause.message ?: this.message ?: this.javaClass.simpleName
+}
+
 class GitCloneException(message: String, cause: Throwable? = null) : Exception(message, cause)
 class GitBranchException(message: String, cause: Throwable? = null) : Exception(message, cause)
-

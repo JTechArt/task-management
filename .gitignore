@@ -67,9 +67,11 @@ release.properties
 
 # Gradle (for safety in mixed builds)
 .gradle/
+.kotlin/
 gradle-app.setting
 gradle-app.properties
 !gradle/wrapper/gradle-wrapper.jar
+/gradle.properties
 
 # Coverage & reports
 coverage/

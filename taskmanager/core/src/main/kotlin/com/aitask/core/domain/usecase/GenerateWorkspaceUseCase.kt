@@ -5,7 +5,10 @@ import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
 import com.aitask.core.domain.service.WorkspaceService
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 class GenerateWorkspaceUseCase(
     private val taskRepository: TaskRepository,
@@ -57,7 +60,8 @@ class GenerateWorkspaceUseCase(
             }
             
             if (repositories.isEmpty()) {
-                return Result.failure(NoRepositoriesException("No repositories found for project"))
+                logger.warn { "No repositories found for project ${project.id} (${project.name})" }
+                return Result.failure(NoRepositoriesException("No repositories found for project. Add at least one repository to the project first."))
             }
             
             onProgress?.invoke("Creating workspace structure...")
@@ -65,7 +69,9 @@ class GenerateWorkspaceUseCase(
             // Create workspace
             val workspaceResult = workspaceService.createWorkspace(task, project, repositories)
             if (workspaceResult.isFailure) {
-                return Result.failure(workspaceResult.exceptionOrNull()!!)
+                val err = workspaceResult.exceptionOrNull()!!
+                logger.error(err) { "Workspace creation failed: ${err.rootCauseMessage()}" }
+                return Result.failure(err)
             }
             
             val workspace = workspaceResult.getOrThrow()
@@ -79,7 +85,9 @@ class GenerateWorkspaceUseCase(
             )
             
             if (preparedWorkspaceResult.isFailure) {
-                return Result.failure(preparedWorkspaceResult.exceptionOrNull()!!)
+                val err = preparedWorkspaceResult.exceptionOrNull()!!
+                logger.error(err) { "Workspace preparation (clone) failed: ${err.rootCauseMessage()}" }
+                return Result.failure(err)
             }
             
             val preparedWorkspace = preparedWorkspaceResult.getOrThrow()
@@ -169,12 +177,18 @@ class GenerateWorkspaceUseCase(
 
             Result.success(workspaceWithRules)
         } catch (e: Exception) {
-            onProgress?.invoke("Workspace generation failed: ${e.message}")
+            val errorMsg = e.rootCauseMessage()
+            logger.error(e) { "Workspace generation failed for task ${request.taskId}: $errorMsg" }
+            onProgress?.invoke("Workspace generation failed: $errorMsg")
             Result.failure(e)
         }
     }
 }
 
+private fun Throwable.rootCauseMessage(): String {
+    val rootCause = generateSequence(this) { it.cause }.last()
+    return rootCause.message ?: this.message ?: this.javaClass.simpleName
+}
+
 class NoRepositoriesException(message: String) : Exception(message)
 class WorkspaceGenerationException(message: String) : Exception(message)
-

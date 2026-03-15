@@ -11,7 +11,7 @@ class EnvConfigLoaderTest {
         val config = loader.loadAppConfig()
         assertEquals("TaskManager", config.appName)
         assertEquals("localhost", config.database.host)
-        assertEquals(5432, config.database.port)
+        assertEquals(5433, config.database.port)
         assertTrue(config.database.password.isNotBlank())
     }
 
