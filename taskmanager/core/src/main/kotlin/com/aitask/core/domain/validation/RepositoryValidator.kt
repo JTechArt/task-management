@@ -19,7 +19,7 @@ class RepositoryValidator : Validator<CreateRepositoryRequest> {
         } else if (input.cloneUrl.length > 500) {
             errors.add(ValidationError("cloneUrl", "Clone URL must not exceed 500 characters", "MAX_LENGTH"))
         } else if (!isValidGitUrl(input.cloneUrl)) {
-            errors.add(ValidationError("cloneUrl", "Clone URL must be a valid Git URL (https://, git://, or ssh://)", "INVALID_URL"))
+            errors.add(ValidationError("cloneUrl", "Clone URL must be a valid Git URL (e.g., https://github.com/user/repo.git or git@github.com:user/repo.git)", "INVALID_URL"))
         }
         
         // Validate preferred IDEs
@@ -35,8 +35,14 @@ class RepositoryValidator : Validator<CreateRepositoryRequest> {
     }
     
     private fun isValidGitUrl(url: String): Boolean {
-        val gitUrlPattern = Regex("^(https?|git|ssh)://.*", RegexOption.IGNORE_CASE)
-        return gitUrlPattern.matches(url)
+        // Support multiple Git URL formats:
+        // - https://github.com/user/repo.git
+        // - git://github.com/user/repo.git
+        // - ssh://git@github.com/user/repo.git
+        // - git@github.com:user/repo.git (SSH shorthand)
+        val protocolPattern = Regex("^(https?|git|ssh)://.*", RegexOption.IGNORE_CASE)
+        val sshShorthandPattern = Regex("^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+:.*", RegexOption.IGNORE_CASE)
+        return protocolPattern.matches(url) || sshShorthandPattern.matches(url)
     }
 }
 

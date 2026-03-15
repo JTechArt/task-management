@@ -3,6 +3,8 @@ package com.aitask.desktop.ui.projects
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -27,21 +29,53 @@ fun CreateProjectDialog(
         preferredIDEs: List<IDEType>
     ) -> Unit,
     isSaving: Boolean,
+    error: String? = null,
+    onDismissError: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    // Hardcoded workspace base path (will be moved to settings later)
+    val workspaceBasePath = "/Users/arthurho/workspaces"
+
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var workspacePath by remember { mutableStateOf("") }
+    var workspacePathManuallyEdited by remember { mutableStateOf(false) }
     var branchTemplate by remember { mutableStateOf("task-{taskId}") }
-    var repositoryName by remember { mutableStateOf("") }
     var cloneUrl by remember { mutableStateOf("") }
     var provider by remember { mutableStateOf(GitProvider.GITHUB) }
     var authType by remember { mutableStateOf(AuthType.HTTPS) }
     var selectedIDEs by remember { mutableStateOf(setOf<IDEType>()) }
     var showDiscardConfirm by remember { mutableStateOf(false) }
+
+    // Auto-configure workspace path based on project name
+    LaunchedEffect(name) {
+        if (!workspacePathManuallyEdited && name.isNotBlank()) {
+            // Sanitize project name for file system (replace spaces with hyphens, lowercase)
+            val sanitizedName = name.trim()
+                .replace(Regex("[^a-zA-Z0-9\\s\\-_]"), "")
+                .replace(Regex("\\s+"), "-")
+                .lowercase()
+            workspacePath = "$workspaceBasePath/$sanitizedName"
+        }
+    }
+
+    // Auto-detect repository name from clone URL
+    val repositoryName = remember(cloneUrl) {
+        if (cloneUrl.isBlank()) {
+            ""
+        } else {
+            // Extract repo name from various URL formats
+            // https://github.com/user/repo.git -> repo
+            // git@github.com:user/repo.git -> repo
+            // https://github.com/user/repo -> repo
+            val urlPattern = Regex("""[:/]([^/]+?)(?:\.git)?$""")
+            urlPattern.find(cloneUrl)?.groupValues?.get(1) ?: ""
+        }
+    }
+
     val hasUnsavedChanges = name.isNotBlank() || description.isNotBlank() ||
         workspacePath.isNotBlank() || branchTemplate != "task-{taskId}" ||
-        repositoryName.isNotBlank() || cloneUrl.isNotBlank() || selectedIDEs.isNotEmpty()
+        cloneUrl.isNotBlank() || selectedIDEs.isNotEmpty()
     val requestDismiss: () -> Unit = {
         if (hasUnsavedChanges) {
             showDiscardConfirm = true
@@ -67,9 +101,39 @@ fun CreateProjectDialog(
                     text = "Create New Project",
                     style = MaterialTheme.typography.headlineSmall
                 )
-                
+
+                // Error message
+                error?.let { errorMessage ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = errorMessage,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = onDismissError) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Dismiss error",
+                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+                }
+
                 Divider()
-                
+
                 // Project section
                 Text(
                     text = "Project Details",
@@ -97,12 +161,15 @@ fun CreateProjectDialog(
                 
                 OutlinedTextField(
                     value = workspacePath,
-                    onValueChange = { workspacePath = it },
+                    onValueChange = {
+                        workspacePath = it
+                        workspacePathManuallyEdited = true
+                    },
                     label = { Text("Workspace Path *") },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isSaving,
                     singleLine = true,
-                    placeholder = { Text("/Users/username/workspaces") }
+                    supportingText = { Text("Auto-configured from project name (editable)") }
                 )
                 
                 OutlinedTextField(
@@ -122,16 +189,7 @@ fun CreateProjectDialog(
                     text = "Primary Repository",
                     style = MaterialTheme.typography.titleMedium
                 )
-                
-                OutlinedTextField(
-                    value = repositoryName,
-                    onValueChange = { repositoryName = it },
-                    label = { Text("Repository Name *") },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isSaving,
-                    singleLine = true
-                )
-                
+
                 OutlinedTextField(
                     value = cloneUrl,
                     onValueChange = { cloneUrl = it },
@@ -139,7 +197,14 @@ fun CreateProjectDialog(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !isSaving,
                     singleLine = true,
-                    placeholder = { Text("https://github.com/user/repo.git") }
+                    placeholder = { Text("https://github.com/user/repo.git") },
+                    supportingText = {
+                        if (repositoryName.isNotBlank()) {
+                            Text("Repository name: $repositoryName")
+                        } else {
+                            Text("Repository name will be auto-detected from URL")
+                        }
+                    }
                 )
                 
                 // Provider dropdown
@@ -274,7 +339,7 @@ fun CreateProjectDialog(
                                 name.isNotBlank() &&
                                 workspacePath.isNotBlank() &&
                                 branchTemplate.isNotBlank() &&
-                                repositoryName.isNotBlank() &&
+                                repositoryName.isNotBlank() && // Auto-detected from URL
                                 cloneUrl.isNotBlank() &&
                                 selectedIDEs.isNotEmpty()
                     ) {
@@ -307,3 +372,8 @@ fun CreateProjectDialog(
             dismissButton = {
                 TextButton(onClick = { showDiscardConfirm = false }) {
                     Text("Keep Editing")
+                }
+            }
+        )
+    }
+}

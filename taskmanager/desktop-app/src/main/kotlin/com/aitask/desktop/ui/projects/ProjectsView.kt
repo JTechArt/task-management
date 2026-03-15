@@ -56,26 +56,28 @@ fun ProjectsView(
             }
         }
         
-        // Error message
-        uiState.error?.let { error ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f)
+        // Error message (only show when dialog is not open)
+        if (!uiState.showCreateDialog) {
+            uiState.error?.let { error ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
                     )
-                    TextButton(onClick = { viewModel.clearError() }) {
-                        Text("Dismiss")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { viewModel.clearError() }) {
+                            Text("Dismiss")
+                        }
                     }
                 }
             }
@@ -142,14 +144,16 @@ fun ProjectsView(
     if (uiState.showCreateDialog) {
         CreateProjectDialog(
             onDismiss = { viewModel.hideCreateDialog() },
-            onConfirm = { name, description, workspacePath, branchTemplate, 
+            onConfirm = { name, description, workspacePath, branchTemplate,
                           repoName, cloneUrl, provider, authType, ides ->
                 viewModel.createProject(
                     name, description, workspacePath, branchTemplate,
                     repoName, cloneUrl, provider, authType, ides
                 )
             },
-            isSaving = uiState.isSaving
+            isSaving = uiState.isSaving,
+            error = uiState.error,
+            onDismissError = { viewModel.clearError() }
         )
     }
 }
