@@ -1,5 +1,6 @@
 package com.aitask.core.domain.usecase
 
+import com.aitask.core.domain.model.CloneStatus
 import com.aitask.core.domain.model.CreateWorkspaceRequest
 import com.aitask.core.domain.model.TaskStatus
 import com.aitask.core.domain.model.Workspace
@@ -94,10 +95,37 @@ class GenerateWorkspaceUseCase(
                 taskRepository.update(updatedTask)
                 onProgress?.invoke("Workspace generation complete!")
             } else if (preparedWorkspace.isFailed) {
-                onProgress?.invoke("Workspace generation failed: ${preparedWorkspace.errorMessage}")
-                return Result.failure(WorkspaceGenerationException(
-                    preparedWorkspace.errorMessage ?: "Workspace generation failed"
-                ))
+                // Build detailed error message listing failed and successful repositories
+                val failedRepos = preparedWorkspace.repositories.filter { it.cloneStatus == CloneStatus.FAILED }
+                val successfulRepos = preparedWorkspace.repositories.filter { it.cloneStatus == CloneStatus.COMPLETED }
+
+                val errorDetails = buildString {
+                    append("Workspace generation partially failed. ")
+
+                    if (failedRepos.isNotEmpty()) {
+                        append("Failed repositories: ")
+                        append(failedRepos.joinToString(", ") { repo ->
+                            val repoEntity = repositories.find { it.id == repo.repositoryId }
+                            "${repoEntity?.name ?: "Unknown"} (${repo.errorMessage ?: "Unknown error"})"
+                        })
+                        append(". ")
+                    }
+
+                    if (successfulRepos.isNotEmpty()) {
+                        append("Successfully cloned: ")
+                        append(successfulRepos.joinToString(", ") { repo ->
+                            val repoEntity = repositories.find { it.id == repo.repositoryId }
+                            repoEntity?.name ?: "Unknown"
+                        })
+                        append(". ")
+                        append("Workspace path: ${preparedWorkspace.path}")
+                    } else {
+                        append("No repositories were successfully cloned.")
+                    }
+                }
+
+                onProgress?.invoke(errorDetails)
+                return Result.failure(WorkspaceGenerationException(errorDetails))
             }
 
             Result.success(preparedWorkspace)

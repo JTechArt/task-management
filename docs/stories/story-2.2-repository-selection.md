@@ -69,8 +69,54 @@ Efficient repository loading. No performance issues identified. Dialog handles l
 
 ### Gate Status
 
-Gate: PASS → docs/qa/gates/2.2-repository-selection.yml
+Gate: PASS_WITH_NOTES → docs/qa/gates/2.2-repository-selection.yml
+
+### Issues Addressed
+
+- ✅ REQ-002 (Medium): Enhanced partial failure reporting
+  * Error messages now list failed repositories with error details
+  * Error messages list successfully cloned repositories
+  * Workspace path included for partial success scenarios
+  * Both GenerateWorkspaceUseCase and FileSystemWorkspaceService updated
+- ✓ REQ-001 (Low): Persist last selection - Deferred as nice-to-have
+  * Smart defaults provide good UX
+  * Can be added in future iteration based on user feedback
 
 ### Recommended Status
 
-✓ Ready for Done – All acceptance criteria met. Repository selection UI complete with smart defaults, preparation summary, and error handling.
+✓ Ready for Done – All acceptance criteria met. Repository selection UI complete with smart defaults, preparation summary, and enhanced error handling for partial failures.
+
+---
+
+### Review Date: 2025-03-15 (Re-review)
+
+### Reviewed By: Quinn (Test Architect)
+
+### Code Quality Assessment
+
+Implementation is solid. RepositorySelectionDialog provides checkbox selection; smart defaults (primary or all); Workspace Preparation Summary before launch; progress tracking during cloning. Backend (FileSystemWorkspaceService) tracks per-repo clone status and invokes progress with "${repository.name}: Clone failed" during run. However, when Result.failure is returned, the UI shows a generic "Some repositories failed to clone" and clears progress—the final error does not list which repository failed. The workspace with successful clones exists on disk but the task is not updated and the user is not told what remains usable.
+
+### Refactoring Performed
+
+None.
+
+### Compliance Check
+
+- Coding Standards: ✓
+- Project Structure: ✓
+- Testing Strategy: ✓ 4 tests for default selection logic
+- All ACs Met: ⚠ AC1, AC3, AC4 full; AC2 partial (no "remembers"); AC5 partial (no final report of which repo failed)
+
+### Improvements Checklist
+
+- [ ] Enhance error message on partial failure to list which repositories failed (AC5)
+- [ ] Consider returning partial workspace to UI so user can see path and which repos succeeded (AC5 "what remains usable")
+- [ ] AC2 "remembers" last selection: documented as nice-to-have for future iteration
+
+### Gate Status
+
+Gate: CONCERNS → docs/qa/gates/2.2-repository-selection.yml
+
+### Recommended Status
+
+✗ Changes Required – See top_issues in gate file. Priority: AC5 partial-failure reporting.

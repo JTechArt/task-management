@@ -112,10 +112,22 @@ class FileSystemWorkspaceService(
             }
             
             val allSuccessful = updatedRepos.all { it.cloneStatus == CloneStatus.COMPLETED }
+
+            // Build detailed error message if there are failures
+            val errorMessage = if (!allSuccessful) {
+                val failedRepos = updatedRepos.filter { it.cloneStatus == CloneStatus.FAILED }
+                val failedNames = failedRepos.mapNotNull { workspaceRepo ->
+                    repositories.find { it.id == workspaceRepo.repositoryId }?.name
+                }
+                "Failed to clone ${failedRepos.size} ${if (failedRepos.size == 1) "repository" else "repositories"}: ${failedNames.joinToString(", ")}"
+            } else {
+                null
+            }
+
             val updatedWorkspace = workspace.copy(
                 repositories = updatedRepos,
                 status = if (allSuccessful) WorkspaceStatus.COMPLETED else WorkspaceStatus.FAILED,
-                errorMessage = if (!allSuccessful) "Some repositories failed to clone" else null
+                errorMessage = errorMessage
             )
             
             // Save workspace metadata
