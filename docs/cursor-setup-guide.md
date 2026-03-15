@@ -12,7 +12,7 @@ This project is a Kotlin/Compose desktop app in [`taskmanager`](/Users/arthurho/
 Run:
 
 ```bash
-./setup-java21.sh
+./taskmanager/scripts/setup-java21.sh
 ```
 
 That script locates a local JDK 21, verifies it, and runs a Gradle build with it.
@@ -71,7 +71,7 @@ Run app:
 
 ```bash
 cd taskmanager
-./run-local.sh
+./scripts/run-local.sh
 ```
 
 Run app without DB bootstrap:
@@ -92,7 +92,7 @@ cd taskmanager
 
 Check these in order:
 
-1. `java -version` and `./setup-java21.sh`
+1. `java -version` and `./taskmanager/scripts/setup-java21.sh`
 2. `taskmanager/.env.local`
 3. `docker compose ps`
 4. `cd taskmanager && ./gradlew :desktop-app:build -x test`

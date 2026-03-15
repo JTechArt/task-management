@@ -1,0 +1,78 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "TaskManager: Build Desktop App",
+            "type": "shell",
+            "command": "JAVA_HOME=\"$(./scripts/resolve-java21.sh)\" PATH=\"$(./scripts/resolve-java21.sh)/bin:${env:PATH}\" ./gradlew --console=plain :desktop-app:build",
+            "options": {
+                "cwd": "${workspaceFolder}/taskmanager"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "TaskManager: Run Local Desktop App",
+            "type": "shell",
+            "command": "./scripts/run-local.sh",
+            "options": {
+                "cwd": "${workspaceFolder}/taskmanager"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "TaskManager: Debug Local Desktop App",
+            "type": "shell",
+            "command": "./scripts/debug-local.sh",
+            "isBackground": true,
+            "options": {
+                "cwd": "${workspaceFolder}/taskmanager"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": {
+                "owner": "custom",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^(.*)$",
+                    "file": 1
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".",
+                    "endsPattern": "Listening for transport dt_socket at address: 5005"
+                }
+            }
+        },
+        {
+            "label": "TaskManager: Stop Debug Gradle",
+            "type": "shell",
+            "command": "pkill",
+            "args": [
+                "-f",
+                "desktop-app:debugDesktopApp"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/taskmanager"
+            },
+            "presentation": {
+                "reveal": "never",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

@@ -3,8 +3,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="${ROOT_DIR}/taskmanager"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RESOLVER="${PROJECT_DIR}/scripts/resolve-java21.sh"
 
 echo "🔍 Checking Java installation..."

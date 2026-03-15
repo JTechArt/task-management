@@ -1,16 +1,19 @@
-# TaskManager
+# Task Management
 
-TaskManager is a Kotlin/JVM 21 desktop app built with Compose Desktop. The project is split into:
+This repository contains the `taskmanager` application, a Kotlin/JVM 21 desktop app built with Compose Desktop.
 
-- `core`: domain logic, config loading, persistence, Git/workspace services, tests
-- `desktop-app`: desktop UI, app bootstrap, view models, log configuration
+Project layout:
+
+- `taskmanager/core`: domain logic, config loading, persistence, Git/workspace services, tests
+- `taskmanager/desktop-app`: desktop UI, app bootstrap, view models, log configuration
+- `taskmanager/scripts`: local run, debug, setup, and packaging scripts
 
 ## Requirements
 
 - Java 21
 - Docker Desktop or another Docker runtime
 
-The repo includes `scripts/resolve-java21.sh`, and the run/debug scripts use it automatically.
+The app scripts in `taskmanager/scripts` resolve Java 21 automatically.
 
 ## First-time setup
 
@@ -26,7 +29,7 @@ docker compose up -d postgres
 For normal local development:
 
 ```bash
-./run-local.sh
+./taskmanager/scripts/run-local.sh
 ```
 
 What it does:
@@ -35,12 +38,18 @@ What it does:
 - loads `.env.local` if present
 - starts Postgres with `docker compose` if needed
 - runs `:desktop-app:runDesktopApp`
-- writes console output to `logs/taskmanager-console.log`
+- writes console output to `taskmanager/logs/taskmanager-console.log`
 
 For debugger attach on port `5005`:
 
 ```bash
-./scripts/debug-local.sh
+./taskmanager/scripts/debug-local.sh
+```
+
+To verify Java 21 and run a clean build:
+
+```bash
+./taskmanager/scripts/setup-java21.sh
 ```
 
 ## Cursor / VS Code launch configs
@@ -105,7 +114,7 @@ The local Docker mapping is `5433 -> 5432`.
 Local run and debug scripts append console output to:
 
 ```bash
-logs/taskmanager-console.log
+taskmanager/logs/taskmanager-console.log
 ```
 
 ## Packaging
@@ -113,5 +122,12 @@ logs/taskmanager-console.log
 Build the desktop artifact:
 
 ```bash
+cd taskmanager
 ./gradlew :desktop-app:build
+```
+
+Build the native package for the current OS:
+
+```bash
+./taskmanager/scripts/build-jpackage.sh
 ```

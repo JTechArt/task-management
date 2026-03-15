@@ -4,7 +4,7 @@
 
 set -euo pipefail
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 export JAVA_HOME="$(./scripts/resolve-java21.sh)"
 export PATH="${JAVA_HOME}/bin:${PATH}"
