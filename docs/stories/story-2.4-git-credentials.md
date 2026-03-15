@@ -92,7 +92,7 @@ This infrastructure is better suited for **Epic 3: Monitoring & Management** whe
 
 ### Gate Status
 
-Gate: DEFERRED_TO_EPIC_3 → docs/qa/gates/2.4-git-credentials.yml
+Gate: WAIVED (Deferred to Epic 3) → docs/qa/gates/2.4-git-credentials.yml
 
 ### Recommended Status
 
@@ -109,3 +109,13 @@ When implementing in Epic 3, include:
 5. **Credential Masking**: Systematic masking in logs, UI, and exports
 6. **Migration**: Handle existing repositories
 7. **Testing**: Comprehensive security testing
+
+---
+
+### Review Date: 2025-03-15 (Re-review)
+
+### Reviewed By: Quinn (Test Architect)
+
+### Verification
+
+Confirmed current state: FileSystemWorkspaceService passes `GitAuthConfig(username="git", password=null, token=null)` for all clones. SSH URLs (git@...) work via JGit system SSH config. HTTPS/TOKEN URLs would fail for private repos without credential storage. Gate updated to WAIVED (schema-compliant) with deferral rationale. Deferral decision remains appropriate.
