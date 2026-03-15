@@ -86,10 +86,14 @@ class GenerateWorkspaceUseCase(
             
             val preparedWorkspace = preparedWorkspaceResult.getOrThrow()
 
-            // Update task with workspace path and status only if workspace is completed
+            // Update task with workspace path, branch name, and status only if workspace is completed
             if (preparedWorkspace.isCompleted) {
+                // Get branch name from first repository (all should have the same branch name)
+                val branchName = preparedWorkspace.repositories.firstOrNull()?.branchName
+
                 val updatedTask = task.copy(
                     workspacePath = preparedWorkspace.path,
+                    branchName = branchName,
                     status = TaskStatus.IN_PROGRESS
                 )
                 taskRepository.update(updatedTask)

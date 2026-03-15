@@ -131,7 +131,65 @@ class JGitService : GitService {
             Result.success(false)
         }
     }
-    
+
+    override suspend fun validateRemoteRepository(
+        url: String,
+        authConfig: GitAuthConfig
+    ): Result<com.aitask.core.domain.service.RepositoryInfo> = withContext(Dispatchers.IO) {
+        try {
+            // Use ls-remote to validate repository access without cloning
+            val lsRemoteCommand = Git.lsRemoteRepository()
+                .setRemote(url)
+                .setHeads(true)
+
+            // Configure authentication (only HTTPS and TOKEN for now)
+            when (authConfig.authType) {
+                AuthType.HTTPS -> {
+                    if (authConfig.username != null && authConfig.password != null) {
+                        lsRemoteCommand.setCredentialsProvider(
+                            UsernamePasswordCredentialsProvider(authConfig.username, authConfig.password)
+                        )
+                    }
+                }
+                AuthType.TOKEN -> {
+                    if (authConfig.token != null) {
+                        lsRemoteCommand.setCredentialsProvider(
+                            UsernamePasswordCredentialsProvider("token", authConfig.token)
+                        )
+                    }
+                }
+                AuthType.SSH -> {
+                    // SSH validation not implemented yet
+                    // For now, assume SSH repositories are accessible
+                }
+            }
+
+            // Execute ls-remote
+            val refs = lsRemoteCommand.call()
+
+            // Find default branch (usually main or master)
+            val defaultBranch = refs.firstOrNull { ref ->
+                ref.name == "refs/heads/main" || ref.name == "refs/heads/master"
+            }?.name?.removePrefix("refs/heads/")
+
+            Result.success(
+                com.aitask.core.domain.service.RepositoryInfo(
+                    url = url,
+                    isAccessible = true,
+                    defaultBranch = defaultBranch ?: "main"
+                )
+            )
+        } catch (e: Exception) {
+            Result.success(
+                com.aitask.core.domain.service.RepositoryInfo(
+                    url = url,
+                    isAccessible = false,
+                    errorMessage = e.message ?: "Failed to access repository"
+                )
+            )
+        }
+    }
+
 }
 
 class GitCloneException(message: String, cause: Throwable? = null) : Exception(message, cause)

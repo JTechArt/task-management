@@ -2,6 +2,7 @@ package com.aitask.core.infrastructure.workspace
 
 import com.aitask.core.domain.model.*
 import com.aitask.core.domain.service.*
+import com.aitask.core.domain.util.BranchTemplateExpander
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -31,12 +32,15 @@ class FileSystemWorkspaceService(
                 workspaceDir.mkdirs()
             }
             
+            // Generate branch name from template
+            val branchName = BranchTemplateExpander.expand(project.branchTemplate, task)
+
             // Create workspace repositories list
             val workspaceRepos = selectedRepositories.map { repo ->
                 WorkspaceRepository(
                     repositoryId = repo.id,
                     localPath = "./${sanitizeName(repo.name)}",
-                    branchName = null,
+                    branchName = branchName,
                     cloneStatus = CloneStatus.PENDING
                 )
             }
@@ -94,9 +98,30 @@ class FileSystemWorkspaceService(
                 )
                 
                 if (cloneResult.isSuccess) {
+                    // Create and checkout branch if branch name is specified
+                    var branchCreationError: String? = null
+                    if (workspaceRepo.branchName != null) {
+                        onProgress?.invoke("${repository.name}: Creating branch ${workspaceRepo.branchName}...")
+
+                        val branchResult = gitService.createBranch(
+                            repositoryPath = repoPath,
+                            branchName = workspaceRepo.branchName,
+                            checkout = true
+                        )
+
+                        if (branchResult.isSuccess) {
+                            onProgress?.invoke("${repository.name}: Branch ${workspaceRepo.branchName} created and checked out")
+                        } else {
+                            branchCreationError = branchResult.exceptionOrNull()?.message
+                            onProgress?.invoke("${repository.name}: Branch creation failed - ${branchCreationError}")
+                        }
+                    }
+
+                    // Mark as completed even if branch creation failed (clone succeeded)
                     updatedRepos.add(
                         workspaceRepo.copy(
-                            cloneStatus = CloneStatus.COMPLETED
+                            cloneStatus = CloneStatus.COMPLETED,
+                            errorMessage = branchCreationError
                         )
                     )
                     onProgress?.invoke("${repository.name}: Cloned successfully")
