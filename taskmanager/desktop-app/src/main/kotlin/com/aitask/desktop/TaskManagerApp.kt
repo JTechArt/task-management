@@ -15,6 +15,7 @@ import com.aitask.core.logging.logStartup
 import com.aitask.desktop.ui.*
 import com.aitask.desktop.ui.projects.ProjectsView
 import com.aitask.desktop.ui.tasks.TasksView
+import com.aitask.desktop.ui.rules.RulesView
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}

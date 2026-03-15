@@ -8,6 +8,7 @@ import com.aitask.core.domain.service.WorkspaceService
 import com.aitask.core.domain.usecase.*
 import com.aitask.core.domain.validation.ProjectValidator
 import com.aitask.core.domain.validation.RepositoryValidator
+import com.aitask.core.domain.validation.RuleValidator
 import com.aitask.core.domain.validation.TaskValidator
 import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.ide.DesktopIDEService
@@ -35,7 +36,11 @@ object DependencyContainer {
     val activityRepository: ActivityRepository by lazy {
         InMemoryActivityRepository()
     }
-    
+
+    val ruleRepository: RuleRepository by lazy {
+        RuleRepositoryImpl()
+    }
+
     // Validators
     val projectValidator: ProjectValidator by lazy {
         ProjectValidator()
@@ -48,7 +53,11 @@ object DependencyContainer {
     val taskValidator: TaskValidator by lazy {
         TaskValidator()
     }
-    
+
+    val ruleValidator: RuleValidator by lazy {
+        RuleValidator()
+    }
+
     // Services
     val gitService: GitService by lazy {
         JGitService()
@@ -141,6 +150,39 @@ object DependencyContainer {
             ideService,
             activityRepository
         )
+    }
+
+    // Rule Use Cases
+    val createRuleUseCase: CreateRuleUseCase by lazy {
+        CreateRuleUseCase(ruleRepository, ruleValidator)
+    }
+
+    val updateRuleUseCase: UpdateRuleUseCase by lazy {
+        UpdateRuleUseCase(ruleRepository, ruleValidator)
+    }
+
+    val deleteRuleUseCase: DeleteRuleUseCase by lazy {
+        DeleteRuleUseCase(ruleRepository)
+    }
+
+    val getRulesUseCase: GetRulesUseCase by lazy {
+        GetRulesUseCase(ruleRepository)
+    }
+
+    val attachRuleUseCase: AttachRuleUseCase by lazy {
+        AttachRuleUseCase(ruleRepository, projectRepository)
+    }
+
+    val detachRuleUseCase: DetachRuleUseCase by lazy {
+        DetachRuleUseCase(ruleRepository)
+    }
+
+    val exportRuleUseCase: ExportRuleUseCase by lazy {
+        ExportRuleUseCase(ruleRepository)
+    }
+
+    val importRuleUseCase: ImportRuleUseCase by lazy {
+        ImportRuleUseCase(ruleRepository, ruleValidator)
     }
 }
 
