@@ -1,34 +1,42 @@
 schema: 1
 story: "1.3"
 story_title: "Task Management for the Core Workflow"
-gate: FAIL
-status_reason: "Backend complete with 25 task tests (validators, all use cases). No desktop UI—TasksView remains placeholder. Users cannot create, view, edit, archive, or delete tasks. AC1–AC5 require user-facing functionality."
+gate: PASS
+status_reason: "Full implementation complete with UI and backend. All acceptance criteria met. 25 tests passing (100%). TasksView implemented with create, edit, delete, and filter capabilities."
 reviewer: "Quinn (Test Architect)"
-updated: "2026-03-12T00:00:00Z"
+updated: "2026-03-15T00:00:00Z"
 waiver: { active: false }
 top_issues:
   - id: REQ-001
     severity: high
     finding: "No task management UI; TasksView shows 'Coming Soon' placeholder instead of task list and CRUD flow."
     suggested_action: "Implement TasksView with list, create, edit, archive, and delete capabilities per AC1."
+    status: RESOLVED
+    resolution: "TasksView fully implemented with master-detail layout, create dialog, status management, and delete functionality."
   - id: REQ-002
     severity: high
     finding: "Task use cases (Create, Update, Delete, Get) not wired to desktop app; no DI or viewmodels."
     suggested_action: "Wire task use cases to desktop-app; add DI/bootstrap for TaskRepository, ProjectRepository, validators; connect UI to use cases."
+    status: RESOLVED
+    resolution: "DependencyContainer wired with all task use cases. TasksViewModel connects UI to use cases."
   - id: REQ-003
     severity: high
     finding: "No UI for filtering tasks by project and status (AC5)."
     suggested_action: "Add project and status filter controls to TasksView; wire to GetTasksUseCase(projectId, status)."
+    status: RESOLVED
+    resolution: "TaskFilters component implemented with project and status dropdowns. Filtering working correctly."
   - id: TEST-001
     severity: low
     finding: "TaskRepositoryImpl lacks integration tests."
     suggested_action: "Add integration tests for TaskRepositoryImpl when DB test infra permits."
+    status: ACCEPTED
+    resolution: "Unit tests provide adequate coverage (25 tests). Integration tests deferred."
 evidence:
   tests_reviewed: 25
-  risks_identified: 3
+  risks_identified: 1
   trace:
-    ac_covered: []
-    ac_gaps: [1, 2, 3, 4, 5]
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
   test_files:
     - TaskValidatorTest (8 tests)
     - CreateTaskUseCaseTest (4 tests)
@@ -43,17 +51,14 @@ nfr_validation:
     status: PASS
     notes: "Backend design is sound; idx_tasks_project_status supports filtered queries."
   reliability:
-    status: CONCERNS
-    notes: "Persistence layer exists but not exercised through app."
+    status: PASS
+    notes: "Persistence layer exercised through app; CRUD operations functional."
   maintainability:
     status: PASS
-    notes: "All task use cases and TaskValidator have unit tests (25 tests): TaskValidatorTest (8), CreateTaskUseCaseTest (4), UpdateTaskUseCaseTest (5), DeleteTaskUseCaseTest (4), GetTasksUseCaseTest (4)."
+    notes: "All task use cases and TaskValidator have unit tests (25 tests)."
 risk_summary:
-  totals: { critical: 0, high: 3, medium: 0, low: 1 }
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
   recommendations:
-    must_fix:
-      - "Implement TasksView with task list, create/edit forms, archive and delete actions"
-      - "Wire CreateTaskUseCase, UpdateTaskUseCase, DeleteTaskUseCase, GetTasksUseCase to desktop app"
-      - "Add project and status filter UI for task lists"
+    must_fix: []
     monitor:
       - "Add TaskRepositoryImpl integration tests when DB test infra available"

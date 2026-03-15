@@ -72,15 +72,7 @@ fun PlaceholderView(
 
 // ProjectsView is now in projects/ProjectsView.kt
 // TasksView is now in tasks/TasksView.kt
-
-@Composable
-fun RulesView(modifier: Modifier = Modifier) {
-    PlaceholderView(
-        title = "Rules",
-        description = "Create and manage reusable rule sets for IDE and AI tools",
-        modifier = modifier
-    )
-}
+// RulesView is now in rules/RulesView.kt
 
 @Composable
 fun IntegrationsView(modifier: Modifier = Modifier) {

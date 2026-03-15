@@ -5,11 +5,15 @@ plugins {
     jacoco
 }
 
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.SourceSetContainer
+
 val composeVersion: String by project
 val coroutinesVersion: String by project
 val kotlinLoggingVersion: String by project
 val logbackVersion: String by project
 val junitVersion: String by project
+val sourceSets = the<SourceSetContainer>()
 
 dependencies {
     // Core module
@@ -73,6 +77,45 @@ compose.desktop {
     }
 }
 
+val localDevelopmentEnvironment = mapOf(
+    "DB_HOST" to "localhost",
+    "DB_PORT" to "5433",
+    "DB_NAME" to "taskmanager",
+    "DB_USER" to "taskmanager",
+    "DB_PASSWORD" to "taskmanager_local",
+    "APP_NAME" to "TaskManager"
+)
+
+fun JavaExec.configureDesktopLaunch(debugEnabled: Boolean) {
+    group = "application"
+    dependsOn(tasks.named("classes"))
+    classpath = sourceSets.named("main").get().runtimeClasspath
+    mainClass.set("com.aitask.desktop.TaskManagerAppKt")
+    workingDir = rootProject.projectDir
+    environment(localDevelopmentEnvironment)
+    standardInput = System.`in`
+
+    if (debugEnabled) {
+        jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005")
+    }
+}
+
+tasks.register<JavaExec>("runDesktopApp") {
+    description = "Runs the desktop app with local development defaults."
+    configureDesktopLaunch(debugEnabled = false)
+}
+
+tasks.register<JavaExec>("debugDesktopApp") {
+    description = "Runs the desktop app and waits for a debugger on port 5005."
+    configureDesktopLaunch(debugEnabled = true)
+}
+
+tasks.register<JavaExec>("runDesktopAppNoDb") {
+    description = "Runs the desktop app without database bootstrap."
+    configureDesktopLaunch(debugEnabled = false)
+    environment("BOOTSTRAP_DATABASE", "false")
+}
+
 tasks.test {
     finalizedBy(tasks.jacocoTestReport)
 }
@@ -84,4 +127,3 @@ tasks.jacocoTestReport {
         html.required.set(true)
     }
 }
-

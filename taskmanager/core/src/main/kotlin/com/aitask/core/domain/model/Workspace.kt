@@ -49,7 +49,8 @@ data class Workspace(
 data class CreateWorkspaceRequest(
     val taskId: UUID,
     val projectId: UUID,
-    val selectedRepositories: List<UUID> = emptyList()
+    val selectedRepositories: List<UUID> = emptyList(),
+    val ideType: IDEType? = null
 )
 
 data class WorkspaceMetadata(

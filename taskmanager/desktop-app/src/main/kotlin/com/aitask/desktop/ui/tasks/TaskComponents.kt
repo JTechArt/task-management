@@ -242,6 +242,7 @@ fun TaskDetailView(
     availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
     preferredIDEs: List<IDEType> = emptyList(),
     isGeneratingWorkspace: Boolean = false,
+    workspaceGenerationProgress: String? = null,
     isLaunchingIDE: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -313,30 +314,62 @@ fun TaskDetailView(
         )
 
         if (task.workspacePath == null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "No workspace generated yet",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-                if (onGenerateWorkspace != null) {
-                    Button(
-                        onClick = { onGenerateWorkspace(task.id) },
-                        enabled = !isGeneratingWorkspace
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "No workspace generated yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    if (onGenerateWorkspace != null) {
+                        Button(
+                            onClick = { onGenerateWorkspace(task.id) },
+                            enabled = !isGeneratingWorkspace
+                        ) {
+                            if (isGeneratingWorkspace) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(if (isGeneratingWorkspace) "Generating..." else "Generate Workspace")
+                        }
+                    }
+                }
+
+                // Show progress message if generating
+                if (isGeneratingWorkspace && workspaceGenerationProgress != null) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
                     ) {
-                        if (isGeneratingWorkspace) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
-                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = workspaceGenerationProgress,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         }
-                        Text(if (isGeneratingWorkspace) "Generating..." else "Generate Workspace")
                     }
                 }
             }

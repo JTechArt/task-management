@@ -2,6 +2,8 @@ package com.aitask.core.infrastructure.workspace
 
 import com.aitask.core.domain.model.*
 import com.aitask.core.domain.service.*
+import com.aitask.core.domain.util.BranchTemplateExpander
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -16,6 +18,7 @@ import kotlin.io.path.deleteRecursively
 class FileSystemWorkspaceService(
     private val gitService: GitService
 ) : WorkspaceService {
+    private val logger = KotlinLogging.logger {}
     
     override suspend fun createWorkspace(
         task: Task,
@@ -31,12 +34,15 @@ class FileSystemWorkspaceService(
                 workspaceDir.mkdirs()
             }
             
+            // Generate branch name from template
+            val branchName = BranchTemplateExpander.expand(project.branchTemplate, task)
+
             // Create workspace repositories list
             val workspaceRepos = selectedRepositories.map { repo ->
                 WorkspaceRepository(
                     repositoryId = repo.id,
                     localPath = "./${sanitizeName(repo.name)}",
-                    branchName = null,
+                    branchName = branchName,
                     cloneStatus = CloneStatus.PENDING
                 )
             }
@@ -94,28 +100,72 @@ class FileSystemWorkspaceService(
                 )
                 
                 if (cloneResult.isSuccess) {
+                    // Create and checkout branch if branch name is specified
+                    var branchCreationError: String? = null
+                    if (workspaceRepo.branchName != null) {
+                        onProgress?.invoke("${repository.name}: Creating branch ${workspaceRepo.branchName}...")
+
+                        val branchResult = gitService.createBranch(
+                            repositoryPath = repoPath,
+                            branchName = workspaceRepo.branchName,
+                            checkout = true
+                        )
+
+                        if (branchResult.isSuccess) {
+                            onProgress?.invoke("${repository.name}: Branch ${workspaceRepo.branchName} created and checked out")
+                        } else {
+                            branchCreationError = branchResult.exceptionOrNull()?.message
+                            onProgress?.invoke("${repository.name}: Branch creation failed - ${branchCreationError}")
+                        }
+                    }
+
+                    // Mark as completed even if branch creation failed (clone succeeded)
                     updatedRepos.add(
                         workspaceRepo.copy(
-                            cloneStatus = CloneStatus.COMPLETED
+                            cloneStatus = CloneStatus.COMPLETED,
+                            errorMessage = branchCreationError
                         )
                     )
                     onProgress?.invoke("${repository.name}: Cloned successfully")
                 } else {
+                    val cloneError = cloneResult.exceptionOrNull()
+                    val cloneErrorMessage = cloneError?.rootCauseMessage() ?: "Unknown clone failure"
+                    val guidance = repository.authType.cloneGuidance()
+                    val detailedMessage = listOf(cloneErrorMessage, guidance)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" ")
+
+                    logger.error(cloneError) {
+                        "Clone failed for repository ${repository.name} (${repository.cloneUrl}) with authType=${repository.authType}: $detailedMessage"
+                    }
+
                     updatedRepos.add(
                         workspaceRepo.copy(
                             cloneStatus = CloneStatus.FAILED,
-                            errorMessage = cloneResult.exceptionOrNull()?.message
+                            errorMessage = detailedMessage
                         )
                     )
-                    onProgress?.invoke("${repository.name}: Clone failed")
+                    onProgress?.invoke("${repository.name}: Clone failed - $detailedMessage")
                 }
             }
             
             val allSuccessful = updatedRepos.all { it.cloneStatus == CloneStatus.COMPLETED }
+
+            // Build detailed error message if there are failures
+            val errorMessage = if (!allSuccessful) {
+                val failedRepos = updatedRepos.filter { it.cloneStatus == CloneStatus.FAILED }
+                val failedNames = failedRepos.mapNotNull { workspaceRepo ->
+                    repositories.find { it.id == workspaceRepo.repositoryId }?.name
+                }
+                "Failed to clone ${failedRepos.size} ${if (failedRepos.size == 1) "repository" else "repositories"}: ${failedNames.joinToString(", ")}"
+            } else {
+                null
+            }
+
             val updatedWorkspace = workspace.copy(
                 repositories = updatedRepos,
                 status = if (allSuccessful) WorkspaceStatus.COMPLETED else WorkspaceStatus.FAILED,
-                errorMessage = if (!allSuccessful) "Some repositories failed to clone" else null
+                errorMessage = errorMessage
             )
             
             // Save workspace metadata
@@ -125,6 +175,7 @@ class FileSystemWorkspaceService(
             
             Result.success(updatedWorkspace)
         } catch (e: Exception) {
+            logger.error(e) { "Failed to prepare workspace ${workspace.path}: ${e.rootCauseMessage()}" }
             Result.failure(WorkspacePreparationException("Failed to prepare workspace: ${e.message}", e))
         }
     }
@@ -209,12 +260,25 @@ class FileSystemWorkspaceService(
             metadataFile.writeText(json)
         } catch (e: Exception) {
             // Log error but don't fail workspace creation
-            println("Warning: Failed to save workspace metadata: ${e.message}")
+            logger.warn(e) { "Failed to save workspace metadata for ${workspace.path}: ${e.rootCauseMessage()}" }
         }
     }
+}
+
+private fun Throwable.rootCauseMessage(): String {
+    val rootCause = generateSequence(this) { it.cause }.last()
+    return rootCause.message ?: this.message ?: this.javaClass.simpleName
+}
+
+private fun AuthType.cloneGuidance(): String = when (this) {
+    AuthType.HTTPS ->
+        "Repository is configured for HTTPS auth, but this app does not yet persist HTTPS credentials. Use a public repo, embed credentials in the clone URL, or switch to SSH."
+    AuthType.TOKEN ->
+        "Repository is configured for token auth, but this app does not yet persist repository tokens. Use a public repo, embed credentials in the clone URL, or switch to SSH."
+    AuthType.SSH ->
+        "Check that your SSH key/agent is available to JGit and that the clone URL is valid."
 }
 
 class WorkspaceCreationException(message: String, cause: Throwable? = null) : Exception(message, cause)
 class WorkspacePreparationException(message: String, cause: Throwable? = null) : Exception(message, cause)
 class WorkspaceCleanupException(message: String, cause: Throwable? = null) : Exception(message, cause)
-

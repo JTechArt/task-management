@@ -1,0 +1,43 @@
+schema: 1
+story: "2.6"
+story_title: "Rule-Aware Workspace Preparation"
+gate: PASS
+status_reason: "AC1-AC4 fully implemented. AC5 (activity history) explicitly deferred per story; Workspace.appliedRules provides traceability. GenerateWorkspaceUseCaseTest fixed during review. IDE selection in workspace flow noted as future enhancement."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-15T19:00:00Z"
+waiver: { active: false }
+top_issues:
+  - id: REQ-001
+    severity: medium
+    finding: "AC5: Successful rule application not recorded in task activity history"
+    suggested_action: "Add ActivityType.RULES_APPLIED and record activity via ActivityRepository when rules are successfully applied"
+  - id: UX-001
+    severity: low
+    finding: "IDE type not passed to CreateWorkspaceRequest from TasksViewModel – rules written to .aitask/rules instead of IDE-specific paths (.cursor/rules, .vscode/rules)"
+    suggested_action: "Consider adding IDE selection to workspace generation flow, or pass preferred IDE from project repositories"
+evidence:
+  tests_reviewed: 12
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: [5]
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Workspace path from project config. validateWorkspace checks exists and isDirectory. No user-controlled path traversal in rule application."
+  performance:
+    status: PASS
+    notes: "Rule determination and application are straightforward. No N+1 patterns."
+  reliability:
+    status: PASS
+    notes: "Rule application failures reported as warnings; workspace generation continues. AC4 satisfied."
+  maintainability:
+    status: PASS
+    notes: "12 unit tests. Clean separation: ApplyRulesToWorkspaceUseCase, FileSystemRuleApplicationService. GenerateWorkspaceUseCaseTest fixed to include rule application mock."
+recommendations:
+  immediate: []
+  future:
+    - action: "Implement AC5: Record rule application in activity history"
+      refs: ["taskmanager/core/src/main/kotlin/com/aitask/core/domain/usecase/GenerateWorkspaceUseCase.kt", "Activity.kt"]
+    - action: "Pass ideType to CreateWorkspaceRequest for IDE-specific rule paths"
+      refs: ["taskmanager/desktop-app/src/main/kotlin/com/aitask/desktop/ui/viewmodel/TasksViewModel.kt", "RepositorySelectionDialog.kt"]

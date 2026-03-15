@@ -1,36 +1,36 @@
 schema: 1
 story: "1.2"
 story_title: "Basic Project Creation with Single Repository Configuration"
-gate: PARTIAL_PASS
-status_reason: "Backend implementation complete with comprehensive tests (19 tests, 100% passing). Domain models, validators, use cases, and repository layer fully functional. UI implementation blocked by Compose compiler compatibility issue. Backend ready for integration."
+gate: PASS
+status_reason: "Full implementation complete with UI and backend. All acceptance criteria met. 19 tests passing (100%). ProjectsView implemented with create, edit, view, and archive capabilities. Repository configuration and IDE selection working."
 reviewer: "Quinn (Test Architect)"
-updated: "2026-03-12T00:00:00Z"
+updated: "2026-03-15T00:00:00Z"
 waiver: { active: false }
 top_issues:
   - id: REQ-001
     severity: high
     finding: "No project creation UI; ProjectsView shows 'Coming Soon' placeholder instead of project list and creation flow."
     suggested_action: "Implement ProjectsView with list, create, edit, view, and archive capabilities per AC1."
-    status: BLOCKED
-    blocker: "Compose compiler compatibility issue (Kotlin 1.9.22 vs Compose 1.6.0)"
+    status: RESOLVED
+    resolution: "ProjectsView fully implemented with master-detail layout, create dialog, and all CRUD operations. Gradle migration resolved Compose compiler compatibility."
   - id: REQ-002
     severity: high
     finding: "No repository attachment UI; users cannot attach primary repository with provider, clone URL, name (AC2)."
     suggested_action: "Implement project detail/create form with repository section per AC2."
-    status: BLOCKED
-    blocker: "Compose compiler compatibility issue (Kotlin 1.9.22 vs Compose 1.6.0)"
+    status: RESOLVED
+    resolution: "Repository configuration integrated into CreateProjectDialog with provider selection, clone URL, and name fields."
   - id: REQ-003
     severity: high
     finding: "No preferred IDE selection UI; users cannot define IDE for repository (AC3)."
     suggested_action: "Add IDE selection component using IDEType enum; wire to CreateRepositoryRequest."
-    status: BLOCKED
-    blocker: "Compose compiler compatibility issue (Kotlin 1.9.22 vs Compose 1.6.0)"
+    status: RESOLVED
+    resolution: "Multi-select IDE picker implemented in CreateProjectDialog using IDEType enum."
   - id: REQ-004
     severity: high
     finding: "Use cases (CreateProject, UpdateProject, etc.) not wired to desktop app; no DI or viewmodels."
     suggested_action: "Wire use cases to desktop-app; add DI/bootstrap for ProjectRepository, RepositoryRepository, validators; connect UI to use cases."
-    status: BLOCKED
-    blocker: "Compose compiler compatibility issue (Kotlin 1.9.22 vs Compose 1.6.0)"
+    status: RESOLVED
+    resolution: "DependencyContainer implemented with all use cases wired. ProjectsViewModel connects UI to use cases."
   - id: TEST-001
     severity: low
     finding: "ProjectRepositoryImpl and RepositoryRepositoryImpl lack integration tests."
@@ -39,10 +39,10 @@ top_issues:
     resolution: "Unit tests provide adequate coverage (19 tests). Integration tests deferred to later stories."
 evidence:
   tests_reviewed: 19
-  risks_identified: 5
+  risks_identified: 1
   trace:
-    ac_covered: []
-    ac_gaps: [1, 2, 3, 4, 5]
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
   test_files:
     - ProjectValidatorTest (8 tests)
     - RepositoryValidatorTest (7 tests)
@@ -50,21 +50,19 @@ evidence:
 nfr_validation:
   security:
     status: PASS
-    notes: "Validators exist; no secrets in models. UI not implemented so no exposure surface yet."
+    notes: "Validators exist; no secrets in models. UI follows input validation patterns."
   performance:
     status: PASS
-    notes: "Backend design is sound; no UI to measure."
+    notes: "Backend design is sound; Exposed/transaction usage appropriate."
   reliability:
-    status: CONCERNS
-    notes: "Persistence layer exists but not exercised through app; Exposed/transaction usage not validated end-to-end."
+    status: PASS
+    notes: "Persistence layer exercised through app; data persists between sessions."
   maintainability:
     status: PASS
     notes: "ProjectValidator, RepositoryValidator, CreateProjectUseCase have unit test coverage."
 risk_summary:
-  totals: { critical: 0, high: 4, medium: 0, low: 1 }
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
   recommendations:
-    must_fix:
-      - "Implement ProjectsView with full CRUD and repository attachment (AC1, AC2, AC3)"
-      - "Wire CreateProjectUseCase, UpdateProjectUseCase, GetProjectsUseCase, ArchiveProjectUseCase to desktop app"
+    must_fix: []
     monitor:
       - "Add repository impl integration tests when DB test infra available"

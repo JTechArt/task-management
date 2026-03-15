@@ -23,8 +23,8 @@ dependencies {
     api("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$coroutinesVersion")
 
-    // Logging
-    api("io.github.oshai:kotlin-logging-jvm:$kotlinLoggingVersion")
+    // Logging (use multiplatform artifact for better IDE resolution; resolves to JVM for this module)
+    api("io.github.oshai:kotlin-logging:$kotlinLoggingVersion")
     api("org.slf4j:slf4j-api:$slf4jVersion")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
 
@@ -40,6 +40,7 @@ dependencies {
 
     // Git
     api("org.eclipse.jgit:org.eclipse.jgit:$jgitVersion")
+    api("org.eclipse.jgit:org.eclipse.jgit.ssh.apache:$jgitVersion")
 
     // Testing
     testImplementation(kotlin("test-junit5"))
@@ -70,4 +71,3 @@ tasks.jacocoTestReport {
         html.required.set(true)
     }
 }
-

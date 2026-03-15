@@ -18,6 +18,7 @@ class GenerateWorkspaceUseCaseTest {
     private lateinit var projectRepository: ProjectRepository
     private lateinit var repositoryRepository: RepositoryRepository
     private lateinit var workspaceService: WorkspaceService
+    private lateinit var applyRulesToWorkspaceUseCase: ApplyRulesToWorkspaceUseCase
     private lateinit var useCase: GenerateWorkspaceUseCase
     
     @BeforeEach
@@ -26,11 +27,13 @@ class GenerateWorkspaceUseCaseTest {
         projectRepository = mockk()
         repositoryRepository = mockk()
         workspaceService = mockk()
+        applyRulesToWorkspaceUseCase = mockk()
         useCase = GenerateWorkspaceUseCase(
             taskRepository,
             projectRepository,
             repositoryRepository,
-            workspaceService
+            workspaceService,
+            applyRulesToWorkspaceUseCase
         )
     }
     
@@ -125,6 +128,17 @@ class GenerateWorkspaceUseCaseTest {
         coEvery { repositoryRepository.findPrimaryByProject(projectId) } returns repository
         coEvery { workspaceService.createWorkspace(task, project, listOf(repository)) } returns Result.success(workspace)
         coEvery { workspaceService.prepareWorkspace(workspace, listOf(repository), any()) } returns Result.success(workspace)
+        coEvery { applyRulesToWorkspaceUseCase(any()) } returns Result.success(
+            AppliedRules(
+                workspacePath = workspace.path,
+                projectId = projectId,
+                ideType = null,
+                appliedRuleIds = emptyList(),
+                skippedRules = emptyList(),
+                appliedAt = Instant.now(),
+                success = true
+            )
+        )
         coEvery { taskRepository.update(any()) } returns mockk()
         
         // When
@@ -284,6 +298,17 @@ class GenerateWorkspaceUseCaseTest {
         coEvery { repositoryRepository.findByProject(projectId) } returns listOf(repo1, repo2)
         coEvery { workspaceService.createWorkspace(task, project, listOf(repo1, repo2)) } returns Result.success(workspace)
         coEvery { workspaceService.prepareWorkspace(workspace, listOf(repo1, repo2), any()) } returns Result.success(workspace)
+        coEvery { applyRulesToWorkspaceUseCase(any()) } returns Result.success(
+            AppliedRules(
+                workspacePath = workspace.path,
+                projectId = projectId,
+                ideType = null,
+                appliedRuleIds = emptyList(),
+                skippedRules = emptyList(),
+                appliedAt = Instant.now(),
+                success = true
+            )
+        )
         coEvery { taskRepository.update(any()) } returns mockk()
 
         // When

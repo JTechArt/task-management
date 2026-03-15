@@ -118,6 +118,9 @@ fun ProjectDetailView(
     project: Project,
     repositories: List<Repository>,
     onArchive: (UUID) -> Unit,
+    onAddRepository: () -> Unit = {},
+    onEditRepository: (Repository) -> Unit = {},
+    onDeleteRepository: (UUID) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -168,11 +171,25 @@ fun ProjectDetailView(
         Divider()
 
         // Repositories section
-        Text(
-            text = "Repositories",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Repositories",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Button(
+                onClick = onAddRepository,
+                modifier = Modifier.height(32.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Add Repository", style = MaterialTheme.typography.bodySmall)
+            }
+        }
 
         if (repositories.isEmpty()) {
             Text(
@@ -182,7 +199,11 @@ fun ProjectDetailView(
             )
         } else {
             repositories.forEach { repo ->
-                RepositoryCard(repo)
+                RepositoryCard(
+                    repository = repo,
+                    onEdit = { onEditRepository(repo) },
+                    onDelete = { onDeleteRepository(repo.id) }
+                )
             }
         }
     }
@@ -215,6 +236,8 @@ fun DetailRow(
 @Composable
 fun RepositoryCard(
     repository: Repository,
+    onEdit: () -> Unit = {},
+    onDelete: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -228,25 +251,58 @@ fun RepositoryCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = repository.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                if (repository.isPrimary) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(4.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = repository.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (repository.isPrimary) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(4.dp)
+                        ) {
+                            Text(
+                                text = "PRIMARY",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        Text(
-                            text = "PRIMARY",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit repository",
+                            modifier = Modifier.size(18.dp)
                         )
+                    }
+                    if (!repository.isPrimary) {
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete repository",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }

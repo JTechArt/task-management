@@ -1,0 +1,39 @@
+schema: 1
+story: "2.5"
+story_title: "Rule Set Management Across Projects and Repositories"
+gate: PASS
+status_reason: "Implementation meets all acceptance criteria. Export functionality bug (async/return) fixed during QA review. Test coverage gap for ExportRuleUseCase/ImportRuleUseCase noted as future improvement."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-15T18:30:00Z"
+waiver: { active: false }
+top_issues:
+  - id: TEST-001
+    severity: medium
+    finding: "ExportRuleUseCase and ImportRuleUseCase lack unit tests (AC5 coverage gap)"
+    suggested_action: "Add ExportRuleUseCaseTest and ImportRuleUseCaseTest to close coverage for import/export flow"
+evidence:
+  tests_reviewed: 31
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Input validation via RuleValidator. Parameterized queries in repository (Exposed SQL). No SQL injection risk."
+  performance:
+    status: PASS
+    notes: "loadAttachedProjects uses N+1 pattern; acceptable for typical project counts. Consider batch query in future."
+  reliability:
+    status: PASS
+    notes: "Error handling in ViewModel. Import skips invalid rules and reports failures."
+  maintainability:
+    status: PASS
+    notes: "31 unit tests for core use cases. Clean architecture. Test gap only for Export/Import."
+recommendations:
+  immediate: []
+  future:
+    - action: "Add ExportRuleUseCaseTest and ImportRuleUseCaseTest"
+      refs: ["taskmanager/core/src/main/kotlin/com/aitask/core/domain/usecase/ExportRuleUseCase.kt", "ImportRuleUseCase.kt"]
+    - action: "Consider batch repository method for loadAttachedProjects to avoid N+1 queries"
+      refs: ["taskmanager/desktop-app/src/main/kotlin/com/aitask/desktop/ui/viewmodel/RulesViewModel.kt"]

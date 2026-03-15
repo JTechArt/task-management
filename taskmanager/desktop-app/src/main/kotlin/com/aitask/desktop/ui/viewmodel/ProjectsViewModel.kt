@@ -18,6 +18,9 @@ class ProjectsViewModel(
     private val createProjectUseCase: CreateProjectUseCase = DependencyContainer.createProjectUseCase,
     private val updateProjectUseCase: UpdateProjectUseCase = DependencyContainer.updateProjectUseCase,
     private val archiveProjectUseCase: ArchiveProjectUseCase = DependencyContainer.archiveProjectUseCase,
+    private val createRepositoryUseCase: CreateRepositoryUseCase = DependencyContainer.createRepositoryUseCase,
+    private val updateRepositoryUseCase: UpdateRepositoryUseCase = DependencyContainer.updateRepositoryUseCase,
+    private val deleteRepositoryUseCase: DeleteRepositoryUseCase = DependencyContainer.deleteRepositoryUseCase,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
@@ -145,6 +148,118 @@ class ProjectsViewModel(
     fun clearError() {
         uiState = uiState.copy(error = null)
     }
+
+    // Repository Management
+    fun showAddRepositoryDialog() {
+        uiState = uiState.copy(showAddRepositoryDialog = true, editingRepository = null, error = null)
+    }
+
+    fun showEditRepositoryDialog(repository: Repository) {
+        uiState = uiState.copy(showAddRepositoryDialog = true, editingRepository = repository, error = null)
+    }
+
+    fun hideRepositoryDialog() {
+        uiState = uiState.copy(showAddRepositoryDialog = false, editingRepository = null, error = null)
+    }
+
+    fun createRepository(
+        projectId: java.util.UUID,
+        name: String,
+        cloneUrl: String,
+        provider: GitProvider,
+        authType: AuthType,
+        preferredIDEs: List<IDEType>,
+        isPrimary: Boolean = false
+    ) {
+        uiState = uiState.copy(isSaving = true, error = null)
+        scope.launch {
+            val request = CreateRepositoryRequest(
+                projectId = projectId,
+                name = name,
+                cloneUrl = cloneUrl,
+                provider = provider,
+                authType = authType,
+                preferredIDEs = preferredIDEs,
+                isPrimary = isPrimary
+            )
+
+            val result = createRepositoryUseCase(request)
+            result.fold(
+                onSuccess = { repository ->
+                    uiState = uiState.copy(
+                        isSaving = false,
+                        showAddRepositoryDialog = false
+                    )
+                    // Reload repositories for the current project
+                    uiState.selectedProject?.let { loadProjectRepositories(it.id) }
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isSaving = false,
+                        error = error.message ?: "Failed to create repository"
+                    )
+                }
+            )
+        }
+    }
+
+    fun updateRepository(
+        repositoryId: java.util.UUID,
+        name: String?,
+        cloneUrl: String?,
+        provider: GitProvider?,
+        authType: AuthType?,
+        preferredIDEs: List<IDEType>?,
+        isPrimary: Boolean?
+    ) {
+        uiState = uiState.copy(isSaving = true, error = null)
+        scope.launch {
+            val request = UpdateRepositoryRequest(
+                name = name,
+                cloneUrl = cloneUrl,
+                provider = provider,
+                authType = authType,
+                preferredIDEs = preferredIDEs,
+                isPrimary = isPrimary
+            )
+
+            val result = updateRepositoryUseCase(repositoryId, request)
+            result.fold(
+                onSuccess = { repository ->
+                    uiState = uiState.copy(
+                        isSaving = false,
+                        showAddRepositoryDialog = false,
+                        editingRepository = null
+                    )
+                    // Reload repositories for the current project
+                    uiState.selectedProject?.let { loadProjectRepositories(it.id) }
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isSaving = false,
+                        error = error.message ?: "Failed to update repository"
+                    )
+                }
+            )
+        }
+    }
+
+    fun deleteRepository(repositoryId: java.util.UUID) {
+        scope.launch {
+            val result = deleteRepositoryUseCase(repositoryId)
+            result.fold(
+                onSuccess = {
+                    // Reload repositories for the current project
+                    uiState.selectedProject?.let { loadProjectRepositories(it.id) }
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to delete repository"
+                    )
+                }
+            )
+        }
+    }
 }
 
 data class ProjectsUiState(
@@ -154,6 +269,8 @@ data class ProjectsUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val showCreateDialog: Boolean = false,
+    val showAddRepositoryDialog: Boolean = false,
+    val editingRepository: Repository? = null,
     val error: String? = null
 )
 

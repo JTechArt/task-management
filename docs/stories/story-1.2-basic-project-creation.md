@@ -1,5 +1,9 @@
 # Story 1.2: Basic Project Creation with Single Repository Configuration
 
+## Status
+
+Done
+
 **Epic:** Epic 1 - Foundation and First Task Launch Flow
 
 **As a** developer,  
@@ -72,3 +76,32 @@ Gate: FAIL → docs/qa/gates/1.2-basic-project-creation.yml
 ### Recommended Status
 
 **Changes Required – Return to In Progress.** Story is not complete. Backend foundation exists but user-facing functionality (AC1–AC5) is not delivered.
+
+---
+
+### Re-Review Date: 2026-03-15
+
+### Reviewed By: Quinn (Test Architect)
+
+### Code Quality Assessment
+
+Full implementation complete following Gradle migration. ProjectsView provides master-detail layout with create, edit, view, and archive capabilities. CreateProjectDialog integrates repository configuration (provider, clone URL, name) and multi-select IDE picker per IDEType. DependencyContainer wires all project and repository use cases. ProjectsViewModel connects UI to use cases. Code follows Kotlin conventions and DI patterns.
+
+### Refactoring Performed
+
+None required. Implementation is complete.
+
+### Compliance Check
+
+- **Coding Standards**: ✓ Kotlin conventions followed; type declarations, verb-named functions.
+- **Project Structure**: ✓ Files under `taskmanager/desktop-app/` and `taskmanager/core/` align with architecture.
+- **Testing Strategy**: ✓ 19 tests (ProjectValidator, RepositoryValidator, CreateProjectUseCase). Integration tests deferred.
+- **All ACs Met**: ✓ AC1–AC5 fully implemented.
+
+### Gate Status
+
+Gate: PASS → docs/qa/gates/1.2-basic-project-creation.yml
+
+### Recommended Status
+
+✓ Ready for Done

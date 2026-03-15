@@ -16,6 +16,13 @@ data class CloneProgress(
     val message: String
 )
 
+data class RepositoryInfo(
+    val url: String,
+    val isAccessible: Boolean,
+    val defaultBranch: String? = null,
+    val errorMessage: String? = null
+)
+
 interface GitService {
     suspend fun cloneRepository(
         url: String,
@@ -24,13 +31,18 @@ interface GitService {
         shallow: Boolean = true,
         onProgress: ((CloneProgress) -> Unit)? = null
     ): Result<Unit>
-    
+
     suspend fun createBranch(
         repositoryPath: String,
         branchName: String,
         checkout: Boolean = true
     ): Result<Unit>
-    
+
     suspend fun validateRepository(path: String): Result<Boolean>
+
+    suspend fun validateRemoteRepository(
+        url: String,
+        authConfig: GitAuthConfig
+    ): Result<RepositoryInfo>
 }
 

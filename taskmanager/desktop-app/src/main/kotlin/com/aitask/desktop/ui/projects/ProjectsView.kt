@@ -56,26 +56,28 @@ fun ProjectsView(
             }
         }
         
-        // Error message
-        uiState.error?.let { error ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.weight(1f)
+        // Error message (only show when dialog is not open)
+        if (!uiState.showCreateDialog) {
+            uiState.error?.let { error ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
                     )
-                    TextButton(onClick = { viewModel.clearError() }) {
-                        Text("Dismiss")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = error,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = { viewModel.clearError() }) {
+                            Text("Dismiss")
+                        }
                     }
                 }
             }
@@ -130,7 +132,10 @@ fun ProjectsView(
                         ProjectDetailView(
                             project = uiState.selectedProject,
                             repositories = uiState.selectedProjectRepositories,
-                            onArchive = { viewModel.archiveProject(it) }
+                            onArchive = { viewModel.archiveProject(it) },
+                            onAddRepository = { viewModel.showAddRepositoryDialog() },
+                            onEditRepository = { viewModel.showEditRepositoryDialog(it) },
+                            onDeleteRepository = { viewModel.deleteRepository(it) }
                         )
                     }
                 }
@@ -142,14 +147,53 @@ fun ProjectsView(
     if (uiState.showCreateDialog) {
         CreateProjectDialog(
             onDismiss = { viewModel.hideCreateDialog() },
-            onConfirm = { name, description, workspacePath, branchTemplate, 
+            onConfirm = { name, description, workspacePath, branchTemplate,
                           repoName, cloneUrl, provider, authType, ides ->
                 viewModel.createProject(
                     name, description, workspacePath, branchTemplate,
                     repoName, cloneUrl, provider, authType, ides
                 )
             },
-            isSaving = uiState.isSaving
+            isSaving = uiState.isSaving,
+            error = uiState.error,
+            onDismissError = { viewModel.clearError() }
+        )
+    }
+
+    // Add/Edit repository dialog
+    if (uiState.showAddRepositoryDialog && uiState.selectedProject != null) {
+        RepositoryDialog(
+            repository = uiState.editingRepository,
+            projectId = uiState.selectedProject.id,
+            onDismiss = { viewModel.hideRepositoryDialog() },
+            onConfirm = { name, cloneUrl, provider, authType, ides, isPrimary ->
+                if (uiState.editingRepository != null) {
+                    // Edit existing repository
+                    viewModel.updateRepository(
+                        repositoryId = uiState.editingRepository.id,
+                        name = name,
+                        cloneUrl = cloneUrl,
+                        provider = provider,
+                        authType = authType,
+                        preferredIDEs = ides,
+                        isPrimary = isPrimary
+                    )
+                } else {
+                    // Create new repository
+                    viewModel.createRepository(
+                        projectId = uiState.selectedProject.id,
+                        name = name,
+                        cloneUrl = cloneUrl,
+                        provider = provider,
+                        authType = authType,
+                        preferredIDEs = ides,
+                        isPrimary = isPrimary
+                    )
+                }
+            },
+            isSaving = uiState.isSaving,
+            error = uiState.error,
+            onDismissError = { viewModel.clearError() }
         )
     }
 }

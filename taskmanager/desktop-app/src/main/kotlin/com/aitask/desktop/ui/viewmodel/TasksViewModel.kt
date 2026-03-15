@@ -143,9 +143,61 @@ class TasksViewModel(
     }
     
     fun selectTask(task: Task?) {
-        uiState = uiState.copy(selectedTask = task)
+        uiState = uiState.copy(selectedTask = task, error = null)
+
+        // Load repositories for the selected task's project
+        if (task != null) {
+            scope.launch {
+                val repositories = DependencyContainer.repositoryRepository.findByProject(task.projectId)
+                uiState = uiState.copy(projectRepositories = repositories)
+            }
+        } else {
+            uiState = uiState.copy(projectRepositories = emptyList())
+        }
     }
-    
+
+    fun showRepositorySelectionDialog(taskId: UUID) {
+        val task = uiState.tasks.find { it.id == taskId }
+        if (task == null) {
+            uiState = uiState.copy(error = "Task not found")
+            return
+        }
+
+        scope.launch {
+            val repositories = DependencyContainer.repositoryRepository.findByProject(task.projectId)
+
+            // Determine default selection
+            val defaultSelection = if (repositories.isNotEmpty()) {
+                val primary = repositories.find { it.isPrimary }
+                if (primary != null) {
+                    listOf(primary.id)
+                } else {
+                    repositories.map { it.id }
+                }
+            } else {
+                emptyList()
+            }
+
+            uiState = uiState.copy(
+                showRepositorySelectionDialog = true,
+                selectedTaskForWorkspace = task,
+                availableRepositoriesForSelection = repositories,
+                defaultRepositorySelection = defaultSelection,
+                error = null
+            )
+        }
+    }
+
+    fun hideRepositorySelectionDialog() {
+        uiState = uiState.copy(
+            showRepositorySelectionDialog = false,
+            selectedTaskForWorkspace = null,
+            availableRepositoriesForSelection = emptyList(),
+            defaultRepositorySelection = emptyList(),
+            error = null
+        )
+    }
+
     fun setProjectFilter(projectId: UUID?) {
         uiState = uiState.copy(selectedProjectFilter = projectId)
         loadTasks()
@@ -168,8 +220,12 @@ class TasksViewModel(
         uiState = uiState.copy(error = null)
     }
 
-    fun generateWorkspace(taskId: UUID) {
-        uiState = uiState.copy(isGeneratingWorkspace = true, error = null)
+    fun generateWorkspace(taskId: UUID, selectedRepositoryIds: List<UUID>) {
+        uiState = uiState.copy(
+            isGeneratingWorkspace = true,
+            showRepositorySelectionDialog = false,
+            error = null
+        )
         scope.launch {
             // Get the task to find the project ID
             val task = uiState.tasks.find { it.id == taskId }
@@ -184,22 +240,32 @@ class TasksViewModel(
             val request = com.aitask.core.domain.model.CreateWorkspaceRequest(
                 taskId = taskId,
                 projectId = task.projectId,
-                selectedRepositories = emptyList() // Use all repositories
+                selectedRepositories = selectedRepositoryIds
             )
 
-            val result = generateWorkspaceUseCase(request)
+            val result = generateWorkspaceUseCase(request) { progress ->
+                // Update progress message
+                uiState = uiState.copy(workspaceGenerationProgress = progress)
+            }
+
             result.fold(
                 onSuccess = { workspace ->
                     uiState = uiState.copy(
                         isGeneratingWorkspace = false,
-                        workspaceGenerationSuccess = "Workspace generated at: ${workspace.path}"
+                        workspaceGenerationSuccess = "Workspace generated at: ${workspace.path}",
+                        workspaceGenerationProgress = null
                     )
                     loadTasks()
                 },
                 onFailure = { error ->
+                    val errorMsg = error.message
+                        ?: error.cause?.message
+                        ?: error.javaClass.simpleName
+                        ?: "Failed to generate workspace"
                     uiState = uiState.copy(
                         isGeneratingWorkspace = false,
-                        error = error.message ?: "Failed to generate workspace"
+                        error = "$errorMsg See logs/taskmanager.log for details.",
+                        workspaceGenerationProgress = null
                     )
                 }
             )
@@ -277,8 +343,12 @@ data class TasksUiState(
     val isGeneratingWorkspace: Boolean = false,
     val isLaunchingIDE: Boolean = false,
     val workspaceGenerationSuccess: String? = null,
+    val workspaceGenerationProgress: String? = null,
     val ideLaunchSuccess: String? = null,
     val availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
-    val projectRepositories: List<Repository> = emptyList()
+    val projectRepositories: List<Repository> = emptyList(),
+    val showRepositorySelectionDialog: Boolean = false,
+    val selectedTaskForWorkspace: Task? = null,
+    val availableRepositoriesForSelection: List<Repository> = emptyList(),
+    val defaultRepositorySelection: List<UUID> = emptyList()
 )
-

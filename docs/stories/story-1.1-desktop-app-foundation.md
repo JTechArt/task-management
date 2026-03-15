@@ -1,5 +1,9 @@
 # Story 1.1: Desktop App Foundation and Persistence Bootstrap
 
+## Status
+
+Done
+
 **Epic:** Epic 1 - Foundation and First Task Launch Flow
 
 **As a** developer,  
