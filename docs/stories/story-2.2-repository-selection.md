@@ -69,7 +69,7 @@ Efficient repository loading. No performance issues identified. Dialog handles l
 
 ### Gate Status
 
-Gate: PASS_WITH_NOTES → docs/qa/gates/2.2-repository-selection.yml
+Gate: PASS → docs/qa/gates/2.2-repository-selection.yml
 
 ### Issues Addressed
 

@@ -1,7 +1,7 @@
 schema: 1
 story: "2.2"
 story_title: "Task Workspace Repository Selection"
-gate: PASS_WITH_NOTES
+gate: PASS
 status_reason: "All acceptance criteria met. Repository selection UI complete with smart defaults, preparation summary, and enhanced error reporting. REQ-002 resolved with detailed partial failure messages. REQ-001 (persist last selection) deferred as nice-to-have."
 reviewer: "Quinn (Test Architect)"
 updated: "2026-03-15T15:00:00Z"
