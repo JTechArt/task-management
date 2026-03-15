@@ -1,0 +1,102 @@
+schema: 1
+story: "2.2"
+story_title: "Task Workspace Repository Selection"
+gate: PASS
+status_reason: "Full implementation complete. Repository selection dialog with smart defaults, preparation summary, and error handling. All acceptance criteria met."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-15T14:30:00Z"
+waiver: { active: false }
+top_issues: []
+evidence:
+  tests_reviewed: 4
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+  test_files:
+    - RepositorySelectionTest (4 tests)
+  implementation_files:
+    - RepositorySelectionDialog.kt (new)
+    - TasksViewModel.kt (updated)
+    - TasksView.kt (updated)
+    - TaskComponents.kt (updated)
+nfr_validation:
+  security:
+    status: PASS
+    notes: "No security concerns. Repository selection is UI-only, no credential handling."
+  performance:
+    status: PASS
+    notes: "Efficient repository loading. No performance bottlenecks identified."
+  reliability:
+    status: PASS
+    notes: "Error handling for partial failures. Progress tracking during workspace generation."
+  maintainability:
+    status: PASS
+    notes: "Clean separation of concerns. Repository selection logic tested."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "User feedback on default repository selection behavior"
+      - "Performance with large numbers of repositories (>50)"
+    nice_to_have:
+      - "Remember user's last repository selection per project"
+      - "Add 'Select All' / 'Deselect All' buttons"
+implementation_notes:
+  ui_components:
+    - RepositorySelectionDialog: Full-featured selection dialog
+      * Checkbox list of available repositories
+      * Smart default selection (primary or all)
+      * Workspace preparation summary card
+      * Progress indicator during generation
+      * Error display for failed repositories
+    - TaskDetailView: Enhanced with progress display
+      * Shows workspace generation progress messages
+      * Progress card with spinner during cloning
+  backend_components:
+    - TasksViewModel: Extended with repository selection
+      * showRepositorySelectionDialog() - Opens selection dialog
+      * hideRepositorySelectionDialog() - Closes dialog
+      * generateWorkspace() - Accepts selected repository IDs
+      * Default selection logic (primary or all)
+  validation_rules:
+    - At least one repository must be selected
+    - Selected repositories must exist in project
+    - Workspace generation disabled during active generation
+  default_selection_logic:
+    - If primary repository exists: select only primary
+    - If no primary exists: select all repositories
+    - If no repositories exist: show error message
+  error_handling:
+    - Partial failures: Show which repositories failed
+    - Failed repositories marked with error message
+    - Workspace status set to FAILED if any repository fails
+    - User can see which repositories cloned successfully
+compliance:
+  coding_standards: PASS
+  architecture: PASS
+  testing: PASS
+  documentation: PASS
+acceptance_criteria_verification:
+  ac1_repository_selection:
+    status: PASS
+    evidence: "RepositorySelectionDialog allows selecting one, many, or all repositories via checkboxes"
+    implementation: "Checkbox list with individual repository selection"
+  ac2_default_selection:
+    status: PASS
+    evidence: "Smart defaults: primary repository if exists, otherwise all repositories"
+    implementation: "Default selection logic in showRepositorySelectionDialog()"
+  ac3_preparation_summary:
+    status: PASS
+    evidence: "Summary card shows selected repository count, names, and workspace path"
+    implementation: "Workspace Preparation Summary card in dialog"
+  ac4_coherent_workspace:
+    status: PASS
+    evidence: "Workspace service creates structured workspace with selected repositories"
+    implementation: "FileSystemWorkspaceService.prepareWorkspace() handles multiple repositories"
+  ac5_partial_failure_reporting:
+    status: PASS
+    evidence: "Failed repositories marked with error message, successful ones remain usable"
+    implementation: "CloneStatus.FAILED with errorMessage field, workspace status reflects partial success"
+

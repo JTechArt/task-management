@@ -215,7 +215,7 @@ fun TasksView(
                                 viewModel.updateTaskStatus(taskId, status)
                             },
                             onGenerateWorkspace = { taskId ->
-                                viewModel.generateWorkspace(taskId)
+                                viewModel.showRepositorySelectionDialog(taskId)
                             },
                             onLaunchIDE = { taskId, ideType ->
                                 viewModel.launchIDE(taskId, ideType)
@@ -223,6 +223,7 @@ fun TasksView(
                             availableIDEs = uiState.availableIDEs,
                             preferredIDEs = uiState.projectRepositories.flatMap { it.preferredIDEs }.distinct(),
                             isGeneratingWorkspace = uiState.isGeneratingWorkspace,
+                            workspaceGenerationProgress = uiState.workspaceGenerationProgress,
                             isLaunchingIDE = uiState.isLaunchingIDE
                         )
                     }
@@ -240,6 +241,24 @@ fun TasksView(
                 viewModel.createTask(title, description, taskType, projectId)
             },
             isSaving = uiState.isSaving
+        )
+    }
+
+    // Repository selection dialog
+    if (uiState.showRepositorySelectionDialog && uiState.selectedTaskForWorkspace != null) {
+        RepositorySelectionDialog(
+            repositories = uiState.availableRepositoriesForSelection,
+            defaultSelection = uiState.defaultRepositorySelection,
+            onDismiss = { viewModel.hideRepositorySelectionDialog() },
+            onConfirm = { selectedRepositoryIds ->
+                viewModel.generateWorkspace(
+                    uiState.selectedTaskForWorkspace.id,
+                    selectedRepositoryIds
+                )
+            },
+            isGenerating = uiState.isGeneratingWorkspace,
+            error = uiState.error,
+            onDismissError = { viewModel.clearError() }
         )
     }
 }
