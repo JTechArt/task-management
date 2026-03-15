@@ -9,8 +9,8 @@ Kotlin 2 / JVM 21 Compose Desktop scaffold with env-driven config, database wiri
 ## Quick start
 ```bash
 cd taskmanager
-mvn -pl desktop-app -am package
-java -jar desktop-app/target/desktop-app-0.1.0-SNAPSHOT.jar
+./gradlew :desktop-app:build
+java -jar desktop-app/build/libs/desktop-app-0.1.0-SNAPSHOT.jar
 ```
 
 ## Environment variables
@@ -42,6 +42,6 @@ docker-compose up
 
 ## Smoke test
 ```bash
-mvn -pl desktop-app -am test
+./gradlew :desktop-app:test
 ```
 

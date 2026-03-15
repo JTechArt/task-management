@@ -35,6 +35,7 @@ This document defines the user experience goals, information architecture, user 
 |------|---------|-------------|--------|
 | 2026-03-11 | 0.1 | Initial front-end spec draft | Sally (UX Expert) |
 | 2026-03-11 | 0.2 | Completed full spec: IA, flows, wireframes, components, branding, accessibility, responsiveness, animation, performance | Sally (UX Expert) |
+| 2026-03-12 | 0.3 | Linked the approved HTML mockup set for development handoff and page-level implementation reference | Sally (UX Expert) |
 
 ---
 
@@ -168,7 +169,27 @@ graph TD
 
 ### Primary Design Files
 
-**Design Tool:** To be decided (Figma, Sketch, or equivalent). **Location:** TBD. **Handoff:** Screen specs and component states documented here; high-fidelity designs linked when design tool established.
+**Current Design Source:** HTML mockup set in [`docs/mockups/`](./mockups/index.html). **Location:** [`docs/mockups/index.html`](./mockups/index.html). **Handoff:** Until a Figma or equivalent file exists, these HTML mockups are the canonical visual reference for layout, hierarchy, and page composition during development.
+
+### Development Handoff Rule
+
+- Use this front-end specification as the source of truth for behavior, flows, accessibility, and component intent.
+- Use the HTML mockups in [`docs/mockups/`](./mockups/index.html) as the source of truth for page layout, visual hierarchy, and information grouping.
+- If a mockup and story text appear to conflict, preserve the story acceptance criteria and user flow, then update the story or spec to remove ambiguity before implementation.
+
+### Mockup Reference Map
+
+| Area | Primary Mockup |
+|------|----------------|
+| Overview / gallery | [`docs/mockups/index.html`](./mockups/index.html) |
+| Main Dashboard | [`docs/mockups/dashboard.html`](./mockups/dashboard.html) |
+| Projects list / creation | [`docs/mockups/projects.html`](./mockups/projects.html) |
+| Project detail / repository + task + Slack tabs | [`docs/mockups/project-detail.html`](./mockups/project-detail.html) |
+| Tasks list and task detail pane | [`docs/mockups/tasks.html`](./mockups/tasks.html) |
+| Task Launch Flow | [`docs/mockups/task-launch.html`](./mockups/task-launch.html) |
+| Rule Management | [`docs/mockups/rules.html`](./mockups/rules.html) |
+| Integrations & Health | [`docs/mockups/integrations.html`](./mockups/integrations.html) |
+| Settings / Import / Export / Backup | [`docs/mockups/settings.html`](./mockups/settings.html) |
 
 ### Key Screen Layouts
 
@@ -184,7 +205,7 @@ graph TD
 
 **Interaction Notes:** One-click open for recent tasks; project cards navigate to Project Detail.
 
-**Design File Reference:** *TBD*
+**Design File Reference:** [`docs/mockups/dashboard.html`](./mockups/dashboard.html)
 
 ---
 
@@ -199,7 +220,7 @@ graph TD
 
 **Interaction Notes:** Tab switching; inline edit for repo config; add task / Open Workspace actions.
 
-**Design File Reference:** *TBD*
+**Design File Reference:** [`docs/mockups/project-detail.html`](./mockups/project-detail.html)
 
 ---
 
@@ -214,7 +235,7 @@ graph TD
 
 **Interaction Notes:** Next/Back; Cancel at any step; Retry on failure.
 
-**Design File Reference:** *TBD*
+**Design File Reference:** [`docs/mockups/task-launch.html`](./mockups/task-launch.html)
 
 ---
 
@@ -229,7 +250,7 @@ graph TD
 
 **Interaction Notes:** Inline or side-panel editor; validate before save.
 
-**Design File Reference:** *TBD*
+**Design File Reference:** [`docs/mockups/rules.html`](./mockups/rules.html)
 
 ---
 
@@ -244,7 +265,85 @@ graph TD
 
 **Interaction Notes:** Connect/disconnect; secure display (masked credentials, no plaintext).
 
-**Design File Reference:** *TBD*
+**Design File Reference:** [`docs/mockups/integrations.html`](./mockups/integrations.html)
+
+#### 6. Projects List / Creation
+
+**Purpose:** Browse, create, and edit project shells before moving into detailed repository configuration.
+
+**Key Elements:**
+- Search and filter bar for project discovery
+- Project cards/list with health and repo count summary
+- Project creation/edit form with workspace path and branch template
+- Inline repository summary before save
+
+**Interaction Notes:** The list screen should keep discovery lightweight; heavy repo details move into Project Detail.
+
+**Design File Reference:** [`docs/mockups/projects.html`](./mockups/projects.html)
+
+---
+
+#### 7. Tasks List / Detail
+
+**Purpose:** Browse the global task queue, inspect task details, and open the task launch flow.
+
+**Key Elements:**
+- Persistent filter rail
+- Task list with status, project, and recency metadata
+- Task detail side pane with launch readiness
+- Primary CTA to open workspace
+
+**Interaction Notes:** Treat task detail as a selected state of the task list unless a later implementation requires a dedicated route.
+
+**Design File Reference:** [`docs/mockups/tasks.html`](./mockups/tasks.html)
+
+---
+
+#### 8. Settings / Import / Export / Backup
+
+**Purpose:** Configure application-wide preferences, backup behavior, and data portability workflows.
+
+**Key Elements:**
+- Backup and restore controls
+- Import/export utilities
+- Environment defaults
+- Destructive-action confirmation patterns
+
+**Interaction Notes:** High-risk operations should favor clarity and confirmation over density.
+
+**Design File Reference:** [`docs/mockups/settings.html`](./mockups/settings.html)
+
+---
+
+#### 9. Slack Channel Configuration View
+
+**Purpose:** Configure per-project Slack channel routing and notification delivery behavior.
+
+**Key Elements:**
+- Channel selector or connected workspace summary
+- Notification toggle and delivery state
+- Test message action
+- Safe disconnect or reconnect affordances
+
+**Interaction Notes:** Treat this as a secondary tab within Project Detail rather than a standalone primary route.
+
+**Design File Reference:** [`docs/mockups/project-detail.html`](./mockups/project-detail.html)
+
+---
+
+#### 10. Import / Export / Backup Restore View
+
+**Purpose:** Support portable export, archive import, scheduled backup, and local restore workflows.
+
+**Key Elements:**
+- Manual import/export actions
+- Backup schedule and last-run status
+- Restore entry point with validation messaging
+- Destructive confirmation for risky restore or cleanup operations
+
+**Interaction Notes:** This view is represented inside the Settings screen and should not require a separate navigation destination in the MVP.
+
+**Design File Reference:** [`docs/mockups/settings.html`](./mockups/settings.html)
 
 ---
 

@@ -21,4 +21,4 @@
 ## UX References
 
 - [Confirmation Dialog component (destructive actions)](../front-end-spec.md#core-components)
-
+- [Visual Mockup: Settings / Backup / Destructive Confirmation](../mockups/settings.html)

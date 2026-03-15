@@ -22,4 +22,4 @@
 
 - [Import / Export / Backup Restore View](../front-end-spec.md#import--export--backup-restore-view)
 - [Confirmation Dialog component (destructive actions)](../front-end-spec.md#core-components)
-
+- [Visual Mockup: Settings / Import / Export / Backup](../mockups/settings.html)

@@ -1,27 +1,21 @@
 package com.aitask.desktop
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.aitask.core.config.AppConfig
 import com.aitask.core.config.ConfigLoader
 import com.aitask.core.config.EnvConfigLoader
 import com.aitask.core.logging.logStartup
-import com.aitask.desktop.StartupBootstrapper
-import mu.KotlinLogging
+import com.aitask.desktop.ui.*
+import com.aitask.desktop.ui.projects.ProjectsView
+import com.aitask.desktop.ui.tasks.TasksView
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
 
@@ -37,13 +31,16 @@ class AppLauncher(
         logStartup(config)
         val bootstrapDatabase = environment["BOOTSTRAP_DATABASE"]?.equals("true", true) ?: false
         val bootstrapResult = bootstrapper.prepareInfrastructure(config, bootstrapDatabase)
-        logger.info { "Bootstrap result databaseInitialized=${bootstrapResult.databaseInitialized}" }
+        logger.info { "Bootstrap result databaseInitialized=${bootstrapResult.databaseInitialized}, migrationsApplied=${bootstrapResult.migrationsApplied}" }
+        if (bootstrapResult.databaseError != null) {
+            logger.warn { "Database initialization issue: ${bootstrapResult.databaseError}" }
+        }
         application {
             Window(
                 onCloseRequest = ::exitApplication,
                 title = config.appName
             ) {
-                AppSurface(config)
+                AppSurface(config, bootstrapResult)
             }
         }
     }
@@ -59,44 +56,40 @@ class AppLauncher(
 }
 
 @Composable
-fun AppSurface(config: AppConfig) {
+fun AppSurface(config: AppConfig, bootstrapResult: BootstrapResult) {
+    var selectedNavItem by remember { mutableStateOf(NavigationItem.DASHBOARD) }
+
     MaterialTheme(colorScheme = lightColorScheme()) {
         Surface(modifier = Modifier.fillMaxSize()) {
-            WelcomeCard(config)
-        }
-    }
-}
+            Row(modifier = Modifier.fillMaxSize()) {
+                // Navigation sidebar
+                NavigationSidebar(
+                    selectedItem = selectedNavItem,
+                    onItemSelected = { selectedNavItem = it }
+                )
 
-@Composable
-fun WelcomeCard(config: AppConfig) {
-    Card(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.background
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = config.appName,
-                style = MaterialTheme.typography.headlineMedium
-            )
-            Text(
-                text = "Compose Desktop scaffold is ready.",
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = "Database: ${config.database.redactSensitiveValues()}",
-                style = MaterialTheme.typography.bodyMedium
-            )
+                // Main content area
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when (selectedNavItem) {
+                        NavigationItem.DASHBOARD -> {
+                            val status = SystemStatus(
+                                databaseConnected = bootstrapResult.databaseInitialized,
+                                databaseMessage = if (bootstrapResult.databaseInitialized) {
+                                    "Successfully connected • ${bootstrapResult.migrationsApplied} migrations applied"
+                                } else {
+                                    bootstrapResult.databaseError ?: "Not connected"
+                                }
+                            )
+                            StatusView(config = config, status = status)
+                        }
+                        NavigationItem.PROJECTS -> ProjectsView()
+                        NavigationItem.TASKS -> TasksView()
+                        NavigationItem.RULES -> RulesView()
+                        NavigationItem.INTEGRATIONS -> IntegrationsView()
+                        NavigationItem.SETTINGS -> SettingsView()
+                    }
+                }
+            }
         }
     }
 }

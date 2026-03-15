@@ -23,4 +23,4 @@
 
 - [Main Dashboard layout](../front-end-spec.md#1-main-dashboard)
 - [Performance Goals: Startup, Interaction Response](../front-end-spec.md#performance-goals)
-
+- [Visual Mockup: Dashboard](../mockups/dashboard.html)

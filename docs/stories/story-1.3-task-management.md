@@ -23,4 +23,64 @@
 
 - [Flow 2: Create and Start New Task](../front-end-spec.md#flow-2-create-and-start-new-task)
 - [Screen Layouts: Task Launch Flow](../front-end-spec.md#key-screen-layouts)
+- [Visual Mockup: Tasks List / Detail](../mockups/tasks.html)
 
+## QA Results
+
+### Review Date: 2025-03-12
+
+### Reviewed By: Quinn (Test Architect)
+
+### Code Quality Assessment
+
+Backend domain, use cases, repository, validator, and database schema are implemented for task CRUD. Task model supports title, description, task type, status; TaskType and TaskStatus enums match AC3/AC4; GetTasksUseCase supports filtering by project and status. However, no desktop UI exists—TasksView remains a placeholder ("Coming Soon"). Users cannot create, view, edit, archive, or delete tasks through the application.
+
+### Refactoring Performed
+
+None. Critical gaps must be addressed before refactoring.
+
+### Compliance Check
+
+- Coding Standards: N/A (insufficient UI implementation to assess)
+- Project Structure: Partial – core layer exists, UI layer missing
+- Testing Strategy: Partial – TaskValidator, CreateTaskUseCase, GetTasksUseCase have tests; UpdateTaskUseCase and DeleteTaskUseCase lack unit tests
+- All ACs Met: FAIL – AC1–AC5 require user-facing functionality that is not delivered
+
+### Improvements Checklist
+
+- [ ] Implement TasksView with task list, create/edit forms, archive and delete actions
+- [ ] Add project selector and status filter for task list (AC5)
+- [ ] Wire CreateTaskUseCase, UpdateTaskUseCase, DeleteTaskUseCase, GetTasksUseCase to desktop app
+- [ ] Surface validation errors from TaskValidator in UI with actionable feedback
+- [ ] Add unit tests for UpdateTaskUseCase and DeleteTaskUseCase
+- [ ] Add integration tests for TaskRepositoryImpl where feasible
+
+### Security Review
+
+No security issues identified. TaskValidator enforces basic input constraints. No sensitive data in task model.
+
+### Performance Considerations
+
+TaskRepositoryImpl uses Exposed transactions; acceptable for desktop scale. Indexes on project_id, status, and (project_id, status) support filtering. No obvious bottlenecks.
+
+### Gate Status
+
+Gate: FAIL → docs/qa/gates/1.3-task-management.yml
+
+### Recommended Status
+
+**Changes Required – Return to In Progress.** Story is not complete. Backend foundation exists but user-facing functionality (AC1–AC5) is not delivered.
+
+---
+
+### Re-Review Date: 2026-03-12
+
+### Reviewed By: Quinn (Test Architect)
+
+### Re-Review Findings
+
+**Test Coverage – Improved:** UpdateTaskUseCaseTest (5 tests) and DeleteTaskUseCaseTest (4 tests) confirmed. Total task-related tests: 25 (TaskValidatorTest 8, CreateTaskUseCaseTest 4, UpdateTaskUseCaseTest 5, DeleteTaskUseCaseTest 4, GetTasksUseCaseTest 4). All use cases now have unit test coverage.
+
+**UI Status – Unchanged:** TasksView remains a placeholder ("Coming Soon"). No task list, create/edit forms, archive, delete, or filter UI. Use cases not wired to desktop app.
+
+**Gate:** FAIL. Backend complete with comprehensive tests; AC1–AC5 require user-facing functionality that is not implemented.

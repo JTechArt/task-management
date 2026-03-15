@@ -4,11 +4,12 @@
 
 | Property | Value |
 |----------|-------|
-| Version | 1.0 |
-| Date | 2026-03-11 |
+| Version | 1.1 |
+| Date | 2026-03-12 |
 | Status | Draft |
 | Author | Architecture Team |
 | Based On | [PRD v0.1](prd.md) |
+| Last Updated | 2026-03-12 - Kotlin 2.1.0 & Compose 1.8.0 upgrade |
 
 ## Table of Contents
 
@@ -1224,11 +1225,11 @@ class ProjectValidator : Validator<CreateProjectRequest> {
 │                   Build Process                             │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
-│  1. Maven Build                                              │
-│     mvn clean package                                        │
+│  1. Gradle Build                                             │
+│     ./gradlew clean build                                    │
 │     ↓                                                        │
 │  2. JPackage Native Installer                                │
-│     jpackage --input target/                                 │
+│     jpackage --input build/libs/                             │
 │              --main-jar desktop-app.jar                      │
 │              --type {dmg|exe|deb|rpm}                        │
 │     ↓                                                        │
@@ -1522,10 +1523,10 @@ class WorkspaceCreationException(reason: String) :
 
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
-| **Language** | Kotlin | 2.0+ | Primary development language |
+| **Language** | Kotlin | 2.1.0 | Primary development language with K2 compiler |
 | **Runtime** | JDK | 21 | Java Virtual Machine |
-| **Build Tool** | Maven | 3.9+ | Build automation and dependency management |
-| **UI Framework** | Compose Multiplatform | 1.6+ | Cross-platform desktop UI |
+| **Build Tool** | Gradle | 8.5+ | Build automation and dependency management with superior Kotlin DSL support |
+| **UI Framework** | Compose Multiplatform | 1.8.0 | Cross-platform desktop UI |
 | **Database** | PostgreSQL | 16+ | Relational database |
 | **ORM** | Exposed | 0.50+ | Type-safe SQL DSL |
 | **Connection Pool** | HikariCP | 5.1+ | Database connection pooling |
@@ -1535,23 +1536,27 @@ class WorkspaceCreationException(reason: String) :
 | **Serialization** | kotlinx.serialization | 1.6+ | JSON serialization |
 | **Logging** | Logback + kotlin-logging | 1.4+ / 3.0+ | Structured logging |
 | **Testing** | JUnit 5 + Mockk | 5.10+ / 1.13+ | Unit and integration testing |
-| **Coroutines** | kotlinx.coroutines | 1.8+ | Async/concurrent programming |
+| **Coroutines** | kotlinx.coroutines | 1.8.1 | Async/concurrent programming |
 
 ### Technology Justification
 
-**Kotlin:**
+**Kotlin 2.1.0:**
 - Modern, concise syntax
 - Null safety built-in
+- K2 compiler with improved performance and stability
 - Excellent IDE support
 - Seamless Java interop
 - Strong coroutines support
+- Built-in Compose compiler (no separate plugin needed)
 
-**Compose Multiplatform:**
+**Compose Multiplatform 1.8.0:**
 - Single codebase for Windows, macOS, Linux
 - Declarative UI paradigm
 - Material 3 design system
 - Active development by JetBrains
 - Growing ecosystem
+- Fully compatible with Kotlin 2.1.0 and K2 compiler
+- Improved rendering and composition performance
 
 **PostgreSQL:**
 - ACID compliance
@@ -1589,67 +1594,30 @@ class WorkspaceCreationException(reason: String) :
 ### Third-Party Libraries
 
 **Core Dependencies:**
-```xml
-<dependencies>
-    <!-- Compose Desktop -->
-    <dependency>
-        <groupId>org.jetbrains.compose.desktop</groupId>
-        <artifactId>desktop-jvm</artifactId>
-        <version>${compose.version}</version>
-    </dependency>
+```kotlin
+dependencies {
+    // Compose Desktop
+    implementation(compose.desktop.currentOs)
 
-    <!-- Database -->
-    <dependency>
-        <groupId>org.postgresql</groupId>
-        <artifactId>postgresql</artifactId>
-        <version>42.7.3</version>
-    </dependency>
+    // Database
+    implementation("org.postgresql:postgresql:42.7.3")
+    implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
+    implementation("com.zaxxer:HikariCP:5.1.0")
+    implementation("org.flywaydb:flyway-core:10.10.0")
 
-    <dependency>
-        <groupId>org.jetbrains.exposed</groupId>
-        <artifactId>exposed-core</artifactId>
-        <version>${exposed.version}</version>
-    </dependency>
+    // Git
+    implementation("org.eclipse.jgit:org.eclipse.jgit:6.9.0.202403050737-r")
 
-    <dependency>
-        <groupId>com.zaxxer</groupId>
-        <artifactId>HikariCP</artifactId>
-        <version>5.1.0</version>
-    </dependency>
+    // HTTP Client
+    implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio:$ktorVersion")
 
-    <dependency>
-        <groupId>org.flywaydb</groupId>
-        <artifactId>flyway-core</artifactId>
-        <version>10.10.0</version>
-    </dependency>
-
-    <!-- Git -->
-    <dependency>
-        <groupId>org.eclipse.jgit</groupId>
-        <artifactId>org.eclipse.jgit</artifactId>
-        <version>6.9.0.202403050737-r</version>
-    </dependency>
-
-    <!-- HTTP Client -->
-    <dependency>
-        <groupId>io.ktor</groupId>
-        <artifactId>ktor-client-core-jvm</artifactId>
-        <version>${ktor.version}</version>
-    </dependency>
-
-    <!-- Logging -->
-    <dependency>
-        <groupId>io.github.microutils</groupId>
-        <artifactId>kotlin-logging-jvm</artifactId>
-        <version>3.0.5</version>
-    </dependency>
-
-    <dependency>
-        <groupId>ch.qos.logback</groupId>
-        <artifactId>logback-classic</artifactId>
-        <version>1.4.14</version>
-    </dependency>
-</dependencies>
+    // Logging
+    implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
+    implementation("ch.qos.logback:logback-classic:1.4.14")
+}
 ```
 
 ---
@@ -1660,11 +1628,13 @@ class WorkspaceCreationException(reason: String) :
 
 ```
 taskmanager/
-├── pom.xml                          # Root Maven configuration
+├── build.gradle.kts                 # Root Gradle configuration
+├── settings.gradle.kts              # Gradle settings
+├── gradle.properties                # Gradle properties
 ├── docker-compose.yml               # PostgreSQL container
 ├── Dockerfile                       # Application container
 ├── core/                            # Core module
-│   ├── pom.xml
+│   ├── build.gradle.kts
 │   └── src/
 │       ├── main/
 │       │   ├── kotlin/
@@ -1678,7 +1648,7 @@ taskmanager/
 │       └── test/
 │           └── kotlin/
 ├── desktop-app/                     # Desktop application module
-│   ├── pom.xml
+│   ├── build.gradle.kts
 │   └── src/
 │       ├── main/
 │       │   ├── kotlin/

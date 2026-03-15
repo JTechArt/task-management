@@ -133,7 +133,7 @@ Manual testing should also be expected for cross-platform desktop workflows that
 
 - Primary language and runtime should remain Kotlin on JDK 21, matching the current environment and stack documents.
 - UI framework should remain JetBrains Compose Multiplatform for Desktop with Material 3 patterns unless architecture review identifies a blocker.
-- Build and dependency management should remain Maven-based to align with the current setup and packaging workflow.
+- Build and dependency management should use Gradle with Kotlin DSL for superior Kotlin project support, better performance, and modern build capabilities.
 - Persistence should use PostgreSQL with Flyway-managed schema migrations and a Kotlin-friendly data access layer consistent with the documented stack.
 - Git operations should be implemented through a JVM-native Git library layer, with support for repository validation, branching, commit, and push flows.
 - Long-running operations such as clone, sync, import/export, and health checks should execute asynchronously with visible progress and cancellation-safe behavior where practical.

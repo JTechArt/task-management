@@ -1,7 +1,7 @@
 package com.aitask.core.logging
 
 import com.aitask.core.config.AppConfig
-import mu.KotlinLogging
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 private val logger = KotlinLogging.logger {}
 

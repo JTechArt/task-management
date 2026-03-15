@@ -23,4 +23,4 @@
 
 - [Flow 1: Task Launch (Primary MVP Flow)](../front-end-spec.md#flow-1-task-launch-primary-mvp-flow)
 - [Task Launch Flow (Stepper)](../front-end-spec.md#3-task-launch-flow-modal-or-stepper)
-
+- [Visual Mockup: Task Launch Flow](../mockups/task-launch.html)

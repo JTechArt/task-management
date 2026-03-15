@@ -21,4 +21,4 @@
 ## UX References
 
 - [Rule Management screen](../front-end-spec.md#4-rule-management)
-
+- [Visual Mockup: Rule Management](../mockups/rules.html)

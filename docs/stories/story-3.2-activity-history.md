@@ -22,4 +22,4 @@
 ## UX References
 
 - [Main Dashboard layout](../front-end-spec.md#1-main-dashboard)
-
+- [Visual Mockup: Dashboard](../mockups/dashboard.html)

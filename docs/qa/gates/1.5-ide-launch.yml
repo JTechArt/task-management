@@ -1,0 +1,60 @@
+schema: 1
+story: "1.5"
+story_title: "Launch Task Workspace in Configured IDE"
+gate: FAIL
+status_reason: "Backend complete with LaunchIDEUseCase, DesktopIDEService, Activity recording, and 14 tests. No desktop UI—TasksView is placeholder; no task detail, IDE selector, or launch action. AC1–AC5 require user-facing functionality."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-12T00:00:00Z"
+waiver: { active: false }
+top_issues:
+  - id: REQ-001
+    severity: high
+    finding: "No UI to launch IDE; user cannot trigger launch from task. TasksView is placeholder; no task detail or launch action."
+    suggested_action: "Implement task detail view with 'Launch IDE' action; add IDE selector (filtered by repo preferredIDEs); wire to LaunchIDEUseCase."
+  - id: REQ-002
+    severity: high
+    finding: "LaunchIDEUseCase not wired to desktop app; no DI or viewmodels for IDE launch flow."
+    suggested_action: "Wire LaunchIDEUseCase, IDEService, ActivityRepository to desktop-app; add DI/bootstrap."
+  - id: REQ-003
+    severity: medium
+    finding: "AC2: Backend validates preferred IDEs but allows unconfigured IDE (logs warning). UI should filter and only present configured IDEs."
+    suggested_action: "When building IDE selector UI, filter options by repository.preferredIDEs; backend already supports validation."
+  - id: REL-001
+    severity: low
+    finding: "InMemoryActivityRepository does not persist activity across app restarts."
+    suggested_action: "Consider persistent ActivityRepository (DB) for audit trail; acceptable for MVP."
+evidence:
+  tests_reviewed: 14
+  risks_identified: 4
+  trace:
+    ac_covered: []
+    ac_gaps: [1, 2, 3, 4, 5]
+  test_files:
+    - LaunchIDEUseCaseTest (6 tests)
+    - DesktopIDEServiceTest (8 tests)
+  backend_implemented:
+    - LaunchIDEUseCase (task validation, workspace check, IDE launch, task status update, activity recording)
+    - DesktopIDEService (launchIDE, detectInstalledIDEs, platform-specific paths for Cursor, VS Code, IntelliJ, etc.)
+    - ActivityRepository (InMemoryActivityRepository), ActivityType.IDE_LAUNCHED
+    - LaunchIDERequest/LaunchIDEResponse, updateTaskStatus flag
+nfr_validation:
+  security:
+    status: PASS
+    notes: "No secrets in IDE launch; workspace path from task. Task context passed to IDE."
+  performance:
+    status: PASS
+    notes: "IDE launch is fire-and-forget; no blocking."
+  reliability:
+    status: PASS
+    notes: "Task status updated only on success; activity recorded after successful launch."
+  maintainability:
+    status: PASS
+    notes: "LaunchIDEUseCaseTest (6) and DesktopIDEServiceTest (8) cover success, failures, validation."
+risk_summary:
+  totals: { critical: 0, high: 2, medium: 1, low: 1 }
+  recommendations:
+    must_fix:
+      - "Implement task detail with IDE launch action and IDE selector"
+      - "Wire LaunchIDEUseCase to desktop app (depends on TasksView, story 1.3)"
+    monitor:
+      - "Add persistent ActivityRepository when audit requirements increase"

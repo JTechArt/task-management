@@ -22,4 +22,5 @@
 
 - [Integrations & Health screen](../front-end-spec.md#5-integrations--health)
 - [Component: Status Indicator](../front-end-spec.md#core-components)
-
+- [Visual Mockup: Integrations & Health](../mockups/integrations.html)
+- [Visual Mockup: Dashboard](../mockups/dashboard.html)

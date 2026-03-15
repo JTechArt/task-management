@@ -23,4 +23,5 @@
 
 - [Task Launch Flow (Stepper)](../front-end-spec.md#3-task-launch-flow-modal-or-stepper)
 - [Rule Management screen](../front-end-spec.md#4-rule-management)
-
+- [Visual Mockup: Task Launch Flow](../mockups/task-launch.html)
+- [Visual Mockup: Rule Management](../mockups/rules.html)

@@ -22,4 +22,4 @@
 ## UX References
 
 - [Integrations & Health screen](../front-end-spec.md#5-integrations--health)
-
+- [Visual Mockup: Integrations & Health](../mockups/integrations.html)
