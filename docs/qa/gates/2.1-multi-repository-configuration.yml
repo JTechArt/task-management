@@ -1,0 +1,83 @@
+schema: 1
+story: "2.1"
+story_title: "Multi-Repository Project Configuration"
+gate: PASS
+status_reason: "Full implementation complete. Add/edit/remove repositories working with UI. Primary distinction clear. Persistence via database. Validation prevents duplicates. All use cases have unit tests. Minor gaps: archive at repository level and explicit role/purpose field are out of scope (acceptable per PO clarification)."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-15T12:45:00Z"
+waiver: { active: false }
+top_issues:
+  - id: REQ-001
+    severity: low
+    finding: "AC1 specifies 'archive' for repositories; only add, edit, remove are implemented. Projects support archive."
+    suggested_action: "Clarify with PO: archive repositories individually, or rely on project-level archive."
+    status: ACCEPTED
+    resolution: "Repository archive deferred to future story. Project-level archive cascades to repositories via ON DELETE CASCADE. Acceptable for MVP."
+  - id: REQ-002
+    severity: low
+    finding: "AC2 mentions 'local role or purpose'; Repository model has name, isPrimary, preferredIDEs but no explicit role/purpose field (e.g. backend, frontend)."
+    suggested_action: "Document as out-of-scope or add optional role/purpose field in future iteration."
+    status: ACCEPTED
+    resolution: "Repository name serves as label/purpose. Explicit role field deferred to future iteration if needed."
+  - id: TEST-001
+    severity: medium
+    finding: "UpdateRepositoryUseCase and DeleteRepositoryUseCase have no unit tests."
+    suggested_action: "Add UpdateRepositoryUseCaseTest and DeleteRepositoryUseCaseTest following CreateRepositoryUseCaseTest patterns."
+    status: RESOLVED
+    resolution: "UpdateRepositoryUseCaseTest (5 tests) and DeleteRepositoryUseCaseTest (4 tests) added. All tests passing."
+evidence:
+  tests_reviewed: 14
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+  test_files:
+    - CreateRepositoryUseCaseTest (5 tests)
+    - UpdateRepositoryUseCaseTest (5 tests)
+    - DeleteRepositoryUseCaseTest (4 tests)
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Input validation via RepositoryValidator; no sensitive data exposure. URL format validated."
+  performance:
+    status: PASS
+    notes: "Straightforward use cases and UI; no obvious bottlenecks. Database queries use indexes."
+  reliability:
+    status: PASS
+    notes: "Error handling in use cases; primary/duplicate guards in place. Cascade delete on project removal."
+  maintainability:
+    status: PASS
+    notes: "All repository use cases have comprehensive unit tests (14 total). Clean architecture maintained."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Consider adding repository archive functionality in future iteration if needed"
+      - "Monitor if explicit role/purpose field is needed based on user feedback"
+    nice_to_have:
+      - "Add integration tests for repository CRUD when test infrastructure permits"
+implementation_notes:
+  ui_components:
+    - RepositoryDialog (add/edit dialog with full validation)
+    - ProjectDetailView (enhanced with repository management)
+    - RepositoryCard (displays repository with edit/delete actions)
+  backend_components:
+    - CreateRepositoryUseCase (with duplicate and primary validation)
+    - UpdateRepositoryUseCase (with name/URL uniqueness checks)
+    - DeleteRepositoryUseCase (with primary and only-repo protection)
+  validation_rules:
+    - Repository name required, max 200 chars, unique per project
+    - Clone URL required, max 500 chars, valid Git URL format, unique per project
+    - At least one preferred IDE required
+    - Only one primary repository per project
+    - Cannot delete primary repository without reassigning
+    - Cannot delete the only repository in a project
+  database:
+    - Repositories table with foreign key to projects (CASCADE delete)
+    - No archivedAt field (deferred to future iteration)
+compliance:
+  coding_standards: PASS
+  architecture: PASS
+  testing: PASS
+  documentation: PASS

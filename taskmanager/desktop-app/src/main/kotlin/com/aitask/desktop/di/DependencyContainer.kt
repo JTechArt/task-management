@@ -83,7 +83,24 @@ object DependencyContainer {
     val archiveProjectUseCase: ArchiveProjectUseCase by lazy {
         ArchiveProjectUseCase(projectRepository)
     }
-    
+
+    // Repository Use Cases
+    val createRepositoryUseCase: CreateRepositoryUseCase by lazy {
+        CreateRepositoryUseCase(
+            repositoryRepository,
+            projectRepository,
+            repositoryValidator
+        )
+    }
+
+    val updateRepositoryUseCase: UpdateRepositoryUseCase by lazy {
+        UpdateRepositoryUseCase(repositoryRepository)
+    }
+
+    val deleteRepositoryUseCase: DeleteRepositoryUseCase by lazy {
+        DeleteRepositoryUseCase(repositoryRepository)
+    }
+
     // Task Use Cases
     val createTaskUseCase: CreateTaskUseCase by lazy {
         CreateTaskUseCase(

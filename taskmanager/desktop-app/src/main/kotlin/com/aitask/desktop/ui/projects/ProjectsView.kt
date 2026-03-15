@@ -132,7 +132,10 @@ fun ProjectsView(
                         ProjectDetailView(
                             project = uiState.selectedProject,
                             repositories = uiState.selectedProjectRepositories,
-                            onArchive = { viewModel.archiveProject(it) }
+                            onArchive = { viewModel.archiveProject(it) },
+                            onAddRepository = { viewModel.showAddRepositoryDialog() },
+                            onEditRepository = { viewModel.showEditRepositoryDialog(it) },
+                            onDeleteRepository = { viewModel.deleteRepository(it) }
                         )
                     }
                 }
@@ -150,6 +153,43 @@ fun ProjectsView(
                     name, description, workspacePath, branchTemplate,
                     repoName, cloneUrl, provider, authType, ides
                 )
+            },
+            isSaving = uiState.isSaving,
+            error = uiState.error,
+            onDismissError = { viewModel.clearError() }
+        )
+    }
+
+    // Add/Edit repository dialog
+    if (uiState.showAddRepositoryDialog && uiState.selectedProject != null) {
+        RepositoryDialog(
+            repository = uiState.editingRepository,
+            projectId = uiState.selectedProject.id,
+            onDismiss = { viewModel.hideRepositoryDialog() },
+            onConfirm = { name, cloneUrl, provider, authType, ides, isPrimary ->
+                if (uiState.editingRepository != null) {
+                    // Edit existing repository
+                    viewModel.updateRepository(
+                        repositoryId = uiState.editingRepository.id,
+                        name = name,
+                        cloneUrl = cloneUrl,
+                        provider = provider,
+                        authType = authType,
+                        preferredIDEs = ides,
+                        isPrimary = isPrimary
+                    )
+                } else {
+                    // Create new repository
+                    viewModel.createRepository(
+                        projectId = uiState.selectedProject.id,
+                        name = name,
+                        cloneUrl = cloneUrl,
+                        provider = provider,
+                        authType = authType,
+                        preferredIDEs = ides,
+                        isPrimary = isPrimary
+                    )
+                }
             },
             isSaving = uiState.isSaving,
             error = uiState.error,
