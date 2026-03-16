@@ -16,6 +16,7 @@ val slf4jVersion: String by project
 val junitVersion: String by project
 val mockkVersion: String by project
 val serializationVersion: String by project
+val ktorVersion: String by project
 
 dependencies {
     // Kotlin
@@ -37,6 +38,12 @@ dependencies {
     api("org.flywaydb:flyway-core:$flywayVersion")
     api("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     api("org.postgresql:postgresql:$postgresVersion")
+
+    // HTTP (Slack webhooks)
+    implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
 
     // Git
     api("org.eclipse.jgit:org.eclipse.jgit:$jgitVersion")

@@ -15,7 +15,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.Project
 import com.aitask.core.domain.model.Repository
+import com.aitask.core.domain.model.SlackChannelConfig
 import java.util.UUID
+
+enum class ProjectDetailTab { REPOSITORIES, SLACK }
 
 @Composable
 fun ProjectFilters(
@@ -236,15 +239,24 @@ fun ProjectDetailView(
     onAddRepository: () -> Unit = {},
     onEditRepository: (Repository) -> Unit = {},
     onDeleteRepository: (UUID) -> Unit = {},
+    slackChannels: List<SlackChannelConfig> = emptyList(),
+    selectedDetailTab: ProjectDetailTab = ProjectDetailTab.REPOSITORIES,
+    onDetailTabChange: (ProjectDetailTab) -> Unit = {},
+    onAddSlackChannel: () -> Unit = {},
+    onEditSlackChannel: (SlackChannelConfig) -> Unit = {},
+    onDeleteSlackChannel: (SlackChannelConfig) -> Unit = {},
+    onTestSlackMessage: (SlackChannelConfig) -> Unit = {},
+    isSendingSlackTest: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    var selectedTab by remember(selectedDetailTab) { mutableStateOf(selectedDetailTab) }
+    LaunchedEffect(selectedDetailTab) { selectedTab = selectedDetailTab }
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header with archive button
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -259,8 +271,6 @@ fun ProjectDetailView(
                 Icon(Icons.Default.Archive, contentDescription = "Archive project")
             }
         }
-        
-        // Description
         project.description?.let { desc ->
             Text(
                 text = desc,
@@ -268,56 +278,81 @@ fun ProjectDetailView(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
         }
-        
-        Divider()
-        
-        // Project details
         DetailRow("Workspace Path", project.workspacePath)
         DetailRow("Branch Template", project.branchTemplate)
-        
         if (project.tags.isNotEmpty()) {
             DetailRow("Tags", project.tags.joinToString(", "))
         }
-
         project.team?.let { team ->
             DetailRow("Team", team)
         }
-
         Divider()
-
-        // Repositories section
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        TabRow(
+            selectedTabIndex = selectedTab.ordinal,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = "Repositories",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+            Tab(
+                selected = selectedTab == ProjectDetailTab.REPOSITORIES,
+                onClick = {
+                    selectedTab = ProjectDetailTab.REPOSITORIES
+                    onDetailTabChange(ProjectDetailTab.REPOSITORIES)
+                },
+                text = { Text("Repositories") }
             )
-            Button(
-                onClick = onAddRepository,
-                modifier = Modifier.height(32.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Add Repository", style = MaterialTheme.typography.bodySmall)
-            }
+            Tab(
+                selected = selectedTab == ProjectDetailTab.SLACK,
+                onClick = {
+                    selectedTab = ProjectDetailTab.SLACK
+                    onDetailTabChange(ProjectDetailTab.SLACK)
+                },
+                text = { Text("Slack") }
+            )
         }
-
-        if (repositories.isEmpty()) {
-            Text(
-                text = "No repositories configured",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-            )
-        } else {
-            repositories.forEach { repo ->
-                RepositoryCard(
-                    repository = repo,
-                    onEdit = { onEditRepository(repo) },
-                    onDelete = { onDeleteRepository(repo.id) }
+        when (selectedTab) {
+            ProjectDetailTab.REPOSITORIES -> {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Repositories",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Button(
+                        onClick = onAddRepository,
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Add Repository", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if (repositories.isEmpty()) {
+                    Text(
+                        text = "No repositories configured",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                } else {
+                    repositories.forEach { repo ->
+                        RepositoryCard(
+                            repository = repo,
+                            onEdit = { onEditRepository(repo) },
+                            onDelete = { onDeleteRepository(repo.id) }
+                        )
+                    }
+                }
+            }
+            ProjectDetailTab.SLACK -> {
+                SlackConfigView(
+                    channels = slackChannels,
+                    onAddChannel = onAddSlackChannel,
+                    onEditChannel = onEditSlackChannel,
+                    onDeleteChannel = onDeleteSlackChannel,
+                    onTestMessage = onTestSlackMessage,
+                    isSendingTest = isSendingSlackTest
                 )
             }
         }

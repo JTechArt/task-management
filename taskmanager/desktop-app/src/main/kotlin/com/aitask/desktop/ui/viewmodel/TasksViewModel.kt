@@ -4,13 +4,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.aitask.core.domain.model.*
+import com.aitask.core.domain.repository.ProjectRepository
+import com.aitask.core.domain.service.IDEService
+import com.aitask.core.domain.service.SlackNotificationService
 import com.aitask.core.domain.usecase.*
 import com.aitask.desktop.di.DependencyContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.UUID
-import com.aitask.core.domain.service.IDEService
 
 /**
  * ViewModel for managing tasks UI state and operations
@@ -26,6 +28,8 @@ class TasksViewModel(
     private val launchIDEUseCase: LaunchIDEUseCase = DependencyContainer.launchIDEUseCase,
     private val ideService: IDEService = DependencyContainer.ideService,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
+    private val projectRepository: com.aitask.core.domain.repository.ProjectRepository = DependencyContainer.projectRepository,
+    private val slackNotificationService: com.aitask.core.domain.service.SlackNotificationService = DependencyContainer.slackNotificationService,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     var uiState by mutableStateOf(TasksUiState())
@@ -95,6 +99,9 @@ class TasksViewModel(
                         showCreateDialog = false
                     )
                     loadTasks()
+                    projectRepository.findById(task.projectId)?.let { project ->
+                        slackNotificationService.notifyInBackground(TaskEvent.TASK_CREATED, task, project)
+                    }
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
@@ -114,7 +121,18 @@ class TasksViewModel(
 
             val result = updateTaskUseCase(taskId, request)
             result.fold(
-                onSuccess = { loadTasks() },
+                onSuccess = { updatedTask ->
+                    loadTasks()
+                    when (newStatus) {
+                        TaskStatus.IN_PROGRESS -> TaskEvent.TASK_STARTED
+                        TaskStatus.COMPLETED -> TaskEvent.TASK_COMPLETED
+                        else -> null
+                    }?.let { event ->
+                        projectRepository.findById(updatedTask.projectId)?.let { project ->
+                            slackNotificationService.notifyInBackground(event, updatedTask, project)
+                        }
+                    }
+                },
                 onFailure = { error ->
                     uiState = uiState.copy(
                         error = error.message ?: "Failed to update task"
@@ -265,6 +283,11 @@ class TasksViewModel(
                         workspaceGenerationProgress = null
                     )
                     loadTasks()
+                    task?.let { t ->
+                        projectRepository.findById(t.projectId)?.let { project ->
+                            slackNotificationService.notifyInBackground(TaskEvent.WORKSPACE_CREATED, t, project)
+                        }
+                    }
                 },
                 onFailure = { error ->
                     val errorMsg = error.message
@@ -298,6 +321,9 @@ class TasksViewModel(
                         ideLaunchSuccess = "Launched ${ideType.name} successfully"
                     )
                     loadTasks()
+                    projectRepository.findById(response.task.projectId)?.let { project ->
+                        slackNotificationService.notifyInBackground(TaskEvent.IDE_LAUNCHED, response.task, project)
+                    }
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(

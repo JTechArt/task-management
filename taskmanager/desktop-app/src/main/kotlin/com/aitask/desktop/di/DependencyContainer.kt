@@ -6,6 +6,8 @@ import com.aitask.core.domain.service.GitService
 import com.aitask.core.domain.service.HealthCheckService
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.RuleApplicationService
+import com.aitask.core.domain.service.SlackNotificationService
+import com.aitask.core.domain.service.SlackService
 import com.aitask.core.domain.service.WorkspaceService
 import com.aitask.core.domain.usecase.*
 import com.aitask.core.domain.validation.ProjectValidator
@@ -16,7 +18,10 @@ import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
 import com.aitask.core.infrastructure.rules.FileSystemRuleApplicationService
+import com.aitask.core.infrastructure.slack.SlackWebhookClient
 import com.aitask.core.infrastructure.workspace.FileSystemWorkspaceService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 /**
  * Dependency injection container for the desktop application
@@ -43,6 +48,10 @@ object DependencyContainer {
 
     val ruleRepository: RuleRepository by lazy {
         RuleRepositoryImpl()
+    }
+
+    val slackChannelRepository: SlackChannelRepository by lazy {
+        SlackChannelRepositoryImpl()
     }
 
     // Validators
@@ -86,6 +95,19 @@ object DependencyContainer {
 
     val ruleApplicationService: RuleApplicationService by lazy {
         FileSystemRuleApplicationService()
+    }
+
+    val slackService: SlackService by lazy {
+        SlackWebhookClient()
+    }
+
+    val slackNotificationService: SlackNotificationService by lazy {
+        SlackNotificationService(
+            slackService,
+            slackChannelRepository,
+            activityRepository,
+            CoroutineScope(Dispatchers.Default)
+        )
     }
 
     // Project Use Cases
@@ -221,6 +243,27 @@ object DependencyContainer {
 
     val importRuleUseCase: ImportRuleUseCase by lazy {
         ImportRuleUseCase(ruleRepository, ruleValidator)
+    }
+
+    // Slack Use Cases
+    val getSlackChannelsUseCase: GetSlackChannelsUseCase by lazy {
+        GetSlackChannelsUseCase(slackChannelRepository)
+    }
+
+    val createSlackChannelUseCase: CreateSlackChannelUseCase by lazy {
+        CreateSlackChannelUseCase(slackChannelRepository, projectRepository)
+    }
+
+    val updateSlackChannelUseCase: UpdateSlackChannelUseCase by lazy {
+        UpdateSlackChannelUseCase(slackChannelRepository)
+    }
+
+    val deleteSlackChannelUseCase: DeleteSlackChannelUseCase by lazy {
+        DeleteSlackChannelUseCase(slackChannelRepository)
+    }
+
+    val sendSlackTestMessageUseCase: SendSlackTestMessageUseCase by lazy {
+        SendSlackTestMessageUseCase(slackChannelRepository, slackService)
     }
 }
 

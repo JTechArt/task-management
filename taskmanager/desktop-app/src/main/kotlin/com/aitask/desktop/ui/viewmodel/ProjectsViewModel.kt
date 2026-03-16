@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.aitask.core.domain.model.*
 import com.aitask.core.domain.usecase.*
+import com.aitask.core.domain.model.TaskEvent
 import com.aitask.desktop.di.DependencyContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +23,11 @@ class ProjectsViewModel(
     private val updateRepositoryUseCase: UpdateRepositoryUseCase = DependencyContainer.updateRepositoryUseCase,
     private val deleteRepositoryUseCase: DeleteRepositoryUseCase = DependencyContainer.deleteRepositoryUseCase,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
+    private val getSlackChannelsUseCase: GetSlackChannelsUseCase = DependencyContainer.getSlackChannelsUseCase,
+    private val createSlackChannelUseCase: CreateSlackChannelUseCase = DependencyContainer.createSlackChannelUseCase,
+    private val updateSlackChannelUseCase: UpdateSlackChannelUseCase = DependencyContainer.updateSlackChannelUseCase,
+    private val deleteSlackChannelUseCase: DeleteSlackChannelUseCase = DependencyContainer.deleteSlackChannelUseCase,
+    private val sendSlackTestMessageUseCase: SendSlackTestMessageUseCase = DependencyContainer.sendSlackTestMessageUseCase,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     var uiState by mutableStateOf(ProjectsUiState())
@@ -103,9 +109,12 @@ class ProjectsViewModel(
     }
     
     fun selectProject(project: Project?) {
-        uiState = uiState.copy(selectedProject = project)
+        uiState = uiState.copy(selectedProject = project, selectedDetailTab = com.aitask.desktop.ui.projects.ProjectDetailTab.REPOSITORIES)
         if (project != null) {
             loadProjectRepositories(project.id)
+            loadSlackChannels(project.id)
+        } else {
+            uiState = uiState.copy(selectedProjectSlackChannels = emptyList())
         }
     }
     
@@ -116,6 +125,17 @@ class ProjectsViewModel(
                 uiState = uiState.copy(selectedProjectRepositories = repositories)
             } catch (e: Exception) {
                 // Silently fail - repositories will be empty
+            }
+        }
+    }
+
+    private fun loadSlackChannels(projectId: java.util.UUID) {
+        scope.launch {
+            try {
+                val channels = getSlackChannelsUseCase(projectId)
+                uiState = uiState.copy(selectedProjectSlackChannels = channels)
+            } catch (e: Exception) {
+                uiState = uiState.copy(selectedProjectSlackChannels = emptyList())
             }
         }
     }
@@ -263,7 +283,6 @@ class ProjectsViewModel(
             val result = deleteRepositoryUseCase(repositoryId)
             result.fold(
                 onSuccess = {
-                    // Reload repositories for the current project
                     uiState.selectedProject?.let { loadProjectRepositories(it.id) }
                 },
                 onFailure = { error ->
@@ -274,12 +293,102 @@ class ProjectsViewModel(
             )
         }
     }
+
+    fun setDetailTab(tab: com.aitask.desktop.ui.projects.ProjectDetailTab) {
+        uiState = uiState.copy(selectedDetailTab = tab)
+    }
+
+    fun showAddSlackChannelDialog() {
+        uiState = uiState.copy(showSlackChannelDialog = true, editingSlackChannel = null, error = null)
+    }
+
+    fun showEditSlackChannelDialog(channel: SlackChannelConfig) {
+        uiState = uiState.copy(showSlackChannelDialog = true, editingSlackChannel = channel, error = null)
+    }
+
+    fun hideSlackChannelDialog() {
+        uiState = uiState.copy(showSlackChannelDialog = false, editingSlackChannel = null, error = null)
+    }
+
+    fun createSlackChannel(webhookUrl: String, channelDisplayName: String, enabledEvents: Set<TaskEvent>) {
+        val projectId = uiState.selectedProject?.id ?: return
+        uiState = uiState.copy(isSaving = true, error = null)
+        scope.launch {
+            val request = CreateSlackChannelRequest(
+                webhookUrl = webhookUrl,
+                channelDisplayName = channelDisplayName,
+                projectId = projectId,
+                enabledEvents = enabledEvents
+            )
+            val result = createSlackChannelUseCase(request)
+            result.fold(
+                onSuccess = {
+                    uiState = uiState.copy(isSaving = false, showSlackChannelDialog = false)
+                    loadSlackChannels(projectId)
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(isSaving = false, error = error.message ?: "Failed to add Slack channel")
+                }
+            )
+        }
+    }
+
+    fun updateSlackChannel(id: java.util.UUID, webhookUrl: String?, channelDisplayName: String?, enabledEvents: Set<TaskEvent>?) {
+        uiState = uiState.copy(isSaving = true, error = null)
+        scope.launch {
+            val request = UpdateSlackChannelRequest(
+                webhookUrl = webhookUrl,
+                channelDisplayName = channelDisplayName,
+                enabledEvents = enabledEvents
+            )
+            val result = updateSlackChannelUseCase(id, request)
+            result.fold(
+                onSuccess = {
+                    uiState = uiState.copy(isSaving = false, showSlackChannelDialog = false, editingSlackChannel = null)
+                    uiState.selectedProject?.let { loadSlackChannels(it.id) }
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(isSaving = false, error = error.message ?: "Failed to update Slack channel")
+                }
+            )
+        }
+    }
+
+    fun deleteSlackChannel(channel: SlackChannelConfig) {
+        scope.launch {
+            val result = deleteSlackChannelUseCase(channel.id)
+            result.fold(
+                onSuccess = {
+                    uiState.selectedProject?.let { loadSlackChannels(it.id) }
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(error = error.message ?: "Failed to delete Slack channel")
+                }
+            )
+        }
+    }
+
+    fun sendSlackTestMessage(channel: SlackChannelConfig) {
+        scope.launch {
+            uiState = uiState.copy(isSendingSlackTest = true, error = null)
+            val result = sendSlackTestMessageUseCase(channel.id)
+            uiState = uiState.copy(isSendingSlackTest = false)
+            result.fold(
+                onSuccess = { },
+                onFailure = { error ->
+                    uiState = uiState.copy(error = error.message ?: "Test message failed")
+                }
+            )
+        }
+    }
 }
 
 data class ProjectsUiState(
     val projects: List<Project> = emptyList(),
     val selectedProject: Project? = null,
     val selectedProjectRepositories: List<Repository> = emptyList(),
+    val selectedProjectSlackChannels: List<SlackChannelConfig> = emptyList(),
+    val selectedDetailTab: com.aitask.desktop.ui.projects.ProjectDetailTab = com.aitask.desktop.ui.projects.ProjectDetailTab.REPOSITORIES,
     val searchQuery: String = "",
     val selectedTagFilter: String? = null,
     val selectedTeamFilter: String? = null,
@@ -287,7 +396,10 @@ data class ProjectsUiState(
     val isSaving: Boolean = false,
     val showCreateDialog: Boolean = false,
     val showAddRepositoryDialog: Boolean = false,
+    val showSlackChannelDialog: Boolean = false,
     val editingRepository: Repository? = null,
+    val editingSlackChannel: SlackChannelConfig? = null,
+    val isSendingSlackTest: Boolean = false,
     val error: String? = null
 )
 

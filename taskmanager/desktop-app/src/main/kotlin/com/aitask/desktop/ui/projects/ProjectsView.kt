@@ -183,7 +183,15 @@ fun ProjectsView(
                                     onArchive = { viewModel.archiveProject(it) },
                                     onAddRepository = { viewModel.showAddRepositoryDialog() },
                                     onEditRepository = { viewModel.showEditRepositoryDialog(it) },
-                                    onDeleteRepository = { viewModel.deleteRepository(it) }
+                                    onDeleteRepository = { viewModel.deleteRepository(it) },
+                                    slackChannels = uiState.selectedProjectSlackChannels,
+                                    selectedDetailTab = uiState.selectedDetailTab,
+                                    onDetailTabChange = { viewModel.setDetailTab(it) },
+                                    onAddSlackChannel = { viewModel.showAddSlackChannelDialog() },
+                                    onEditSlackChannel = { viewModel.showEditSlackChannelDialog(it) },
+                                    onDeleteSlackChannel = { viewModel.deleteSlackChannel(it) },
+                                    onTestSlackMessage = { viewModel.sendSlackTestMessage(it) },
+                                    isSendingSlackTest = uiState.isSendingSlackTest
                                 )
                             }
                         }
