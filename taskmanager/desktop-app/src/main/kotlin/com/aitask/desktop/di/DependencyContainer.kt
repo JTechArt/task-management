@@ -3,6 +3,7 @@ package com.aitask.desktop.di
 import com.aitask.core.data.repository.*
 import com.aitask.core.domain.repository.*
 import com.aitask.core.domain.service.GitService
+import com.aitask.core.domain.service.HealthCheckService
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.RuleApplicationService
 import com.aitask.core.domain.service.WorkspaceService
@@ -12,6 +13,7 @@ import com.aitask.core.domain.validation.RepositoryValidator
 import com.aitask.core.domain.validation.RuleValidator
 import com.aitask.core.domain.validation.TaskValidator
 import com.aitask.core.infrastructure.git.JGitService
+import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
 import com.aitask.core.infrastructure.rules.FileSystemRuleApplicationService
 import com.aitask.core.infrastructure.workspace.FileSystemWorkspaceService
@@ -67,6 +69,15 @@ object DependencyContainer {
 
     val ideService: IDEService by lazy {
         DesktopIDEService()
+    }
+
+    val healthCheckService: HealthCheckService by lazy {
+        HealthCheckServiceImpl(
+            projectRepository,
+            repositoryRepository,
+            gitService,
+            ideService
+        )
     }
 
     val workspaceService: WorkspaceService by lazy {

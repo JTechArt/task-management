@@ -73,15 +73,7 @@ fun PlaceholderView(
 // ProjectsView is now in projects/ProjectsView.kt
 // TasksView is now in tasks/TasksView.kt
 // RulesView is now in rules/RulesView.kt
-
-@Composable
-fun IntegrationsView(modifier: Modifier = Modifier) {
-    PlaceholderView(
-        title = "Integrations",
-        description = "Manage credentials, OAuth connections, and view system health",
-        modifier = modifier
-    )
-}
+// IntegrationsView is now in integrations/IntegrationsView.kt
 
 @Composable
 fun SettingsView(modifier: Modifier = Modifier) {
