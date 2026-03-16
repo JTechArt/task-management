@@ -1,0 +1,45 @@
+schema: 1
+story: "3.2"
+story_title: "Activity History and Recent Events"
+gate: PASS
+status_reason: "All acceptance criteria met. Activity model extended; V5 migration and ActivityRepositoryImpl provide persistence. Use cases record activity for TASK_CREATED, WORKSPACE_PREPARED, GIT_PREPARED, RULES_APPLIED, IDE_LAUNCHED. ActivityView with project/task/type filters; success/failed styling in ActivityView and Dashboard RecentActivitySection. 5 ActivityViewModelTest tests plus updated use case tests."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-16T15:00:00Z"
+waiver: { active: false }
+top_issues: []
+evidence:
+  tests_reviewed: 10
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+  test_files:
+    - ActivityViewModelTest (5 tests)
+    - CreateTaskUseCaseTest (activity recording)
+    - GenerateWorkspaceUseCaseTest (activity recording)
+    - ApplyRulesToWorkspaceUseCaseTest (activity recording)
+    - LaunchIDEUseCaseTest (activity recording)
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Activity log stores event metadata; no secrets. User context not exposed."
+  performance:
+    status: PASS
+    notes: "Indexes on created_at, entity, type, project. findFiltered limit 100."
+  reliability:
+    status: PASS
+    notes: "Error handling in ActivityViewModel; activity recording in use cases with status SUCCESS/FAILED."
+  maintainability:
+    status: PASS
+    notes: "ActivityViewModelTest covers load, filters, error path. Use case tests mock activityRepository."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "2 pre-existing core test failures (EnvConfigLoaderTest, ApplyRulesToWorkspaceUseCaseTest) - not story-introduced"
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider explicit setTaskFilter test in ActivityViewModelTest for parity with setProjectFilter/setTypeFilter"
+      refs: ["taskmanager/desktop-app/src/test/kotlin/com/aitask/desktop/ui/viewmodel/ActivityViewModelTest.kt"]

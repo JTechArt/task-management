@@ -19,7 +19,9 @@ import java.util.UUID
 @Composable
 fun TasksView(
     modifier: Modifier = Modifier,
-    viewModel: TasksViewModel = remember { TasksViewModel() }
+    viewModel: TasksViewModel = remember { TasksViewModel() },
+    taskIdToSelectOnMount: UUID? = null,
+    onMountedAfterSelection: (() -> Unit)? = null
 ) {
     val uiState = viewModel.uiState
 
@@ -32,6 +34,18 @@ fun TasksView(
     LaunchedEffect(uiState.selectedTask) {
         uiState.selectedTask?.let { task ->
             viewModel.loadProjectRepositories(task.projectId)
+        }
+    }
+
+    // Pre-select task when navigating from dashboard
+    LaunchedEffect(taskIdToSelectOnMount, uiState.tasks) {
+        val taskId = taskIdToSelectOnMount ?: return@LaunchedEffect
+        if (uiState.tasks.isNotEmpty()) {
+            val task = uiState.tasks.find { it.id == taskId }
+            if (task != null) {
+                viewModel.selectTask(task)
+            }
+            onMountedAfterSelection?.invoke()
         }
     }
     
@@ -76,12 +90,31 @@ fun TasksView(
         }
         
         // Filters
+        val filteredTasks = remember(
+            uiState.tasks,
+            uiState.selectedTaskTypeFilter,
+            uiState.searchQuery
+        ) {
+            uiState.tasks.filter { task ->
+                val typeMatch = uiState.selectedTaskTypeFilter == null ||
+                    task.taskType == uiState.selectedTaskTypeFilter
+                val query = uiState.searchQuery.trim().lowercase()
+                val searchMatch = query.isEmpty() ||
+                    task.title.lowercase().contains(query) ||
+                    (task.description?.lowercase()?.contains(query) == true)
+                typeMatch && searchMatch
+            }
+        }
         TaskFilters(
             projects = uiState.projects,
             selectedProjectId = uiState.selectedProjectFilter,
             selectedStatus = uiState.selectedStatusFilter,
+            selectedTaskType = uiState.selectedTaskTypeFilter,
+            searchQuery = uiState.searchQuery,
             onProjectSelected = { viewModel.setProjectFilter(it) },
-            onStatusSelected = { viewModel.setStatusFilter(it) }
+            onStatusSelected = { viewModel.setStatusFilter(it) },
+            onTaskTypeSelected = { viewModel.setTaskTypeFilter(it) },
+            onSearchQueryChange = { viewModel.setSearchQuery(it) }
         )
         
         // Error message
@@ -166,8 +199,8 @@ fun TasksView(
             ) {
                 CircularProgressIndicator()
             }
-        } else if (uiState.tasks.isEmpty()) {
-            // Empty state
+        } else if (filteredTasks.isEmpty()) {
+            // Empty state (no tasks or no matches)
             EmptyTasksState(
                 hasProjects = uiState.projects.isNotEmpty(),
                 onCreateClick = { viewModel.showCreateDialog() }
@@ -188,7 +221,7 @@ fun TasksView(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(uiState.tasks) { task ->
+                        items(filteredTasks) { task ->
                             TaskListItem(
                                 task = task,
                                 isSelected = task.id == uiState.selectedTask?.id,
@@ -220,11 +253,13 @@ fun TasksView(
                             onLaunchIDE = { taskId, ideType ->
                                 viewModel.launchIDE(taskId, ideType)
                             },
+                            onCleanupWorkspace = { task -> viewModel.showCleanupConfirmationDialog(task) },
                             availableIDEs = uiState.availableIDEs,
                             preferredIDEs = uiState.projectRepositories.flatMap { it.preferredIDEs }.distinct(),
                             isGeneratingWorkspace = uiState.isGeneratingWorkspace,
                             workspaceGenerationProgress = uiState.workspaceGenerationProgress,
-                            isLaunchingIDE = uiState.isLaunchingIDE
+                            isLaunchingIDE = uiState.isLaunchingIDE,
+                            isCleaningUpWorkspace = uiState.isCleaningUpWorkspace
                         )
                     }
                 }
@@ -241,6 +276,17 @@ fun TasksView(
                 viewModel.createTask(title, description, taskType, projectId)
             },
             isSaving = uiState.isSaving
+        )
+    }
+
+    // Destructive cleanup confirmation dialog
+    if (uiState.showCleanupConfirmationDialog && uiState.taskToCleanup != null) {
+        DestructiveCleanupConfirmationDialog(
+            taskTitle = uiState.taskToCleanup!!.title,
+            typedText = uiState.cleanupConfirmationTypedText,
+            onTypedTextChange = { viewModel.setCleanupConfirmationTypedText(it) },
+            onConfirm = { viewModel.confirmCleanupWorkspace() },
+            onDismiss = { viewModel.hideCleanupConfirmationDialog() }
         )
     }
 

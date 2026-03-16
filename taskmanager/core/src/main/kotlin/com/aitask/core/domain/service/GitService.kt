@@ -8,7 +8,21 @@ data class GitAuthConfig(
     val password: String? = null,
     val sshKeyPath: String? = null,
     val token: String? = null
-)
+) {
+    override fun toString(): String {
+        val hasPassword = password != null
+        val hasToken = token != null
+        val maskNote = when {
+            hasPassword && hasToken -> "password=***, token=***"
+            hasPassword -> "password=***"
+            hasToken -> "token=***"
+            else -> ""
+        }
+        return "GitAuthConfig(authType=$authType, username=$username, sshKeyPath=$sshKeyPath${
+            if (maskNote.isNotEmpty()) ", $maskNote" else ""
+        })"
+    }
+}
 
 data class CloneProgress(
     val phase: String,

@@ -1,6 +1,7 @@
 package com.aitask.core.domain.usecase
 
 import com.aitask.core.domain.model.*
+import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RuleRepository
 import com.aitask.core.domain.service.RuleApplicationResult
@@ -20,6 +21,7 @@ class ApplyRulesToWorkspaceUseCaseTest {
     private lateinit var ruleRepository: RuleRepository
     private lateinit var projectRepository: ProjectRepository
     private lateinit var ruleApplicationService: RuleApplicationService
+    private lateinit var activityRepository: ActivityRepository
     private lateinit var useCase: ApplyRulesToWorkspaceUseCase
     
     @BeforeEach
@@ -27,10 +29,13 @@ class ApplyRulesToWorkspaceUseCaseTest {
         ruleRepository = mockk()
         projectRepository = mockk()
         ruleApplicationService = mockk()
+        activityRepository = mockk()
+        coEvery { activityRepository.create(any()) } answers { firstArg() }
         useCase = ApplyRulesToWorkspaceUseCase(
             ruleRepository,
             projectRepository,
-            ruleApplicationService
+            ruleApplicationService,
+            activityRepository
         )
     }
     

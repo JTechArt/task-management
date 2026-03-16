@@ -56,6 +56,7 @@ class TaskRepositoryImpl : TaskRepository {
             it[projectId] = task.projectId
             it[workspacePath] = task.workspacePath
             it[branchName] = task.branchName
+            it[workspaceCleanedAt] = task.workspaceCleanedAt
             it[createdAt] = task.createdAt
             it[updatedAt] = task.updatedAt
             it[completedAt] = task.completedAt
@@ -71,6 +72,7 @@ class TaskRepositoryImpl : TaskRepository {
             it[status] = task.status.name
             it[workspacePath] = task.workspacePath
             it[branchName] = task.branchName
+            it[workspaceCleanedAt] = task.workspaceCleanedAt
             it[updatedAt] = Instant.now()
             it[completedAt] = task.completedAt
         }
@@ -103,6 +105,7 @@ class TaskRepositoryImpl : TaskRepository {
         projectId = this[Tasks.projectId].value,
         workspacePath = this[Tasks.workspacePath],
         branchName = this[Tasks.branchName],
+        workspaceCleanedAt = this[Tasks.workspaceCleanedAt],
         createdAt = this[Tasks.createdAt],
         updatedAt = this[Tasks.updatedAt],
         completedAt = this[Tasks.completedAt]

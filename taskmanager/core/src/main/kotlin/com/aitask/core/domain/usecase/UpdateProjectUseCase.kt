@@ -32,6 +32,7 @@ class UpdateProjectUseCase(
                 description = request.description,
                 workspacePath = request.workspacePath,
                 branchTemplate = request.branchTemplate,
+                retentionPolicy = request.retentionPolicy,
                 tags = request.tags,
                 team = request.team
             )

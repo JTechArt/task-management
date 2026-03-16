@@ -7,7 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,6 +16,121 @@ import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.Project
 import com.aitask.core.domain.model.Repository
 import java.util.UUID
+
+@Composable
+fun ProjectFilters(
+    availableTags: List<String>,
+    availableTeams: List<String>,
+    selectedTag: String?,
+    selectedTeam: String?,
+    searchQuery: String,
+    onTagSelected: (String?) -> Unit,
+    onTeamSelected: (String?) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            label = { Text("Search projects") },
+            placeholder = { Text("Search by name or description...") },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = "Search")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            if (availableTags.isNotEmpty()) {
+                var tagExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = tagExpanded,
+                    onExpandedChange = { tagExpanded = it },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    OutlinedTextField(
+                        value = selectedTag ?: "All Tags",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Tag") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = tagExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = tagExpanded,
+                        onDismissRequest = { tagExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("All Tags") },
+                            onClick = {
+                                onTagSelected(null)
+                                tagExpanded = false
+                            }
+                        )
+                        availableTags.sorted().forEach { tag ->
+                            DropdownMenuItem(
+                                text = { Text(tag) },
+                                onClick = {
+                                    onTagSelected(tag)
+                                    tagExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            if (availableTeams.isNotEmpty()) {
+                var teamExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = teamExpanded,
+                    onExpandedChange = { teamExpanded = it },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    OutlinedTextField(
+                        value = selectedTeam ?: "All Teams",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Team") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = teamExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = teamExpanded,
+                        onDismissRequest = { teamExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("All Teams") },
+                            onClick = {
+                                onTeamSelected(null)
+                                teamExpanded = false
+                            }
+                        )
+                        availableTeams.sorted().forEach { team ->
+                            DropdownMenuItem(
+                                text = { Text(team) },
+                                onClick = {
+                                    onTeamSelected(team)
+                                    teamExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun EmptyProjectsState(

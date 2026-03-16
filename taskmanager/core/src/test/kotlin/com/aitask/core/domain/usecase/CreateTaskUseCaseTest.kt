@@ -1,6 +1,7 @@
 package com.aitask.core.domain.usecase
 
 import com.aitask.core.domain.model.*
+import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.TaskRepository
 import com.aitask.core.domain.validation.TaskValidator
@@ -16,6 +17,7 @@ import java.util.UUID
 class CreateTaskUseCaseTest {
     private lateinit var taskRepository: TaskRepository
     private lateinit var projectRepository: ProjectRepository
+    private lateinit var activityRepository: ActivityRepository
     private lateinit var taskValidator: TaskValidator
     private lateinit var useCase: CreateTaskUseCase
     
@@ -23,8 +25,15 @@ class CreateTaskUseCaseTest {
     fun setup() {
         taskRepository = mockk()
         projectRepository = mockk()
+        activityRepository = mockk()
         taskValidator = mockk()
-        useCase = CreateTaskUseCase(taskRepository, projectRepository, taskValidator)
+        coEvery { activityRepository.create(any()) } answers { firstArg() }
+        useCase = CreateTaskUseCase(
+            taskRepository,
+            projectRepository,
+            activityRepository,
+            taskValidator
+        )
     }
     
     @Test

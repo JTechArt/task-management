@@ -7,7 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,7 +15,100 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.Project
 import com.aitask.core.domain.model.Rule
+import com.aitask.core.domain.model.RuleScope
 import java.util.UUID
+
+@Composable
+fun RuleFilters(
+    projects: List<Project>,
+    selectedScope: RuleScope?,
+    selectedProjectId: UUID?,
+    onScopeSelected: (RuleScope?) -> Unit,
+    onProjectSelected: (UUID?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        var scopeExpanded by remember { mutableStateOf(false) }
+        ExposedDropdownMenuBox(
+            expanded = scopeExpanded,
+            onExpandedChange = { scopeExpanded = it },
+            modifier = Modifier.weight(1f)
+        ) {
+            OutlinedTextField(
+                value = selectedScope?.name ?: "All Scopes",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Scope") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = scopeExpanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor()
+            )
+            ExposedDropdownMenu(
+                expanded = scopeExpanded,
+                onDismissRequest = { scopeExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("All Scopes") },
+                    onClick = {
+                        onScopeSelected(null)
+                        scopeExpanded = false
+                    }
+                )
+                RuleScope.entries.forEach { scope ->
+                    DropdownMenuItem(
+                        text = { Text(scope.name) },
+                        onClick = {
+                            onScopeSelected(scope)
+                            scopeExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+        var projectExpanded by remember { mutableStateOf(false) }
+        ExposedDropdownMenuBox(
+            expanded = projectExpanded,
+            onExpandedChange = { projectExpanded = it },
+            modifier = Modifier.weight(1f)
+        ) {
+            OutlinedTextField(
+                value = projects.find { it.id == selectedProjectId }?.name ?: "All Projects",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Linked Project") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = projectExpanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor()
+            )
+            ExposedDropdownMenu(
+                expanded = projectExpanded,
+                onDismissRequest = { projectExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("All Projects") },
+                    onClick = {
+                        onProjectSelected(null)
+                        projectExpanded = false
+                    }
+                )
+                projects.forEach { project ->
+                    DropdownMenuItem(
+                        text = { Text(project.name) },
+                        onClick = {
+                            onProjectSelected(project.id)
+                            projectExpanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun RuleListItem(

@@ -1,11 +1,13 @@
 package com.aitask.core.domain.usecase
 
 import com.aitask.core.domain.model.*
+import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
 import com.aitask.core.domain.service.WorkspaceService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.time.Instant
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
@@ -15,7 +17,8 @@ class GenerateWorkspaceUseCase(
     private val projectRepository: ProjectRepository,
     private val repositoryRepository: RepositoryRepository,
     private val workspaceService: WorkspaceService,
-    private val applyRulesToWorkspaceUseCase: ApplyRulesToWorkspaceUseCase
+    private val applyRulesToWorkspaceUseCase: ApplyRulesToWorkspaceUseCase,
+    private val activityRepository: ActivityRepository
 ) {
     suspend operator fun invoke(
         request: CreateWorkspaceRequest,
@@ -71,6 +74,14 @@ class GenerateWorkspaceUseCase(
             if (workspaceResult.isFailure) {
                 val err = workspaceResult.exceptionOrNull()!!
                 logger.error(err) { "Workspace creation failed: ${err.rootCauseMessage()}" }
+                recordActivity(
+                    type = ActivityType.WORKSPACE_PREPARED,
+                    task = task,
+                    projectId = project.id,
+                    status = ActivityStatus.FAILED,
+                    description = "Workspace creation failed for task: ${task.title}",
+                    metadata = mapOf("error" to (err.message ?: "Unknown"))
+                )
                 return Result.failure(err)
             }
             
@@ -87,10 +98,26 @@ class GenerateWorkspaceUseCase(
             if (preparedWorkspaceResult.isFailure) {
                 val err = preparedWorkspaceResult.exceptionOrNull()!!
                 logger.error(err) { "Workspace preparation (clone) failed: ${err.rootCauseMessage()}" }
+                recordActivity(
+                    type = ActivityType.GIT_PREPARED,
+                    task = task,
+                    projectId = project.id,
+                    status = ActivityStatus.FAILED,
+                    description = "Git clone failed for task: ${task.title}",
+                    metadata = mapOf("error" to (err.message ?: "Unknown"))
+                )
                 return Result.failure(err)
             }
             
             val preparedWorkspace = preparedWorkspaceResult.getOrThrow()
+            recordActivity(
+                type = ActivityType.GIT_PREPARED,
+                task = task,
+                projectId = project.id,
+                status = ActivityStatus.SUCCESS,
+                description = "Cloned repositories for task: ${task.title}",
+                metadata = mapOf("workspacePath" to preparedWorkspace.path)
+            )
 
             // Apply rules to workspace if preparation was successful
             var workspaceWithRules = preparedWorkspace
@@ -140,6 +167,14 @@ class GenerateWorkspaceUseCase(
                     status = TaskStatus.IN_PROGRESS
                 )
                 taskRepository.update(updatedTask)
+                recordActivity(
+                    type = ActivityType.WORKSPACE_PREPARED,
+                    task = task,
+                    projectId = project.id,
+                    status = ActivityStatus.SUCCESS,
+                    description = "Workspace prepared for task: ${task.title}",
+                    metadata = mapOf("workspacePath" to workspaceWithRules.path)
+                )
                 onProgress?.invoke("Workspace generation complete!")
             } else if (workspaceWithRules.isFailed) {
                 // Build detailed error message listing failed and successful repositories
@@ -171,6 +206,14 @@ class GenerateWorkspaceUseCase(
                     }
                 }
 
+                recordActivity(
+                    type = ActivityType.WORKSPACE_PREPARED,
+                    task = task,
+                    projectId = project.id,
+                    status = ActivityStatus.FAILED,
+                    description = "Workspace preparation partially failed for task: ${task.title}",
+                    metadata = mapOf("error" to errorDetails)
+                )
                 onProgress?.invoke(errorDetails)
                 return Result.failure(WorkspaceGenerationException(errorDetails))
             }
@@ -179,9 +222,43 @@ class GenerateWorkspaceUseCase(
         } catch (e: Exception) {
             val errorMsg = e.rootCauseMessage()
             logger.error(e) { "Workspace generation failed for task ${request.taskId}: $errorMsg" }
+            val task = taskRepository.findById(request.taskId)
+            if (task != null) {
+                recordActivity(
+                    type = ActivityType.WORKSPACE_PREPARED,
+                    task = task,
+                    projectId = request.projectId,
+                    status = ActivityStatus.FAILED,
+                    description = "Workspace generation failed: ${task.title}",
+                    metadata = mapOf("error" to errorMsg)
+                )
+            }
             onProgress?.invoke("Workspace generation failed: $errorMsg")
             Result.failure(e)
         }
+    }
+
+    private suspend fun recordActivity(
+        type: ActivityType,
+        task: Task,
+        projectId: UUID,
+        status: ActivityStatus,
+        description: String,
+        metadata: Map<String, String>
+    ) {
+        activityRepository.create(
+            Activity(
+                id = UUID.randomUUID(),
+                type = type,
+                entityType = "task",
+                entityId = task.id,
+                description = description,
+                metadata = metadata,
+                status = status,
+                createdAt = Instant.now(),
+                projectId = projectId
+            )
+        )
     }
 }
 

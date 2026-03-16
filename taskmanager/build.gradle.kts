@@ -19,6 +19,13 @@ allprojects {
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
 
+    val javaToolchainService = extensions.getByType<org.gradle.jvm.toolchain.JavaToolchainService>()
+    tasks.withType<Test>().configureEach {
+        javaLauncher.set(javaToolchainService.launcherFor {
+            languageVersion.set(org.gradle.jvm.toolchain.JavaLanguageVersion.of(21))
+        })
+    }
+
     tasks.withType<JavaCompile> {
         sourceCompatibility = "21"
         targetCompatibility = "21"

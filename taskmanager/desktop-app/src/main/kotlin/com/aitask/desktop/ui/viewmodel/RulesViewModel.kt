@@ -34,7 +34,10 @@ class RulesViewModel(
     fun loadRules() {
         uiState = uiState.copy(isLoading = true, error = null)
         scope.launch {
-            val result = getRulesUseCase.getAll(includeArchived = false)
+            val result = when (val projectId = uiState.selectedProjectFilter) {
+                null -> getRulesUseCase.getAll(includeArchived = false)
+                else -> getRulesUseCase.getByProject(projectId, includeArchived = false)
+            }
             result.fold(
                 onSuccess = { rules ->
                     uiState = uiState.copy(
@@ -279,12 +282,23 @@ class RulesViewModel(
     fun clearExportFeedback() {
         uiState = uiState.copy(exportFeedback = null)
     }
+
+    fun setScopeFilter(scope: RuleScope?) {
+        uiState = uiState.copy(selectedScopeFilter = scope)
+    }
+
+    fun setProjectFilter(projectId: UUID?) {
+        uiState = uiState.copy(selectedProjectFilter = projectId)
+        loadRules()
+    }
 }
 
 data class RulesUiState(
     val rules: List<Rule> = emptyList(),
     val projects: List<Project> = emptyList(),
     val selectedRule: Rule? = null,
+    val selectedScopeFilter: RuleScope? = null,
+    val selectedProjectFilter: UUID? = null,
     val attachedProjectIds: List<UUID> = emptyList(),
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,

@@ -19,6 +19,7 @@ enum class NavigationItem {
     DASHBOARD,
     PROJECTS,
     TASKS,
+    ACTIVITY,
     RULES,
     INTEGRATIONS,
     SETTINGS

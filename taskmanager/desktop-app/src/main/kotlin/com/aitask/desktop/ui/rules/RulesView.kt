@@ -153,48 +153,79 @@ fun RulesView(
                 }
             }
         } else {
-            // Rules list
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            val filteredRules = remember(
+                uiState.rules,
+                uiState.selectedScopeFilter
             ) {
-                // Rules list (left side)
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                ) {
-                    LazyColumn(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(uiState.rules) { rule ->
-                            RuleListItem(
-                                rule = rule,
-                                isSelected = rule.id == uiState.selectedRule?.id,
-                                onClick = { viewModel.selectRule(rule) }
-                            )
-                        }
-                    }
+                uiState.rules.filter { rule ->
+                    uiState.selectedScopeFilter == null || rule.scope == uiState.selectedScopeFilter
                 }
-
-                // Rule detail (right side)
-                if (uiState.selectedRule != null) {
-                    Card(
-                        modifier = Modifier
-                            .weight(1.5f)
-                            .fillMaxHeight()
+            }
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                RuleFilters(
+                    projects = uiState.projects,
+                    selectedScope = uiState.selectedScopeFilter,
+                    selectedProjectId = uiState.selectedProjectFilter,
+                    onScopeSelected = { viewModel.setScopeFilter(it) },
+                    onProjectSelected = { viewModel.setProjectFilter(it) }
+                )
+                if (filteredRules.isEmpty()) {
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
                     ) {
-                        RuleDetailView(
-                            rule = uiState.selectedRule,
-                            projects = uiState.projects,
-                            attachedProjectIds = uiState.attachedProjectIds,
-                            onEdit = { viewModel.showEditDialog(it) },
-                            onDelete = { viewModel.deleteRule(it) },
-                            onAttach = { projectId, ruleId -> viewModel.attachRule(projectId, ruleId) },
-                            onDetach = { projectId, ruleId -> viewModel.detachRule(projectId, ruleId) },
-                            onExport = { ruleId -> viewModel.exportRules(listOf(ruleId)) }
+                        Text(
+                            text = "No rules match the current filters",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Card(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                        ) {
+                            LazyColumn(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(filteredRules) { rule ->
+                                    RuleListItem(
+                                        rule = rule,
+                                        isSelected = rule.id == uiState.selectedRule?.id,
+                                        onClick = { viewModel.selectRule(rule) }
+                                    )
+                                }
+                            }
+                        }
+                        if (uiState.selectedRule != null) {
+                            Card(
+                                modifier = Modifier
+                                    .weight(1.5f)
+                                    .fillMaxHeight()
+                            ) {
+                                RuleDetailView(
+                                    rule = uiState.selectedRule!!,
+                                    projects = uiState.projects,
+                                    attachedProjectIds = uiState.attachedProjectIds,
+                                    onEdit = { viewModel.showEditDialog(it) },
+                                    onDelete = { viewModel.deleteRule(it) },
+                                    onAttach = { projectId, ruleId -> viewModel.attachRule(projectId, ruleId) },
+                                    onDetach = { projectId, ruleId -> viewModel.detachRule(projectId, ruleId) },
+                                    onExport = { ruleId -> viewModel.exportRules(listOf(ruleId)) }
+                                )
+                            }
+                        }
                     }
                 }
             }

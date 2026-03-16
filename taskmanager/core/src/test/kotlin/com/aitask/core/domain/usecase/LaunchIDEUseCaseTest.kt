@@ -281,6 +281,7 @@ class LaunchIDEUseCaseTest {
         coEvery { repositoryRepository.findByProject(projectId) } returns emptyList()
         coEvery { ideService.launchIDE(any(), any(), any()) } returns
             Result.failure(IDENotFoundException(IDEType.CURSOR))
+        coEvery { activityRepository.create(any()) } answers { firstArg() }
 
         // When
         val result = useCase(request)
@@ -290,7 +291,7 @@ class LaunchIDEUseCaseTest {
         assertTrue(result.exceptionOrNull() is IDENotFoundException)
 
         coVerify(exactly = 0) { taskRepository.update(any()) }
-        coVerify(exactly = 0) { activityRepository.create(any()) }
+        coVerify(exactly = 1) { activityRepository.create(any()) }
     }
 }
 

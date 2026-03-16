@@ -69,90 +69,145 @@ fun TaskFilters(
     projects: List<Project>,
     selectedProjectId: UUID?,
     selectedStatus: TaskStatus?,
+    selectedTaskType: TaskType?,
+    searchQuery: String,
     onProjectSelected: (UUID?) -> Unit,
     onStatusSelected: (TaskStatus?) -> Unit,
+    onTaskTypeSelected: (TaskType?) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Project filter
-        var projectExpanded by remember { mutableStateOf(false) }
-        ExposedDropdownMenuBox(
-            expanded = projectExpanded,
-            onExpandedChange = { projectExpanded = it },
-            modifier = Modifier.weight(1f)
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            label = { Text("Search tasks") },
+            placeholder = { Text("Search by title or description...") },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = "Search")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            OutlinedTextField(
-                value = projects.find { it.id == selectedProjectId }?.name ?: "All Projects",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Project") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = projectExpanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-            ExposedDropdownMenu(
+            var projectExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
                 expanded = projectExpanded,
-                onDismissRequest = { projectExpanded = false }
+                onExpandedChange = { projectExpanded = it },
+                modifier = Modifier.weight(1f)
             ) {
-                DropdownMenuItem(
-                    text = { Text("All Projects") },
-                    onClick = {
-                        onProjectSelected(null)
-                        projectExpanded = false
-                    }
+                OutlinedTextField(
+                    value = projects.find { it.id == selectedProjectId }?.name ?: "All Projects",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Project") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = projectExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
                 )
-                projects.forEach { project ->
+                ExposedDropdownMenu(
+                    expanded = projectExpanded,
+                    onDismissRequest = { projectExpanded = false }
+                ) {
                     DropdownMenuItem(
-                        text = { Text(project.name) },
+                        text = { Text("All Projects") },
                         onClick = {
-                            onProjectSelected(project.id)
+                            onProjectSelected(null)
                             projectExpanded = false
                         }
                     )
+                    projects.forEach { project ->
+                        DropdownMenuItem(
+                            text = { Text(project.name) },
+                            onClick = {
+                                onProjectSelected(project.id)
+                                projectExpanded = false
+                            }
+                        )
+                    }
                 }
             }
-        }
-        
-        // Status filter
-        var statusExpanded by remember { mutableStateOf(false) }
-        ExposedDropdownMenuBox(
-            expanded = statusExpanded,
-            onExpandedChange = { statusExpanded = it },
-            modifier = Modifier.weight(1f)
-        ) {
-            OutlinedTextField(
-                value = selectedStatus?.name ?: "All Statuses",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Status") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-            ExposedDropdownMenu(
+            var statusExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
                 expanded = statusExpanded,
-                onDismissRequest = { statusExpanded = false }
+                onExpandedChange = { statusExpanded = it },
+                modifier = Modifier.weight(1f)
             ) {
-                DropdownMenuItem(
-                    text = { Text("All Statuses") },
-                    onClick = {
-                        onStatusSelected(null)
-                        statusExpanded = false
-                    }
+                OutlinedTextField(
+                    value = selectedStatus?.name ?: "All Statuses",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Status") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
                 )
-                TaskStatus.values().forEach { status ->
+                ExposedDropdownMenu(
+                    expanded = statusExpanded,
+                    onDismissRequest = { statusExpanded = false }
+                ) {
                     DropdownMenuItem(
-                        text = { Text(status.name) },
+                        text = { Text("All Statuses") },
                         onClick = {
-                            onStatusSelected(status)
+                            onStatusSelected(null)
                             statusExpanded = false
                         }
                     )
+                    TaskStatus.values().forEach { status ->
+                        DropdownMenuItem(
+                            text = { Text(status.name) },
+                            onClick = {
+                                onStatusSelected(status)
+                                statusExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            var taskTypeExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = taskTypeExpanded,
+                onExpandedChange = { taskTypeExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = selectedTaskType?.name?.replace("_", " ") ?: "All Types",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Task Type") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = taskTypeExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = taskTypeExpanded,
+                    onDismissRequest = { taskTypeExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("All Types") },
+                        onClick = {
+                            onTaskTypeSelected(null)
+                            taskTypeExpanded = false
+                        }
+                    )
+                    TaskType.values().forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type.name.replace("_", " ")) },
+                            onClick = {
+                                onTaskTypeSelected(type)
+                                taskTypeExpanded = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -239,11 +294,13 @@ fun TaskDetailView(
     onStatusChange: (UUID, TaskStatus) -> Unit,
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
+    onCleanupWorkspace: ((Task) -> Unit)? = null,
     availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
     preferredIDEs: List<IDEType> = emptyList(),
     isGeneratingWorkspace: Boolean = false,
     workspaceGenerationProgress: String? = null,
     isLaunchingIDE: Boolean = false,
+    isCleaningUpWorkspace: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -302,6 +359,15 @@ fun TaskDetailView(
 
         task.branchName?.let { branch ->
             DetailRow("Branch", branch)
+        }
+
+        if (task.isCompleted) {
+            val workspaceStateText = when {
+                task.workspaceCleanedAt != null -> "Cleanup completed"
+                task.workspacePath != null -> "Retained"
+                else -> "Not created"
+            }
+            DetailRow("Workspace state", workspaceStateText)
         }
 
         Divider()
@@ -418,6 +484,32 @@ fun TaskDetailView(
                     }
                 }
             }
+
+            if (task.isCompleted && task.workspacePath != null && task.workspaceCleanedAt == null && onCleanupWorkspace != null) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Workspace Cleanup",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                OutlinedButton(
+                    onClick = { onCleanupWorkspace(task) },
+                    enabled = !isCleaningUpWorkspace,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    if (isCleaningUpWorkspace) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (isCleaningUpWorkspace) "Cleaning up..." else "Clean up workspace")
+                }
+            }
         }
 
         Divider()
@@ -445,6 +537,67 @@ fun TaskDetailView(
             }
         }
     }
+}
+
+@Composable
+fun DestructiveCleanupConfirmationDialog(
+    taskTitle: String,
+    typedText: String,
+    onTypedTextChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = { Text("Clean up workspace?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "This will permanently delete local workspace data for task \"$taskTitle\". This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Type DELETE to continue:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                OutlinedTextField(
+                    value = typedText,
+                    onValueChange = onTypedTextChange,
+                    placeholder = { Text("DELETE") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    supportingText = {
+                        if (typedText.isNotEmpty() && typedText != "DELETE") {
+                            Text("Must type DELETE exactly", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = typedText == "DELETE",
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Clean up workspace")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

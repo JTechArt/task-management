@@ -55,6 +55,7 @@ class CreateProjectUseCase(
                 description = projectRequest.description,
                 workspacePath = projectRequest.workspacePath,
                 branchTemplate = projectRequest.branchTemplate,
+                retentionPolicy = projectRequest.retentionPolicy,
                 tags = projectRequest.tags,
                 team = projectRequest.team,
                 createdAt = now,

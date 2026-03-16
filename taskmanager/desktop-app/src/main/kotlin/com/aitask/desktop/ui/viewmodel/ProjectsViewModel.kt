@@ -57,6 +57,7 @@ class ProjectsViewModel(
         description: String?,
         workspacePath: String,
         branchTemplate: String,
+        retentionPolicy: com.aitask.core.domain.service.RetentionPolicy,
         repositoryName: String,
         cloneUrl: String,
         provider: GitProvider,
@@ -69,7 +70,8 @@ class ProjectsViewModel(
                 name = name,
                 description = description,
                 workspacePath = workspacePath,
-                branchTemplate = branchTemplate
+                branchTemplate = branchTemplate,
+                retentionPolicy = retentionPolicy
             )
             
             val repositoryRequest = CreateRepositoryRequest(
@@ -147,6 +149,18 @@ class ProjectsViewModel(
     
     fun clearError() {
         uiState = uiState.copy(error = null)
+    }
+
+    fun setSearchQuery(query: String) {
+        uiState = uiState.copy(searchQuery = query)
+    }
+
+    fun setTagFilter(tag: String?) {
+        uiState = uiState.copy(selectedTagFilter = tag)
+    }
+
+    fun setTeamFilter(team: String?) {
+        uiState = uiState.copy(selectedTeamFilter = team)
     }
 
     // Repository Management
@@ -266,6 +280,9 @@ data class ProjectsUiState(
     val projects: List<Project> = emptyList(),
     val selectedProject: Project? = null,
     val selectedProjectRepositories: List<Repository> = emptyList(),
+    val searchQuery: String = "",
+    val selectedTagFilter: String? = null,
+    val selectedTeamFilter: String? = null,
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val showCreateDialog: Boolean = false,
