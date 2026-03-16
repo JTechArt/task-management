@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.Activity
+import com.aitask.core.domain.model.ActivityStatus
 import com.aitask.core.domain.model.Task
 import com.aitask.core.domain.model.TaskStatus
 import com.aitask.desktop.ui.NavigationItem
@@ -76,6 +77,7 @@ fun DashboardView(
             ) {
                 RecentActivitySection(
                     activities = uiState.recentActivity,
+                    onViewAll = { onNavigate(NavigationItem.ACTIVITY) },
                     modifier = Modifier.weight(1f)
                 )
                 ProjectsInMotionSection(
@@ -365,6 +367,7 @@ private fun SystemHealthSection(
 @Composable
 private fun RecentActivitySection(
     activities: List<Activity>,
+    onViewAll: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     DashboardCard(
@@ -372,6 +375,16 @@ private fun RecentActivitySection(
         subtitle = "Workspace opens, task status changes, and setup events",
         modifier = modifier
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {}
+            TextButton(onClick = onViewAll) {
+                Text("View activity")
+            }
+        }
         if (activities.isEmpty()) {
             Text(
                 text = "No recent activity.",
@@ -381,13 +394,24 @@ private fun RecentActivitySection(
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(activities) { activity ->
+                    val statusColor = when (activity.status) {
+                        com.aitask.core.domain.model.ActivityStatus.SUCCESS -> Color(0xFF2E7D32)
+                        com.aitask.core.domain.model.ActivityStatus.FAILED -> Color(0xFFC62828)
+                        com.aitask.core.domain.model.ActivityStatus.IN_PROGRESS -> Color(0xFF1565C0)
+                    }
+                    val backgroundColor = when (activity.status) {
+                        com.aitask.core.domain.model.ActivityStatus.SUCCESS -> Color(0xFFE8F5E9)
+                        com.aitask.core.domain.model.ActivityStatus.FAILED -> Color(0xFFFFEBEE)
+                        com.aitask.core.domain.model.ActivityStatus.IN_PROGRESS -> Color(0xFFE3F2FD)
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .background(backgroundColor)
                             .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -395,11 +419,28 @@ private fun RecentActivitySection(
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Medium
                             )
-                            Text(
-                                text = activity.type.name.replace('_', ' '),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = activity.type.name.replace('_', ' '),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                                Surface(
+                                    color = statusColor.copy(alpha = 0.2f),
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = activity.status.name.replace('_', ' '),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = statusColor,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
                         }
                         Text(
                             text = formatRelativeTime(activity.createdAt),

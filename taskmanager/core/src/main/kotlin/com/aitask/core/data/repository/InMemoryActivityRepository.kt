@@ -42,6 +42,22 @@ class InMemoryActivityRepository : ActivityRepository {
             .take(limit)
     }
     
+    override suspend fun findFiltered(
+        projectId: UUID?,
+        taskId: UUID?,
+        type: com.aitask.core.domain.model.ActivityType?,
+        limit: Int
+    ): List<Activity> {
+        return activities.values
+            .filter { act ->
+                (projectId == null || act.projectId == projectId) &&
+                (taskId == null || (act.entityType == "task" && act.entityId == taskId)) &&
+                (type == null || act.type == type)
+            }
+            .sortedByDescending { it.createdAt }
+            .take(limit)
+    }
+    
     override suspend fun deleteOlderThan(timestamp: Instant): Int {
         val toDelete = activities.values.filter { it.createdAt < timestamp }
         toDelete.forEach { activities.remove(it.id) }

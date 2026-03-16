@@ -13,6 +13,7 @@ import com.aitask.core.config.ConfigLoader
 import com.aitask.core.config.EnvConfigLoader
 import com.aitask.core.logging.logStartup
 import com.aitask.desktop.ui.*
+import com.aitask.desktop.ui.activity.ActivityView
 import com.aitask.desktop.ui.dashboard.DashboardView
 import com.aitask.desktop.ui.projects.ProjectsView
 import com.aitask.desktop.ui.tasks.TasksView
@@ -83,6 +84,13 @@ fun AppSurface(config: AppConfig, bootstrapResult: BootstrapResult) {
                             }
                         )
                         NavigationItem.PROJECTS -> ProjectsView()
+                        NavigationItem.ACTIVITY -> ActivityView(
+                            databaseConnected = bootstrapResult.databaseInitialized,
+                            onNavigateToTask = { taskId ->
+                                taskIdToSelectWhenShowingTasks = taskId
+                                selectedNavItem = NavigationItem.TASKS
+                            }
+                        )
                         NavigationItem.TASKS -> TasksView(
                             taskIdToSelectOnMount = taskIdToSelectWhenShowingTasks,
                             onMountedAfterSelection = { taskIdToSelectWhenShowingTasks = null }

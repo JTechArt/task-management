@@ -156,7 +156,8 @@ class DashboardViewModelTest {
                 entityId = UUID.randomUUID(),
                 description = "IDE launched",
                 metadata = emptyMap(),
-                createdAt = Instant.now()
+                createdAt = Instant.now(),
+                status = com.aitask.core.domain.model.ActivityStatus.SUCCESS
             )
         )
         coEvery { projectRepository.findAllActive() } returns emptyList()

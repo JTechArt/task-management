@@ -14,9 +14,20 @@ enum class ActivityType {
     WORKSPACE_CREATED,
     WORKSPACE_PREPARED,
     IDE_LAUNCHED,
+    GIT_PREPARED,
+    RULES_APPLIED,
     PROJECT_CREATED,
     PROJECT_UPDATED,
     REPOSITORY_ADDED
+}
+
+/**
+ * Status of the activity (success, failure, or in progress)
+ */
+enum class ActivityStatus {
+    SUCCESS,
+    FAILED,
+    IN_PROGRESS
 }
 
 /**
@@ -25,11 +36,13 @@ enum class ActivityType {
 data class Activity(
     val id: UUID,
     val type: ActivityType,
-    val entityType: String, // "task", "project", "workspace", etc.
+    val entityType: String,
     val entityId: UUID,
     val description: String,
     val metadata: Map<String, String> = emptyMap(),
-    val createdAt: Instant
+    val createdAt: Instant,
+    val status: ActivityStatus = ActivityStatus.SUCCESS,
+    val projectId: UUID? = null
 )
 
 /**
@@ -40,6 +53,8 @@ data class CreateActivityRequest(
     val entityType: String,
     val entityId: UUID,
     val description: String,
-    val metadata: Map<String, String> = emptyMap()
+    val metadata: Map<String, String> = emptyMap(),
+    val status: ActivityStatus = ActivityStatus.SUCCESS,
+    val projectId: UUID? = null
 )
 

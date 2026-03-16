@@ -36,7 +36,7 @@ object DependencyContainer {
     }
     
     val activityRepository: ActivityRepository by lazy {
-        InMemoryActivityRepository()
+        ActivityRepositoryImpl()
     }
 
     val ruleRepository: RuleRepository by lazy {
@@ -121,6 +121,7 @@ object DependencyContainer {
         CreateTaskUseCase(
             taskRepository,
             projectRepository,
+            activityRepository,
             taskValidator
         )
     }
@@ -142,7 +143,8 @@ object DependencyContainer {
         ApplyRulesToWorkspaceUseCase(
             ruleRepository,
             projectRepository,
-            ruleApplicationService
+            ruleApplicationService,
+            activityRepository
         )
     }
 
@@ -152,7 +154,8 @@ object DependencyContainer {
             projectRepository,
             repositoryRepository,
             workspaceService,
-            applyRulesToWorkspaceUseCase
+            applyRulesToWorkspaceUseCase,
+            activityRepository
         )
     }
     

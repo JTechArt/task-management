@@ -93,11 +93,22 @@ class LaunchIDEUseCase(
             )
             
             if (launchResult.isFailure) {
-                logger.error { "Failed to launch IDE: ${launchResult.exceptionOrNull()?.message}" }
-                return Result.failure(
-                    launchResult.exceptionOrNull() 
-                        ?: Exception("Failed to launch IDE")
+                val err = launchResult.exceptionOrNull() ?: Exception("Failed to launch IDE")
+                logger.error { "Failed to launch IDE: ${err.message}" }
+                activityRepository.create(
+                    Activity(
+                        id = UUID.randomUUID(),
+                        type = ActivityType.IDE_LAUNCHED,
+                        entityType = "task",
+                        entityId = task.id,
+                        description = "Failed to launch ${request.ideType} for task: ${task.title}",
+                        metadata = mapOf("error" to (err.message ?: "Unknown")),
+                        status = ActivityStatus.FAILED,
+                        createdAt = Instant.now(),
+                        projectId = task.projectId
+                    )
                 )
+                return Result.failure(err)
             }
             
             // 7. Update task status to IN_PROGRESS if requested
@@ -110,7 +121,7 @@ class LaunchIDEUseCase(
                 task
             }
             
-            // 8. Record activity
+            // 8. Record activity (success)
             val activity = Activity(
                 id = UUID.randomUUID(),
                 type = ActivityType.IDE_LAUNCHED,
@@ -122,7 +133,9 @@ class LaunchIDEUseCase(
                     "workspacePath" to task.workspacePath,
                     "projectName" to project.name
                 ),
-                createdAt = Instant.now()
+                status = ActivityStatus.SUCCESS,
+                createdAt = Instant.now(),
+                projectId = task.projectId
             )
             activityRepository.create(activity)
             

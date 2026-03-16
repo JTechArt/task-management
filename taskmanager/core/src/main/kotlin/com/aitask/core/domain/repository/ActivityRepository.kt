@@ -34,6 +34,16 @@ interface ActivityRepository {
     suspend fun findRecent(limit: Int = 50): List<Activity>
     
     /**
+     * Find activities with optional filters (project, task, type). Results in chronological order, most recent first.
+     */
+    suspend fun findFiltered(
+        projectId: java.util.UUID? = null,
+        taskId: java.util.UUID? = null,
+        type: ActivityType? = null,
+        limit: Int = 100
+    ): List<Activity>
+    
+    /**
      * Delete activities older than the specified timestamp
      */
     suspend fun deleteOlderThan(timestamp: java.time.Instant): Int
