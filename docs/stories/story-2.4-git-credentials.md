@@ -2,7 +2,7 @@
 
 ## Status
 
-Deferred to Epic 3
+Done
 
 **Epic:** Epic 2 - Multi-Repository Git Automation and Rule Application
 
@@ -28,6 +28,47 @@ Deferred to Epic 3
 - [Flow 3: Project and Repository Setup](../front-end-spec.md#flow-3-project-and-repository-setup)
 - [Visual Mockup: Integrations & Health](../mockups/integrations.html)
 - [Visual Mockup: Project Detail](../mockups/project-detail.html)
+
+## Tasks / Subtasks
+
+- [x] Task 1: Add credential masking to GitAuthConfig (AC5)
+  - [x] Override toString() to mask password and token
+- [x] Task 2: Add CredentialRedactor for URL redaction
+  - [x] redactUrl for clone URLs in logs
+  - [x] redactMessage for user-facing error messages
+- [x] Task 3: Apply redaction in FileSystemWorkspaceService
+  - [x] Redact cloneUrl in logger.error
+  - [x] Redact detailedMessage before storage/UI
+- [x] Task 4: Add unit tests
+  - [x] GitAuthConfigTest (toString masking)
+  - [x] CredentialRedactorTest (redactUrl, redactMessage)
+
+## Dev Agent Record
+
+### Agent Model Used
+Claude Opus 4.5
+
+### Debug Log References
+`cd taskmanager && ./gradlew :core:test` — all core tests pass
+
+### Completion Notes List
+- Implemented AC5 (credential-handling flows avoid exposing secrets) within Epic 2 MVP scope per QA waiver
+- GitAuthConfig: override toString() to show password=***, token=*** instead of raw values
+- CredentialRedactor: redacts embedded credentials in HTTP(S) URLs (https://user:pass@host → https://***@host)
+- FileSystemWorkspaceService: uses CredentialRedactor for clone failure logs and user-facing error messages
+- AC1, AC2 (SSH) unchanged; AC3–AC4 deferred to Epic 3 per QA decision
+
+### File List
+- taskmanager/core/src/main/kotlin/com/aitask/core/domain/service/GitService.kt (modified)
+- taskmanager/core/src/main/kotlin/com/aitask/core/domain/util/CredentialRedactor.kt (new)
+- taskmanager/core/src/main/kotlin/com/aitask/core/infrastructure/workspace/FileSystemWorkspaceService.kt (modified)
+- taskmanager/core/src/test/kotlin/com/aitask/core/domain/service/GitAuthConfigTest.kt (new)
+- taskmanager/core/src/test/kotlin/com/aitask/core/domain/util/CredentialRedactorTest.kt (new)
+
+### Change Log
+| Date | Change |
+|------|--------|
+| 2026-03-17 | Implemented AC5 credential masking: GitAuthConfig toString, CredentialRedactor, FileSystemWorkspaceService redaction, unit tests |
 
 ## QA Results
 
@@ -119,3 +160,57 @@ When implementing in Epic 3, include:
 ### Verification
 
 Confirmed current state: FileSystemWorkspaceService passes `GitAuthConfig(username="git", password=null, token=null)` for all clones. SSH URLs (git@...) work via JGit system SSH config. HTTPS/TOKEN URLs would fail for private repos without credential storage. Gate updated to WAIVED (schema-compliant) with deferral rationale. Deferral decision remains appropriate.
+
+---
+
+### Review Date: 2026-03-17 (Re-review – AC5 Implementation)
+
+### Reviewed By: Quinn (Test Architect)
+
+### Code Quality Assessment
+
+The developer implemented AC5 (credential-handling flows avoid exposing secrets) within Epic 2 MVP scope. Implementation is clean, focused, and follows security best practices.
+
+**Implementation Summary:**
+- **GitAuthConfig**: `toString()` override masks `password` and `token` as `password=***`, `token=***`; never exposes raw values
+- **CredentialRedactor**: `redactUrl()` and `redactMessage()` use a regex to redact embedded credentials in HTTP(S) URLs (`https://user:pass@host` → `https://***@host`)
+- **FileSystemWorkspaceService**: Applies `CredentialRedactor.redactUrl()` for `cloneUrl` in `logger.error`; applies `CredentialRedactor.redactMessage()` to `detailedMessage` before storage in `errorMessage` and before passing to `onProgress` callback
+
+### Refactoring Performed
+
+None required. Implementation is production-ready for the delivered scope.
+
+### Compliance Check
+
+- Coding Standards: ✓ Kotlin conventions, clear naming, single-purpose functions
+- Project Structure: ✓ CredentialRedactor in `domain/util`; tests mirror source layout
+- Testing Strategy: ✓ Unit tests for GitAuthConfig (3 tests) and CredentialRedactor (5 tests)
+- All ACs Met: ✓ AC1–AC2 met (SSH); AC5 met; AC3–AC4 deferred to Epic 3 by design
+
+### Improvements Checklist
+
+- [x] GitAuthConfig toString masking verified
+- [x] CredentialRedactor covers URL and message redaction
+- [x] FileSystemWorkspaceService applies redaction to logs and user-facing errors
+- [x] Unit tests cover new behavior
+- [ ] Consider applying `CredentialRedactor.redactUrl()` to `cloneUrl` in `HealthCheckServiceImpl` when building `RepositoryHealth` (cross-cutting; cloneUrl in Integrations view could expose embedded credentials)
+
+### Security Review
+
+AC5 satisfied for the clone-failure flow. Credentials are masked in logs, stored error messages, and user-facing progress. One cross-cutting recommendation: `HealthCheckServiceImpl` passes `repo.cloneUrl` into `RepositoryHealth` without redaction; if a user configures a URL with embedded credentials, it could appear in the Integrations UI. Recommend addressing in a follow-up story or when touching the health-monitoring flow.
+
+### Performance Considerations
+
+No concerns. CredentialRedactor uses a single regex replacement; negligible overhead.
+
+### Files Modified During Review
+
+None.
+
+### Gate Status
+
+Gate: **PASS** → docs/qa/gates/2.4-git-credentials.yml
+
+### Recommended Status
+
+✓ **Ready for Done** – AC5 implemented within scope. AC3–AC4 remain deferred to Epic 3. Dev may update File List if needed.

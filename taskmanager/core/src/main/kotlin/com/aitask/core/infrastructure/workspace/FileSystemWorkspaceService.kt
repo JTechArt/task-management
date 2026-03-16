@@ -3,6 +3,7 @@ package com.aitask.core.infrastructure.workspace
 import com.aitask.core.domain.model.*
 import com.aitask.core.domain.service.*
 import com.aitask.core.domain.util.BranchTemplateExpander
+import com.aitask.core.domain.util.CredentialRedactor
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -131,12 +132,15 @@ class FileSystemWorkspaceService(
                     val cloneError = cloneResult.exceptionOrNull()
                     val cloneErrorMessage = cloneError?.rootCauseMessage() ?: "Unknown clone failure"
                     val guidance = repository.authType.cloneGuidance()
-                    val detailedMessage = listOf(cloneErrorMessage, guidance)
-                        .filter { it.isNotBlank() }
-                        .joinToString(" ")
+                    val detailedMessage = CredentialRedactor.redactMessage(
+                        listOf(cloneErrorMessage, guidance)
+                            .filter { it.isNotBlank() }
+                            .joinToString(" ")
+                    )
+                    val redactedCloneUrl: String = CredentialRedactor.redactUrl(repository.cloneUrl)
 
                     logger.error(cloneError) {
-                        "Clone failed for repository ${repository.name} (${repository.cloneUrl}) with authType=${repository.authType}: $detailedMessage"
+                        "Clone failed for repository ${repository.name} ($redactedCloneUrl) with authType=${repository.authType}: $detailedMessage"
                     }
 
                     updatedRepos.add(
