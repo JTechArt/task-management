@@ -19,7 +19,9 @@ import java.util.UUID
 @Composable
 fun TasksView(
     modifier: Modifier = Modifier,
-    viewModel: TasksViewModel = remember { TasksViewModel() }
+    viewModel: TasksViewModel = remember { TasksViewModel() },
+    taskIdToSelectOnMount: UUID? = null,
+    onMountedAfterSelection: (() -> Unit)? = null
 ) {
     val uiState = viewModel.uiState
 
@@ -32,6 +34,18 @@ fun TasksView(
     LaunchedEffect(uiState.selectedTask) {
         uiState.selectedTask?.let { task ->
             viewModel.loadProjectRepositories(task.projectId)
+        }
+    }
+
+    // Pre-select task when navigating from dashboard
+    LaunchedEffect(taskIdToSelectOnMount, uiState.tasks) {
+        val taskId = taskIdToSelectOnMount ?: return@LaunchedEffect
+        if (uiState.tasks.isNotEmpty()) {
+            val task = uiState.tasks.find { it.id == taskId }
+            if (task != null) {
+                viewModel.selectTask(task)
+            }
+            onMountedAfterSelection?.invoke()
         }
     }
     

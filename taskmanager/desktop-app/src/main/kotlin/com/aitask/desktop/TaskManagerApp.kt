@@ -13,6 +13,7 @@ import com.aitask.core.config.ConfigLoader
 import com.aitask.core.config.EnvConfigLoader
 import com.aitask.core.logging.logStartup
 import com.aitask.desktop.ui.*
+import com.aitask.desktop.ui.dashboard.DashboardView
 import com.aitask.desktop.ui.projects.ProjectsView
 import com.aitask.desktop.ui.tasks.TasksView
 import com.aitask.desktop.ui.rules.RulesView
@@ -59,6 +60,7 @@ class AppLauncher(
 @Composable
 fun AppSurface(config: AppConfig, bootstrapResult: BootstrapResult) {
     var selectedNavItem by remember { mutableStateOf(NavigationItem.DASHBOARD) }
+    var taskIdToSelectWhenShowingTasks by remember { mutableStateOf<java.util.UUID?>(null) }
 
     MaterialTheme(colorScheme = lightColorScheme()) {
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -72,19 +74,19 @@ fun AppSurface(config: AppConfig, bootstrapResult: BootstrapResult) {
                 // Main content area
                 Box(modifier = Modifier.fillMaxSize()) {
                     when (selectedNavItem) {
-                        NavigationItem.DASHBOARD -> {
-                            val status = SystemStatus(
-                                databaseConnected = bootstrapResult.databaseInitialized,
-                                databaseMessage = if (bootstrapResult.databaseInitialized) {
-                                    "Successfully connected • ${bootstrapResult.migrationsApplied} migrations applied"
-                                } else {
-                                    bootstrapResult.databaseError ?: "Not connected"
-                                }
-                            )
-                            StatusView(config = config, status = status)
-                        }
+                        NavigationItem.DASHBOARD -> DashboardView(
+                            databaseConnected = bootstrapResult.databaseInitialized,
+                            onNavigate = { selectedNavItem = it },
+                            onNavigateToTask = { taskId ->
+                                taskIdToSelectWhenShowingTasks = taskId
+                                selectedNavItem = NavigationItem.TASKS
+                            }
+                        )
                         NavigationItem.PROJECTS -> ProjectsView()
-                        NavigationItem.TASKS -> TasksView()
+                        NavigationItem.TASKS -> TasksView(
+                            taskIdToSelectOnMount = taskIdToSelectWhenShowingTasks,
+                            onMountedAfterSelection = { taskIdToSelectWhenShowingTasks = null }
+                        )
                         NavigationItem.RULES -> RulesView()
                         NavigationItem.INTEGRATIONS -> IntegrationsView()
                         NavigationItem.SETTINGS -> SettingsView()

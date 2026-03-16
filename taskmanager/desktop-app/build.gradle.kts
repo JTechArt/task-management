@@ -13,6 +13,7 @@ val coroutinesVersion: String by project
 val kotlinLoggingVersion: String by project
 val logbackVersion: String by project
 val junitVersion: String by project
+val mockkVersion: String by project
 val sourceSets = the<SourceSetContainer>()
 
 dependencies {
@@ -36,6 +37,8 @@ dependencies {
     // Testing
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
+    testImplementation("io.mockk:mockk-jvm:$mockkVersion")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
 }
 
 kotlin {
