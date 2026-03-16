@@ -234,11 +234,13 @@ fun TasksView(
                             onLaunchIDE = { taskId, ideType ->
                                 viewModel.launchIDE(taskId, ideType)
                             },
+                            onCleanupWorkspace = { task -> viewModel.showCleanupConfirmationDialog(task) },
                             availableIDEs = uiState.availableIDEs,
                             preferredIDEs = uiState.projectRepositories.flatMap { it.preferredIDEs }.distinct(),
                             isGeneratingWorkspace = uiState.isGeneratingWorkspace,
                             workspaceGenerationProgress = uiState.workspaceGenerationProgress,
-                            isLaunchingIDE = uiState.isLaunchingIDE
+                            isLaunchingIDE = uiState.isLaunchingIDE,
+                            isCleaningUpWorkspace = uiState.isCleaningUpWorkspace
                         )
                     }
                 }
@@ -255,6 +257,17 @@ fun TasksView(
                 viewModel.createTask(title, description, taskType, projectId)
             },
             isSaving = uiState.isSaving
+        )
+    }
+
+    // Destructive cleanup confirmation dialog
+    if (uiState.showCleanupConfirmationDialog && uiState.taskToCleanup != null) {
+        DestructiveCleanupConfirmationDialog(
+            taskTitle = uiState.taskToCleanup!!.title,
+            typedText = uiState.cleanupConfirmationTypedText,
+            onTypedTextChange = { viewModel.setCleanupConfirmationTypedText(it) },
+            onConfirm = { viewModel.confirmCleanupWorkspace() },
+            onDismiss = { viewModel.hideCleanupConfirmationDialog() }
         )
     }
 

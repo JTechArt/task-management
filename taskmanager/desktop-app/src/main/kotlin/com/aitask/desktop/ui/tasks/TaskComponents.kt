@@ -239,11 +239,13 @@ fun TaskDetailView(
     onStatusChange: (UUID, TaskStatus) -> Unit,
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
+    onCleanupWorkspace: ((Task) -> Unit)? = null,
     availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
     preferredIDEs: List<IDEType> = emptyList(),
     isGeneratingWorkspace: Boolean = false,
     workspaceGenerationProgress: String? = null,
     isLaunchingIDE: Boolean = false,
+    isCleaningUpWorkspace: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -302,6 +304,15 @@ fun TaskDetailView(
 
         task.branchName?.let { branch ->
             DetailRow("Branch", branch)
+        }
+
+        if (task.isCompleted) {
+            val workspaceStateText = when {
+                task.workspaceCleanedAt != null -> "Cleanup completed"
+                task.workspacePath != null -> "Retained"
+                else -> "Not created"
+            }
+            DetailRow("Workspace state", workspaceStateText)
         }
 
         Divider()
@@ -418,6 +429,32 @@ fun TaskDetailView(
                     }
                 }
             }
+
+            if (task.isCompleted && task.workspacePath != null && task.workspaceCleanedAt == null && onCleanupWorkspace != null) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Workspace Cleanup",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                OutlinedButton(
+                    onClick = { onCleanupWorkspace(task) },
+                    enabled = !isCleaningUpWorkspace,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    if (isCleaningUpWorkspace) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (isCleaningUpWorkspace) "Cleaning up..." else "Clean up workspace")
+                }
+            }
         }
 
         Divider()
@@ -445,6 +482,67 @@ fun TaskDetailView(
             }
         }
     }
+}
+
+@Composable
+fun DestructiveCleanupConfirmationDialog(
+    taskTitle: String,
+    typedText: String,
+    onTypedTextChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+        },
+        title = { Text("Clean up workspace?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "This will permanently delete local workspace data for task \"$taskTitle\". This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Type DELETE to continue:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                OutlinedTextField(
+                    value = typedText,
+                    onValueChange = onTypedTextChange,
+                    placeholder = { Text("DELETE") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    supportingText = {
+                        if (typedText.isNotEmpty() && typedText != "DELETE") {
+                            Text("Must type DELETE exactly", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = typedText == "DELETE",
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Clean up workspace")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

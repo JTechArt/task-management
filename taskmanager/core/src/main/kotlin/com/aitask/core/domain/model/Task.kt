@@ -27,6 +27,7 @@ data class Task(
     val status: TaskStatus,
     val projectId: UUID,
     val workspacePath: String?,
+    val workspaceCleanedAt: Instant? = null,
     val branchName: String?,
     val createdAt: Instant,
     val updatedAt: Instant,

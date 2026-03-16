@@ -13,6 +13,7 @@ import androidx.compose.ui.window.Dialog
 import com.aitask.core.domain.model.AuthType
 import com.aitask.core.domain.model.GitProvider
 import com.aitask.core.domain.model.IDEType
+import com.aitask.core.domain.service.RetentionPolicy
 
 @Composable
 fun CreateProjectDialog(
@@ -22,6 +23,7 @@ fun CreateProjectDialog(
         description: String?,
         workspacePath: String,
         branchTemplate: String,
+        retentionPolicy: RetentionPolicy,
         repositoryName: String,
         cloneUrl: String,
         provider: GitProvider,
@@ -42,6 +44,7 @@ fun CreateProjectDialog(
     var workspacePathManuallyEdited by remember { mutableStateOf(false) }
     var branchTemplate by remember { mutableStateOf("task-{taskId}") }
     var cloneUrl by remember { mutableStateOf("") }
+    var retentionPolicy by remember { mutableStateOf(RetentionPolicy.KEEP_ALL) }
     var provider by remember { mutableStateOf(GitProvider.GITHUB) }
     var authType by remember { mutableStateOf(AuthType.HTTPS) }
     var selectedIDEs by remember { mutableStateOf(setOf<IDEType>()) }
@@ -181,6 +184,39 @@ fun CreateProjectDialog(
                     singleLine = true,
                     supportingText = { Text("Use {taskId} as placeholder") }
                 )
+
+                var retentionExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = retentionExpanded,
+                    onExpandedChange = { if (!isSaving) retentionExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = retentionPolicy.name.replace("_", " "),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Workspace Retention *") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = retentionExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        enabled = !isSaving,
+                        supportingText = { Text("Behavior for completed task workspaces") }
+                    )
+                    ExposedDropdownMenu(
+                        expanded = retentionExpanded,
+                        onDismissRequest = { retentionExpanded = false }
+                    ) {
+                        RetentionPolicy.values().forEach { policy ->
+                            DropdownMenuItem(
+                                text = { Text(policy.name.replace("_", " ")) },
+                                onClick = {
+                                    retentionPolicy = policy
+                                    retentionExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
                 
                 Divider()
                 
@@ -328,6 +364,7 @@ fun CreateProjectDialog(
                                 description.trim().takeIf { it.isNotEmpty() },
                                 workspacePath.trim(),
                                 branchTemplate.trim(),
+                                retentionPolicy,
                                 repositoryName.trim(),
                                 cloneUrl.trim(),
                                 provider,

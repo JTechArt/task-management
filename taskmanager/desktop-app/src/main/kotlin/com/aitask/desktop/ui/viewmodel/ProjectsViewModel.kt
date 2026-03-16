@@ -57,6 +57,7 @@ class ProjectsViewModel(
         description: String?,
         workspacePath: String,
         branchTemplate: String,
+        retentionPolicy: com.aitask.core.domain.service.RetentionPolicy,
         repositoryName: String,
         cloneUrl: String,
         provider: GitProvider,
@@ -69,7 +70,8 @@ class ProjectsViewModel(
                 name = name,
                 description = description,
                 workspacePath = workspacePath,
-                branchTemplate = branchTemplate
+                branchTemplate = branchTemplate,
+                retentionPolicy = retentionPolicy
             )
             
             val repositoryRequest = CreateRepositoryRequest(

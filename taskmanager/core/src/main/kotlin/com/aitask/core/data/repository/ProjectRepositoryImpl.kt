@@ -3,6 +3,7 @@ package com.aitask.core.data.repository
 import com.aitask.core.data.entity.Projects
 import com.aitask.core.domain.model.Project
 import com.aitask.core.domain.repository.ProjectRepository
+import com.aitask.core.domain.service.RetentionPolicy
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -42,6 +43,7 @@ class ProjectRepositoryImpl : ProjectRepository {
             it[description] = project.description
             it[workspacePath] = project.workspacePath
             it[branchTemplate] = project.branchTemplate
+            it[retentionPolicy] = project.retentionPolicy.name
             it[tags] = project.tags
             it[team] = project.team
             it[createdAt] = project.createdAt
@@ -57,6 +59,7 @@ class ProjectRepositoryImpl : ProjectRepository {
             it[description] = project.description
             it[workspacePath] = project.workspacePath
             it[branchTemplate] = project.branchTemplate
+            it[retentionPolicy] = project.retentionPolicy.name
             it[tags] = project.tags
             it[team] = project.team
             it[updatedAt] = Instant.now()
@@ -85,6 +88,7 @@ class ProjectRepositoryImpl : ProjectRepository {
         description = this[Projects.description],
         workspacePath = this[Projects.workspacePath],
         branchTemplate = this[Projects.branchTemplate],
+        retentionPolicy = RetentionPolicy.valueOf(this[Projects.retentionPolicy]),
         tags = this[Projects.tags] ?: emptyList(),
         team = this[Projects.team],
         createdAt = this[Projects.createdAt],

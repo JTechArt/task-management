@@ -1,5 +1,6 @@
 package com.aitask.core.domain.model
 
+import com.aitask.core.domain.service.RetentionPolicy
 import java.time.Instant
 import java.util.UUID
 
@@ -9,6 +10,7 @@ data class Project(
     val description: String?,
     val workspacePath: String,
     val branchTemplate: String = "task-{taskId}",
+    val retentionPolicy: RetentionPolicy = RetentionPolicy.KEEP_ALL,
     val tags: List<String> = emptyList(),
     val team: String? = null,
     val createdAt: Instant,
@@ -25,6 +27,7 @@ data class Project(
         description: String? = null,
         workspacePath: String? = null,
         branchTemplate: String? = null,
+        retentionPolicy: RetentionPolicy? = null,
         tags: List<String>? = null,
         team: String? = null
     ): Project = copy(
@@ -32,6 +35,7 @@ data class Project(
         description = description ?: this.description,
         workspacePath = workspacePath ?: this.workspacePath,
         branchTemplate = branchTemplate ?: this.branchTemplate,
+        retentionPolicy = retentionPolicy ?: this.retentionPolicy,
         tags = tags ?: this.tags,
         team = team ?: this.team,
         updatedAt = Instant.now()
@@ -43,6 +47,7 @@ data class CreateProjectRequest(
     val description: String? = null,
     val workspacePath: String,
     val branchTemplate: String = "task-{taskId}",
+    val retentionPolicy: RetentionPolicy = RetentionPolicy.KEEP_ALL,
     val tags: List<String> = emptyList(),
     val team: String? = null
 )
@@ -52,6 +57,7 @@ data class UpdateProjectRequest(
     val description: String? = null,
     val workspacePath: String? = null,
     val branchTemplate: String? = null,
+    val retentionPolicy: RetentionPolicy? = null,
     val tags: List<String>? = null,
     val team: String? = null
 )

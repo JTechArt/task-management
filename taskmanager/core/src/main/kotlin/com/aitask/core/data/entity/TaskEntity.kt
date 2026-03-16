@@ -13,6 +13,7 @@ object Tasks : UUIDTable("tasks") {
     val projectId = reference("project_id", Projects, onDelete = ReferenceOption.CASCADE)
     val workspacePath = varchar("workspace_path", 1000).nullable()
     val branchName = varchar("branch_name", 200).nullable()
+    val workspaceCleanedAt = timestamp("workspace_cleaned_at").nullable()
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)
     val completedAt = timestamp("completed_at").nullable()

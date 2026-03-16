@@ -22,6 +22,7 @@ class TasksViewModel(
     private val deleteTaskUseCase: DeleteTaskUseCase = DependencyContainer.deleteTaskUseCase,
     private val getProjectsUseCase: GetProjectsUseCase = DependencyContainer.getProjectsUseCase,
     private val generateWorkspaceUseCase: GenerateWorkspaceUseCase = DependencyContainer.generateWorkspaceUseCase,
+    private val cleanupWorkspaceUseCase: CleanupWorkspaceUseCase = DependencyContainer.cleanupWorkspaceUseCase,
     private val launchIDEUseCase: LaunchIDEUseCase = DependencyContainer.launchIDEUseCase,
     private val ideService: IDEService = DependencyContainer.ideService,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
@@ -328,6 +329,57 @@ class TasksViewModel(
             ideLaunchSuccess = null
         )
     }
+
+    fun showCleanupConfirmationDialog(task: Task) {
+        uiState = uiState.copy(
+            showCleanupConfirmationDialog = true,
+            taskToCleanup = task,
+            cleanupConfirmationTypedText = "",
+            error = null
+        )
+    }
+
+    fun hideCleanupConfirmationDialog() {
+        uiState = uiState.copy(
+            showCleanupConfirmationDialog = false,
+            taskToCleanup = null,
+            cleanupConfirmationTypedText = ""
+        )
+    }
+
+    fun setCleanupConfirmationTypedText(text: String) {
+        uiState = uiState.copy(cleanupConfirmationTypedText = text)
+    }
+
+    fun confirmCleanupWorkspace() {
+        val task = uiState.taskToCleanup ?: return
+        if (uiState.cleanupConfirmationTypedText != "DELETE") return
+        uiState = uiState.copy(isCleaningUpWorkspace = true, showCleanupConfirmationDialog = false)
+        scope.launch {
+            val result = cleanupWorkspaceUseCase(task.id)
+            result.fold(
+                onSuccess = {
+                    uiState = uiState.copy(
+                        isCleaningUpWorkspace = false,
+                        taskToCleanup = null,
+                        cleanupConfirmationTypedText = "",
+                        workspaceGenerationSuccess = "Workspace cleaned up successfully"
+                    )
+                    loadTasks()
+                    selectTask(uiState.tasks.find { it.id == task.id })
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isCleaningUpWorkspace = false,
+                        taskToCleanup = null,
+                        cleanupConfirmationTypedText = "",
+                        error = error.message ?: "Failed to clean up workspace"
+                    )
+                    loadTasks()
+                }
+            )
+        }
+    }
 }
 
 data class TasksUiState(
@@ -350,5 +402,9 @@ data class TasksUiState(
     val showRepositorySelectionDialog: Boolean = false,
     val selectedTaskForWorkspace: Task? = null,
     val availableRepositoriesForSelection: List<Repository> = emptyList(),
-    val defaultRepositorySelection: List<UUID> = emptyList()
+    val defaultRepositorySelection: List<UUID> = emptyList(),
+    val showCleanupConfirmationDialog: Boolean = false,
+    val taskToCleanup: Task? = null,
+    val cleanupConfirmationTypedText: String = "",
+    val isCleaningUpWorkspace: Boolean = false
 )

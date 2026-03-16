@@ -9,6 +9,7 @@ object Projects : UUIDTable("projects") {
     val description = text("description").nullable()
     val workspacePath = varchar("workspace_path", 1000)
     val branchTemplate = varchar("branch_template", 200).default("task-{taskId}")
+    val retentionPolicy = varchar("retention_policy", 50).default("KEEP_ALL")
     val tags = array<String>("tags").nullable()
     val team = varchar("team", 200).nullable()
     val createdAt = timestamp("created_at").defaultExpression(CurrentTimestamp)

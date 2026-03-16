@@ -147,10 +147,10 @@ fun ProjectsView(
     if (uiState.showCreateDialog) {
         CreateProjectDialog(
             onDismiss = { viewModel.hideCreateDialog() },
-            onConfirm = { name, description, workspacePath, branchTemplate,
+            onConfirm = { name, description, workspacePath, branchTemplate, retentionPolicy,
                           repoName, cloneUrl, provider, authType, ides ->
                 viewModel.createProject(
-                    name, description, workspacePath, branchTemplate,
+                    name, description, workspacePath, branchTemplate, retentionPolicy,
                     repoName, cloneUrl, provider, authType, ides
                 )
             },

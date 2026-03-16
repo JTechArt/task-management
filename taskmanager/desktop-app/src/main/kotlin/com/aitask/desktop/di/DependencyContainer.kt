@@ -170,6 +170,15 @@ object DependencyContainer {
         )
     }
     
+    val cleanupWorkspaceUseCase: CleanupWorkspaceUseCase by lazy {
+        CleanupWorkspaceUseCase(
+            taskRepository,
+            projectRepository,
+            workspaceService,
+            activityRepository
+        )
+    }
+
     // IDE Use Cases
     val launchIDEUseCase: LaunchIDEUseCase by lazy {
         LaunchIDEUseCase(
