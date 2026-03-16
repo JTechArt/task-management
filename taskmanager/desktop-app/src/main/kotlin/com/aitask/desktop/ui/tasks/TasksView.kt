@@ -90,12 +90,31 @@ fun TasksView(
         }
         
         // Filters
+        val filteredTasks = remember(
+            uiState.tasks,
+            uiState.selectedTaskTypeFilter,
+            uiState.searchQuery
+        ) {
+            uiState.tasks.filter { task ->
+                val typeMatch = uiState.selectedTaskTypeFilter == null ||
+                    task.taskType == uiState.selectedTaskTypeFilter
+                val query = uiState.searchQuery.trim().lowercase()
+                val searchMatch = query.isEmpty() ||
+                    task.title.lowercase().contains(query) ||
+                    (task.description?.lowercase()?.contains(query) == true)
+                typeMatch && searchMatch
+            }
+        }
         TaskFilters(
             projects = uiState.projects,
             selectedProjectId = uiState.selectedProjectFilter,
             selectedStatus = uiState.selectedStatusFilter,
+            selectedTaskType = uiState.selectedTaskTypeFilter,
+            searchQuery = uiState.searchQuery,
             onProjectSelected = { viewModel.setProjectFilter(it) },
-            onStatusSelected = { viewModel.setStatusFilter(it) }
+            onStatusSelected = { viewModel.setStatusFilter(it) },
+            onTaskTypeSelected = { viewModel.setTaskTypeFilter(it) },
+            onSearchQueryChange = { viewModel.setSearchQuery(it) }
         )
         
         // Error message
@@ -180,8 +199,8 @@ fun TasksView(
             ) {
                 CircularProgressIndicator()
             }
-        } else if (uiState.tasks.isEmpty()) {
-            // Empty state
+        } else if (filteredTasks.isEmpty()) {
+            // Empty state (no tasks or no matches)
             EmptyTasksState(
                 hasProjects = uiState.projects.isNotEmpty(),
                 onCreateClick = { viewModel.showCreateDialog() }
@@ -202,7 +221,7 @@ fun TasksView(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(uiState.tasks) { task ->
+                        items(filteredTasks) { task ->
                             TaskListItem(
                                 task = task,
                                 isSelected = task.id == uiState.selectedTask?.id,

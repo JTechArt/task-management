@@ -97,46 +97,96 @@ fun ProjectsView(
                 onCreateClick = { viewModel.showCreateDialog() }
             )
         } else {
-            // Projects list
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            val availableTags = remember(uiState.projects) {
+                uiState.projects.flatMap { it.tags }.distinct()
+            }
+            val availableTeams = remember(uiState.projects) {
+                uiState.projects.mapNotNull { it.team }.distinct()
+            }
+            val filteredProjects = remember(
+                uiState.projects,
+                uiState.searchQuery,
+                uiState.selectedTagFilter,
+                uiState.selectedTeamFilter
             ) {
-                // Projects list (left side)
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                ) {
-                    LazyColumn(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(uiState.projects) { project ->
-                            ProjectListItem(
-                                project = project,
-                                isSelected = project.id == uiState.selectedProject?.id,
-                                onClick = { viewModel.selectProject(project) }
-                            )
-                        }
-                    }
+                uiState.projects.filter { project ->
+                    val query = uiState.searchQuery.trim().lowercase()
+                    val searchMatch = query.isEmpty() ||
+                        project.name.lowercase().contains(query) ||
+                        (project.description?.lowercase()?.contains(query) == true)
+                    val tagMatch = uiState.selectedTagFilter == null ||
+                        project.tags.contains(uiState.selectedTagFilter)
+                    val teamMatch = uiState.selectedTeamFilter == null ||
+                        project.team == uiState.selectedTeamFilter
+                    searchMatch && tagMatch && teamMatch
                 }
-                
-                // Project detail (right side)
-                if (uiState.selectedProject != null) {
-                    Card(
-                        modifier = Modifier
-                            .weight(1.5f)
-                            .fillMaxHeight()
+            }
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                ProjectFilters(
+                    availableTags = availableTags,
+                    availableTeams = availableTeams,
+                    selectedTag = uiState.selectedTagFilter,
+                    selectedTeam = uiState.selectedTeamFilter,
+                    searchQuery = uiState.searchQuery,
+                    onTagSelected = { viewModel.setTagFilter(it) },
+                    onTeamSelected = { viewModel.setTeamFilter(it) },
+                    onSearchQueryChange = { viewModel.setSearchQuery(it) }
+                )
+                if (filteredProjects.isEmpty()) {
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
                     ) {
-                        ProjectDetailView(
-                            project = uiState.selectedProject,
-                            repositories = uiState.selectedProjectRepositories,
-                            onArchive = { viewModel.archiveProject(it) },
-                            onAddRepository = { viewModel.showAddRepositoryDialog() },
-                            onEditRepository = { viewModel.showEditRepositoryDialog(it) },
-                            onDeleteRepository = { viewModel.deleteRepository(it) }
+                        Text(
+                            text = "No projects match the current filters",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Card(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                        ) {
+                            LazyColumn(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(filteredProjects) { project ->
+                                    ProjectListItem(
+                                        project = project,
+                                        isSelected = project.id == uiState.selectedProject?.id,
+                                        onClick = { viewModel.selectProject(project) }
+                                    )
+                                }
+                            }
+                        }
+                        if (uiState.selectedProject != null) {
+                            Card(
+                                modifier = Modifier
+                                    .weight(1.5f)
+                                    .fillMaxHeight()
+                            ) {
+                                ProjectDetailView(
+                                    project = uiState.selectedProject,
+                                    repositories = uiState.selectedProjectRepositories,
+                                    onArchive = { viewModel.archiveProject(it) },
+                                    onAddRepository = { viewModel.showAddRepositoryDialog() },
+                                    onEditRepository = { viewModel.showEditRepositoryDialog(it) },
+                                    onDeleteRepository = { viewModel.deleteRepository(it) }
+                                )
+                            }
+                        }
                     }
                 }
             }

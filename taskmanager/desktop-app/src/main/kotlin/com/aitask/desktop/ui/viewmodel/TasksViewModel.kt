@@ -209,6 +209,14 @@ class TasksViewModel(
         loadTasks()
     }
 
+    fun setTaskTypeFilter(taskType: TaskType?) {
+        uiState = uiState.copy(selectedTaskTypeFilter = taskType)
+    }
+
+    fun setSearchQuery(query: String) {
+        uiState = uiState.copy(searchQuery = query)
+    }
+
     fun showCreateDialog() {
         uiState = uiState.copy(showCreateDialog = true, error = null)
     }
@@ -388,6 +396,8 @@ data class TasksUiState(
     val selectedTask: Task? = null,
     val selectedProjectFilter: UUID? = null,
     val selectedStatusFilter: TaskStatus? = null,
+    val selectedTaskTypeFilter: TaskType? = null,
+    val searchQuery: String = "",
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
     val showCreateDialog: Boolean = false,

@@ -69,90 +69,145 @@ fun TaskFilters(
     projects: List<Project>,
     selectedProjectId: UUID?,
     selectedStatus: TaskStatus?,
+    selectedTaskType: TaskType?,
+    searchQuery: String,
     onProjectSelected: (UUID?) -> Unit,
     onStatusSelected: (TaskStatus?) -> Unit,
+    onTaskTypeSelected: (TaskType?) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Project filter
-        var projectExpanded by remember { mutableStateOf(false) }
-        ExposedDropdownMenuBox(
-            expanded = projectExpanded,
-            onExpandedChange = { projectExpanded = it },
-            modifier = Modifier.weight(1f)
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            label = { Text("Search tasks") },
+            placeholder = { Text("Search by title or description...") },
+            leadingIcon = {
+                Icon(Icons.Default.Search, contentDescription = "Search")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            OutlinedTextField(
-                value = projects.find { it.id == selectedProjectId }?.name ?: "All Projects",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Project") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = projectExpanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-            ExposedDropdownMenu(
+            var projectExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
                 expanded = projectExpanded,
-                onDismissRequest = { projectExpanded = false }
+                onExpandedChange = { projectExpanded = it },
+                modifier = Modifier.weight(1f)
             ) {
-                DropdownMenuItem(
-                    text = { Text("All Projects") },
-                    onClick = {
-                        onProjectSelected(null)
-                        projectExpanded = false
-                    }
+                OutlinedTextField(
+                    value = projects.find { it.id == selectedProjectId }?.name ?: "All Projects",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Project") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = projectExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
                 )
-                projects.forEach { project ->
+                ExposedDropdownMenu(
+                    expanded = projectExpanded,
+                    onDismissRequest = { projectExpanded = false }
+                ) {
                     DropdownMenuItem(
-                        text = { Text(project.name) },
+                        text = { Text("All Projects") },
                         onClick = {
-                            onProjectSelected(project.id)
+                            onProjectSelected(null)
                             projectExpanded = false
                         }
                     )
+                    projects.forEach { project ->
+                        DropdownMenuItem(
+                            text = { Text(project.name) },
+                            onClick = {
+                                onProjectSelected(project.id)
+                                projectExpanded = false
+                            }
+                        )
+                    }
                 }
             }
-        }
-        
-        // Status filter
-        var statusExpanded by remember { mutableStateOf(false) }
-        ExposedDropdownMenuBox(
-            expanded = statusExpanded,
-            onExpandedChange = { statusExpanded = it },
-            modifier = Modifier.weight(1f)
-        ) {
-            OutlinedTextField(
-                value = selectedStatus?.name ?: "All Statuses",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Status") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor()
-            )
-            ExposedDropdownMenu(
+            var statusExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
                 expanded = statusExpanded,
-                onDismissRequest = { statusExpanded = false }
+                onExpandedChange = { statusExpanded = it },
+                modifier = Modifier.weight(1f)
             ) {
-                DropdownMenuItem(
-                    text = { Text("All Statuses") },
-                    onClick = {
-                        onStatusSelected(null)
-                        statusExpanded = false
-                    }
+                OutlinedTextField(
+                    value = selectedStatus?.name ?: "All Statuses",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Status") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
                 )
-                TaskStatus.values().forEach { status ->
+                ExposedDropdownMenu(
+                    expanded = statusExpanded,
+                    onDismissRequest = { statusExpanded = false }
+                ) {
                     DropdownMenuItem(
-                        text = { Text(status.name) },
+                        text = { Text("All Statuses") },
                         onClick = {
-                            onStatusSelected(status)
+                            onStatusSelected(null)
                             statusExpanded = false
                         }
                     )
+                    TaskStatus.values().forEach { status ->
+                        DropdownMenuItem(
+                            text = { Text(status.name) },
+                            onClick = {
+                                onStatusSelected(status)
+                                statusExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            var taskTypeExpanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = taskTypeExpanded,
+                onExpandedChange = { taskTypeExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = selectedTaskType?.name?.replace("_", " ") ?: "All Types",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Task Type") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = taskTypeExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = taskTypeExpanded,
+                    onDismissRequest = { taskTypeExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("All Types") },
+                        onClick = {
+                            onTaskTypeSelected(null)
+                            taskTypeExpanded = false
+                        }
+                    )
+                    TaskType.values().forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type.name.replace("_", " ")) },
+                            onClick = {
+                                onTaskTypeSelected(type)
+                                taskTypeExpanded = false
+                            }
+                        )
+                    }
                 }
             }
         }
