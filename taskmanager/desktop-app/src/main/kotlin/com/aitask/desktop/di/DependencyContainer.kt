@@ -6,6 +6,8 @@ import com.aitask.core.domain.service.GitService
 import com.aitask.core.domain.service.HealthCheckService
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.RuleApplicationService
+import com.aitask.core.domain.service.EncryptionService
+import com.aitask.core.domain.service.OAuthService
 import com.aitask.core.domain.service.SlackNotificationService
 import com.aitask.core.domain.service.SlackService
 import com.aitask.core.domain.service.WorkspaceService
@@ -18,6 +20,9 @@ import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
 import com.aitask.core.infrastructure.rules.FileSystemRuleApplicationService
+import com.aitask.core.config.OAuthConfig
+import com.aitask.core.infrastructure.oauth.OAuthServiceImpl
+import com.aitask.core.infrastructure.security.AesGcmEncryptionService
 import com.aitask.core.infrastructure.slack.SlackWebhookClient
 import com.aitask.core.infrastructure.workspace.FileSystemWorkspaceService
 import kotlinx.coroutines.CoroutineScope
@@ -52,6 +57,22 @@ object DependencyContainer {
 
     val slackChannelRepository: SlackChannelRepository by lazy {
         SlackChannelRepositoryImpl()
+    }
+
+    val encryptionService: EncryptionService by lazy {
+        AesGcmEncryptionService()
+    }
+
+    val oauthConnectionRepository: OAuthConnectionRepository by lazy {
+        OAuthConnectionRepositoryImpl(encryptionService)
+    }
+
+    val oauthService: OAuthService by lazy {
+        OAuthServiceImpl(
+            OAuthConfig(),
+            oauthConnectionRepository,
+            encryptionService
+        )
     }
 
     // Validators
@@ -264,6 +285,10 @@ object DependencyContainer {
 
     val sendSlackTestMessageUseCase: SendSlackTestMessageUseCase by lazy {
         SendSlackTestMessageUseCase(slackChannelRepository, slackService)
+    }
+
+    val getOAuthStatusUseCase: GetOAuthStatusUseCase by lazy {
+        GetOAuthStatusUseCase(oauthConnectionRepository, oauthService)
     }
 }
 

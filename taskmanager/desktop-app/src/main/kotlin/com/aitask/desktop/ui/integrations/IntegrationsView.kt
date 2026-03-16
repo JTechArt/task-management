@@ -35,7 +35,10 @@ import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.ComponentHealth
 import com.aitask.core.domain.model.HealthState
 import com.aitask.core.domain.model.HealthStatus
+import com.aitask.core.domain.model.OAuthConnectionStatus
+import com.aitask.core.domain.model.OAuthProvider
 import com.aitask.core.domain.model.RepositoryHealth
+import com.aitask.core.domain.usecase.GetOAuthStatusUseCase
 import com.aitask.desktop.ui.viewmodel.IntegrationsViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -54,6 +57,8 @@ fun IntegrationsView(
     LaunchedEffect(Unit) {
         viewModel.loadHealth()
     }
+    val oauthStatuses by viewModel.oauthStatuses.collectAsState()
+    val oauthActionInProgress by viewModel.oauthActionInProgress.collectAsState()
     val healthStatus by viewModel.healthStatus.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -93,6 +98,12 @@ fun IntegrationsView(
                 ConnectionHealthCard(status = status)
             }
         }
+        OAuthStatusCard(
+            oauthStatuses = oauthStatuses,
+            oauthActionInProgress = oauthActionInProgress,
+            onConnect = { viewModel.connectOAuth(it) },
+            onDisconnect = { viewModel.disconnectOAuth(it) }
+        )
     }
 }
 
@@ -171,6 +182,98 @@ private fun ConnectionHealthCard(
                 RepositoryHealthRow(repo = repo)
             }
             HealthRow(component = status.ideDiscovery)
+        }
+    }
+}
+
+@Composable
+private fun OAuthStatusCard(
+    oauthStatuses: List<GetOAuthStatusUseCase.OAuthProviderStatus>,
+    oauthActionInProgress: OAuthProvider?,
+    onConnect: (OAuthProvider) -> Unit,
+    onDisconnect: (OAuthProvider) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "OAuth integrations",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Connect external services via OAuth2. Authentication state is visible here (AC2).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+            Spacer(Modifier.height(16.dp))
+            oauthStatuses.forEach { status ->
+                val (badgeColor, badgeBg) = when (status.status) {
+                    OAuthConnectionStatus.CONNECTED -> HEALTHY_COLOR to HEALTHY_COLOR.copy(alpha = 0.2f)
+                    OAuthConnectionStatus.EXPIRED, OAuthConnectionStatus.INVALID -> FAILED_COLOR to FAILED_COLOR.copy(alpha = 0.2f)
+                    OAuthConnectionStatus.DISCONNECTED -> UNKNOWN_COLOR to UNKNOWN_COLOR.copy(alpha = 0.2f)
+                }
+                val actionInProgress = oauthActionInProgress == status.provider
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = status.provider.displayName,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = status.message,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(color = badgeBg, shape = RoundedCornerShape(8.dp)) {
+                            Text(
+                                text = status.status.name.lowercase().replaceFirstChar { it.uppercase() },
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = badgeColor
+                            )
+                        }
+                        when {
+                            actionInProgress -> {
+                                CircularProgressIndicator(Modifier.height(24.dp).padding(4.dp))
+                            }
+                            status.canConnect -> {
+                                Button(
+                                    onClick = { onConnect(status.provider) },
+                                    enabled = !actionInProgress
+                                ) {
+                                    Text(if (status.connection != null) "Reconnect" else "Connect")
+                                }
+                            }
+                            status.connection != null -> {
+                                Button(
+                                    onClick = { onDisconnect(status.provider) },
+                                    enabled = !actionInProgress
+                                ) {
+                                    Text("Disconnect")
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
         }
     }
 }
