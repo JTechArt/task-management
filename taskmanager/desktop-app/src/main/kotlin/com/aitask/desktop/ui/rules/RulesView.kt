@@ -215,15 +215,17 @@ fun RulesView(
                                     .fillMaxHeight()
                             ) {
                                 RuleDetailView(
-                            rule = uiState.selectedRule,
-                            projects = uiState.projects,
-                            attachedProjectIds = uiState.attachedProjectIds,
-                            onEdit = { viewModel.showEditDialog(it) },
-                            onDelete = { viewModel.deleteRule(it) },
-                            onAttach = { projectId, ruleId -> viewModel.attachRule(projectId, ruleId) },
-                            onDetach = { projectId, ruleId -> viewModel.detachRule(projectId, ruleId) },
-                            onExport = { ruleId -> viewModel.exportRules(listOf(ruleId)) }
-                        )
+                                    rule = uiState.selectedRule!!,
+                                    projects = uiState.projects,
+                                    attachedProjectIds = uiState.attachedProjectIds,
+                                    onEdit = { viewModel.showEditDialog(it) },
+                                    onDelete = { viewModel.deleteRule(it) },
+                                    onAttach = { projectId, ruleId -> viewModel.attachRule(projectId, ruleId) },
+                                    onDetach = { projectId, ruleId -> viewModel.detachRule(projectId, ruleId) },
+                                    onExport = { ruleId -> viewModel.exportRules(listOf(ruleId)) }
+                                )
+                            }
+                        }
                     }
                 }
             }
