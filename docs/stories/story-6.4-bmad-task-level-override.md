@@ -33,6 +33,12 @@ Draft
 - [Component Architecture: Project Management](../architecture.md#1-project-management-component)
 - [Component Architecture: Task Management](../architecture.md#2-task-management-component)
 
+## UX References
+
+- [Front-end Spec: Methodology & BMAD Configuration](../front-end-spec.md#12-methodology--bmad-configuration)
+- [Mockup: Methodology](../mockups/methodology.html)
+- [Mockup: Tasks](../mockups/tasks.html)
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Model task-level BMAD override (methodology, tools, injection options)

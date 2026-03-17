@@ -32,3 +32,8 @@ Draft
 
 - [Component Architecture: Git Integration](../architecture.md)
 - [Component Architecture: Integration](../architecture.md)
+
+## UX References
+
+- [Front-end Spec: AI Studio](../front-end-spec.md#13-ai-studio)
+- [Mockup: AI Studio](../mockups/ai-studio.html)

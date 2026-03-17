@@ -27,6 +27,11 @@ Draft
 
 - [Component Architecture: Workspace Management](../architecture.md#6-workspace-management-component)
 
+## UX References
+
+- [Front-end Spec: Preflight Scripts & Environment Validation](../front-end-spec.md#11-preflight-scripts--environment-validation)
+- [Mockup: Preflight](../mockups/preflight.html)
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Define environment check template model and registry

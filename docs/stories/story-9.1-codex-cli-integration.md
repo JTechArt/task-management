@@ -28,6 +28,12 @@ Draft
 - Epic 1: IDE Launch flow (similar invocation pattern)
 - Epic 5: Pre-Run Scripts (optional: run pre-run before Codex)
 
+## UX References
+
+- [Front-end Spec: AI Studio](../front-end-spec.md#13-ai-studio)
+- [Mockup: AI Studio](../mockups/ai-studio.html)
+- [Mockup: Tasks](../mockups/tasks.html)
+
 ## Dev Notes
 
 - Codex CLI typically runs in terminal; design for subprocess launch with context injection.

@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Plugins</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Plugin Catalog</span><span>Epic 11 • Optional capabilities</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Plugin management</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Core</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>01</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>02</small></a>
+            <a class="nav-item" href="./project-detail.html"><span>Project Detail</span><small>03</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>04</small></a>
+            <a class="nav-item" href="./task-launch.html"><span>Task Launch</span><small>05</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>06</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>07</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>08</small></a>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Advanced</p>
+            <a class="nav-item" href="./preflight.html"><span>Preflight</span><small>09</small></a>
+            <a class="nav-item" href="./methodology.html"><span>Methodology</span><small>10</small></a>
+            <a class="nav-item" href="./ai-studio.html"><span>AI Studio</span><small>11</small></a>
+            <a class="nav-item" href="./automation-center.html"><span>Automation</span><small>12</small></a>
+            <a class="nav-item active" href="./plugins.html"><span>Plugins</span><small>13</small></a>
+            <a class="nav-item" href="./slack-analyzer.html"><span>Slack Analyzer</span><small>14</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>The catalog distinguishes optional add-ons from core product areas so failures stay isolated and understandable.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Install, validate, isolate</span>
+              <h2>Optional capabilities need better status language than generic settings</h2>
+              <p>Plugin management combines catalog browsing with infrastructure-style health feedback. Users should understand compatibility, prerequisites, and impact before they enable an add-on.</p>
+            </div>
+            <div class="actions">
+              <span class="btn primary">Install plugin</span>
+              <span class="btn">Re-run validation</span>
+            </div>
+          </div>
+
+          <section class="master-detail" style="grid-template-columns: 320px 1fr;">
+            <article class="list-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Installed plugins</h3>
+                  <p>Catalog + current states</p>
+                </div>
+              </div>
+              <div class="list-item selected">
+                <h4>Slack Analyzer</h4>
+                <p>Enabled • healthy • schedule configured</p>
+              </div>
+              <div class="list-item">
+                <h4>AI Studio Connectors</h4>
+                <p>Enabled • one degraded dependency</p>
+              </div>
+              <div class="list-item">
+                <h4>GEPPA Optimizer</h4>
+                <p>Installed but detached from all projects</p>
+              </div>
+              <div class="list-item">
+                <h4>Release Reporter</h4>
+                <p>Disabled • incompatible with current plugin API</p>
+              </div>
+            </article>
+
+            <article class="detail-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Plugin detail and health</h3>
+                  <p>Selected plugin: Slack Analyzer</p>
+                </div>
+                <span class="badge ready">Healthy</span>
+              </div>
+              <div class="grid cols-3">
+                <div class="card">
+                  <h3>Lifecycle</h3>
+                  <p>Discovered, initialized, enabled, and validated against plugin contract v1.2</p>
+                </div>
+                <div class="card">
+                  <h3>Scope</h3>
+                  <p>App-wide install with project-level source selection</p>
+                </div>
+                <div class="card">
+                  <h3>Failure isolation</h3>
+                  <p>Background job errors do not block workspace generation or task launch</p>
+                </div>
+              </div>
+
+              <section class="split" style="margin-top:18px;">
+                <article class="card">
+                  <div class="panel-header">
+                    <div>
+                      <h3>Dependency validation</h3>
+                      <p>Prerequisites must be clear and repairable</p>
+                    </div>
+                  </div>
+                  <div class="row-list">
+                    <div class="row"><div><strong>Slack OAuth</strong><p>Workspace token valid and channel access confirmed.</p></div><span class="badge ready">Pass</span></div>
+                    <div class="row"><div><strong>Scheduler</strong><p>Background executor available for daily jobs.</p></div><span class="badge ready">Pass</span></div>
+                    <div class="row"><div><strong>Storage retention job</strong><p>Archive cleanup queue active.</p></div><span class="badge ready">Pass</span></div>
+                  </div>
+                </article>
+                <article class="card">
+                  <div class="panel-header">
+                    <div>
+                      <h3>Event history</h3>
+                      <p>Operational visibility by plugin</p>
+                    </div>
+                  </div>
+                  <div class="row-list">
+                    <div class="row"><div><strong>Today 09:00</strong><p>Scheduled validation completed successfully.</p></div><span class="badge ready">OK</span></div>
+                    <div class="row"><div><strong>Yesterday 18:22</strong><p>Configuration updated: added `#product-eng` to source list.</p></div><span class="badge info">Config</span></div>
+                    <div class="row"><div><strong>Yesterday 18:20</strong><p>Plugin attached to Atlas and Forge projects.</p></div><span class="badge info">Attach</span></div>
+                  </div>
+                </article>
+              </section>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

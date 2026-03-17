@@ -26,3 +26,8 @@ Draft
 
 - [Integration Architecture: External APIs](../architecture.md)
 - [Settings / Configuration](../architecture.md)
+
+## UX References
+
+- [Front-end Spec: AI Studio](../front-end-spec.md#13-ai-studio)
+- [Mockup: AI Studio](../mockups/ai-studio.html)

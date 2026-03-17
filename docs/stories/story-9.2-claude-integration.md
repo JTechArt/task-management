@@ -28,6 +28,12 @@ Draft
 - Epic 1: Task context and workspace structure
 - Epic 7: Credential/API key storage patterns (OAuth or secure config)
 
+## UX References
+
+- [Front-end Spec: AI Studio](../front-end-spec.md#13-ai-studio)
+- [Mockup: AI Studio](../mockups/ai-studio.html)
+- [Mockup: Tasks](../mockups/tasks.html)
+
 ## Dev Notes
 
 - Claude may be invoked via CLI or API; design for both modes.

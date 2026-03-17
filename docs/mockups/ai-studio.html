@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • AI Studio</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>AI Studio</span><span>Epics 7-9 • AI configuration and launch</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Advanced AI setup</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Core</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>01</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>02</small></a>
+            <a class="nav-item" href="./project-detail.html"><span>Project Detail</span><small>03</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>04</small></a>
+            <a class="nav-item" href="./task-launch.html"><span>Task Launch</span><small>05</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>06</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>07</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>08</small></a>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Advanced</p>
+            <a class="nav-item" href="./preflight.html"><span>Preflight</span><small>09</small></a>
+            <a class="nav-item" href="./methodology.html"><span>Methodology</span><small>10</small></a>
+            <a class="nav-item active" href="./ai-studio.html"><span>AI Studio</span><small>11</small></a>
+            <a class="nav-item" href="./automation-center.html"><span>Automation</span><small>12</small></a>
+            <a class="nav-item" href="./plugins.html"><span>Plugins</span><small>13</small></a>
+            <a class="nav-item" href="./slack-analyzer.html"><span>Slack Analyzer</span><small>14</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>This view combines setup and readiness. It must help users understand what can be used right now, not just where to type credentials.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Local AI, prompts, tools, and MCP</span>
+              <h2>Make advanced AI capability legible before it is trusted</h2>
+              <p>AI Studio collects the operational setup for local models, optimized prompts, external coding assistants, and context sharing. It favors readiness states and safe configuration over generic settings forms.</p>
+            </div>
+            <div class="actions">
+              <span class="btn primary">Test all connections</span>
+              <span class="btn">Open task with AI</span>
+            </div>
+          </div>
+
+          <section class="grid cols-4">
+            <article class="card">
+              <h3>Ollama endpoint</h3>
+              <p>http://localhost:11434 • model `qwen2.5-coder:14b`</p>
+              <div class="stat-trend">Healthy • 62 ms ping</div>
+            </article>
+            <article class="card">
+              <h3>GEPPA routing</h3>
+              <p>Optimization enabled for task descriptions and agent prompts</p>
+              <div class="stat-trend">2 prompt libraries attached</div>
+            </article>
+            <article class="card">
+              <h3>Codex CLI</h3>
+              <p>Binary detected • project context injection ready</p>
+              <div class="stat-trend">Default for terminal tasks</div>
+            </article>
+            <article class="card">
+              <h3>Claude</h3>
+              <p>CLI configured • fallback to API disabled</p>
+              <div class="stat-trend">Ready when selected</div>
+            </article>
+          </section>
+
+          <section class="split" style="margin-top:18px;">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Local model and MCP</h3>
+                  <p>Security-sensitive settings stay explicit and scoped</p>
+                </div>
+              </div>
+              <div class="field-grid">
+                <div class="field"><span>Backend</span><strong>Ollama</strong></div>
+                <div class="field"><span>Model</span><strong>qwen2.5-coder:14b</strong></div>
+                <div class="field"><span>MCP server</span><strong>Enabled for local clients</strong></div>
+                <div class="field"><span>Exposed context</span><strong>Task, project, repo paths</strong></div>
+              </div>
+              <div class="row-list" style="margin-top:18px;">
+                <div class="row"><div><strong>MCP safety guardrail</strong><p>No secrets or credential records are exposed through the context surface.</p></div><span class="badge ready">Protected</span></div>
+                <div class="row"><div><strong>Connection instructions</strong><p>Copy local endpoint and capability list into Cursor, Claude, or another MCP client.</p></div><span class="badge info">Guided</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Prompt library</h3>
+                  <p>Global and project-scoped optimized prompts</p>
+                </div>
+                <span class="badge sync">GEPPA active</span>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>Task description primer</strong><p>Global • used in task creation flow • last optimized yesterday</p></div><span class="badge ready">Default</span></div>
+                <div class="row"><div><strong>Commit message concise</strong><p>Atlas project • attached to Codex and Claude suggestions</p></div><span class="badge info">Project</span></div>
+                <div class="row"><div><strong>Agent kickoff prompt</strong><p>Automation-specific prompt with reusable system framing</p></div><span class="badge info">Reusable</span></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="master-detail" style="grid-template-columns: 1fr 420px; margin-top:18px;">
+            <article class="list-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Task-level AI launch actions</h3>
+                  <p>Epic 9 posture from the task detail screen</p>
+                </div>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>Run with Codex</strong><p>Pass project name, task description, repository path, and workspace path.</p></div><span class="badge ready">Visible</span></div>
+                <div class="row"><div><strong>Run with Claude</strong><p>Appears only when configured and validated.</p></div><span class="badge ready">Visible</span></div>
+                <div class="row"><div><strong>Generate description with local LLM</strong><p>Suggestion-only flow with accept, edit, or discard controls.</p></div><span class="badge sync">Optional</span></div>
+              </div>
+            </article>
+            <article class="detail-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Invocation guardrails</h3>
+                  <p>Failures should stay actionable</p>
+                </div>
+                <span class="badge warning">1 issue</span>
+              </div>
+              <div class="detail-hero">
+                <h3>Claude CLI not found</h3>
+                <p>Hide the task action until validation passes, but keep the remediation visible in AI Studio so the user can fix the connector without guessing.</p>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

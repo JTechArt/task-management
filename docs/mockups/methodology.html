@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Methodology</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Methodology setup</span><span>Epic 6 • BMAD integration</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Workflow methodology</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Core</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>01</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>02</small></a>
+            <a class="nav-item" href="./project-detail.html"><span>Project Detail</span><small>03</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>04</small></a>
+            <a class="nav-item" href="./task-launch.html"><span>Task Launch</span><small>05</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>06</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>07</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>08</small></a>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Advanced</p>
+            <a class="nav-item" href="./preflight.html"><span>Preflight</span><small>09</small></a>
+            <a class="nav-item active" href="./methodology.html"><span>Methodology</span><small>10</small></a>
+            <a class="nav-item" href="./ai-studio.html"><span>AI Studio</span><small>11</small></a>
+            <a class="nav-item" href="./automation-center.html"><span>Automation</span><small>12</small></a>
+            <a class="nav-item" href="./plugins.html"><span>Plugins</span><small>13</small></a>
+            <a class="nav-item" href="./slack-analyzer.html"><span>Slack Analyzer</span><small>14</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>Methodology is a scoped decision, so this UI sits inside project and task detail rather than global settings.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">BMAD and scoped workflow presets</span>
+              <h2>Show what methodology selection will actually do</h2>
+              <p>The UI makes methodology tangible: injected files, recommended tools, and override behavior are all visible before the next workspace is generated.</p>
+            </div>
+            <div class="actions">
+              <span class="btn primary">Save methodology</span>
+              <span class="btn">Compare override</span>
+            </div>
+          </div>
+
+          <section class="split">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Methodology scope</h3>
+                  <p>Project default with task-level override</p>
+                </div>
+                <span class="badge ready">BMAD active</span>
+              </div>
+              <div class="field-grid">
+                <div class="field"><span>Project default</span><strong>BMAD</strong></div>
+                <div class="field"><span>Task override</span><strong>Custom for `TM-812`</strong></div>
+                <div class="field"><span>Workspace effect</span><strong>Inject on generate</strong></div>
+                <div class="field"><span>Existing content</span><strong>Protect from overwrite</strong></div>
+              </div>
+              <div class="tabs" style="margin-top:18px;">
+                <span class="tab active">Methodology</span>
+                <span class="tab">Recommended tools</span>
+                <span class="tab">Task overrides</span>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>None</strong><p>Do not inject workflow files or recommend tools automatically.</p></div><span class="badge info">Available</span></div>
+                <div class="row"><div><strong>BMAD</strong><p>Inject `.bmad-core`, `AGENTS.md`, and default task/checklist selections.</p></div><span class="badge ready">Selected</span></div>
+                <div class="row"><div><strong>Custom</strong><p>Use organization-specific templates and tool presets.</p></div><span class="badge sync">Configurable</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Workspace injection preview</h3>
+                  <p>Users should know exactly what appears in generated workspaces</p>
+                </div>
+              </div>
+              <div class="code-panel">/workspace/task-TM-812
+├── .bmad-core/
+│   ├── agents/
+│   ├── tasks/
+│   └── templates/
+├── AGENTS.md
+└── docs/
+    └── stories/</div>
+              <div class="row-list" style="margin-top:18px;">
+                <div class="row"><div><strong>Safe merge behavior</strong><p>Existing BMAD files are preserved unless the user confirms replacement.</p></div><span class="badge warning">Confirm</span></div>
+                <div class="row"><div><strong>Activity log</strong><p>Injection is recorded during workspace generation with scope and result.</p></div><span class="badge ready">Tracked</span></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="split" style="margin-top:18px;">
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Recommended BMAD tools</h3>
+                  <p>Pre-selected but still user-controllable</p>
+                </div>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>Agents</strong><p>`dev`, `po`, `qa`, `sm`, `ux-expert`</p></div><span class="badge ready">5 selected</span></div>
+                <div class="row"><div><strong>Tasks</strong><p>Story drafting, validation, review, and execution helpers</p></div><span class="badge ready">Enabled</span></div>
+                <div class="row"><div><strong>Checklists</strong><p>Definition-of-done and story validation packs</p></div><span class="badge ready">Enabled</span></div>
+              </div>
+            </article>
+            <article class="card">
+              <div class="panel-header">
+                <div>
+                  <h3>Task override card</h3>
+                  <p>Visible from task detail and launch summary</p>
+                </div>
+              </div>
+              <div class="detail-hero">
+                <h3>TM-812 • Override active</h3>
+                <p>This task disables the QA checklist and swaps the default BMAD developer persona for a custom release workflow. Other tasks continue using the project default.</p>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

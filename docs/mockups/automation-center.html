@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Automation Center</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Automation Center</span><span>Epic 10 • Plan, review, execute</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Automation workflows</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Core</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>01</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>02</small></a>
+            <a class="nav-item" href="./project-detail.html"><span>Project Detail</span><small>03</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>04</small></a>
+            <a class="nav-item" href="./task-launch.html"><span>Task Launch</span><small>05</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>06</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>07</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>08</small></a>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Advanced</p>
+            <a class="nav-item" href="./preflight.html"><span>Preflight</span><small>09</small></a>
+            <a class="nav-item" href="./methodology.html"><span>Methodology</span><small>10</small></a>
+            <a class="nav-item" href="./ai-studio.html"><span>AI Studio</span><small>11</small></a>
+            <a class="nav-item active" href="./automation-center.html"><span>Automation</span><small>12</small></a>
+            <a class="nav-item" href="./plugins.html"><span>Plugins</span><small>13</small></a>
+            <a class="nav-item" href="./slack-analyzer.html"><span>Slack Analyzer</span><small>14</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>Automation needs a review posture, not a one-click magic button. Generated plans are editable artifacts before execution starts.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Agents, approaches, and traceability</span>
+              <h2>Separate planning confidence from execution confidence</h2>
+              <p>The center supports the full automation lifecycle: define agents, generate an approach from a task, review and edit it, then track runs with enough history to improve the workflow later.</p>
+            </div>
+            <div class="actions">
+              <span class="btn primary">Generate approach</span>
+              <span class="btn">Create agent</span>
+            </div>
+          </div>
+
+          <section class="master-detail" style="grid-template-columns: 320px 1fr 420px;">
+            <article class="list-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Agent library</h3>
+                  <p>Project and task-type associations</p>
+                </div>
+                <span class="badge info">7 agents</span>
+              </div>
+              <div class="list-item selected">
+                <h4>Bug triage automator</h4>
+                <p>Uses Codex + local LLM + concise diagnosis prompt</p>
+              </div>
+              <div class="list-item">
+                <h4>BMAD story helper</h4>
+                <p>Project-scoped • attaches BMAD workflow presets</p>
+              </div>
+              <div class="list-item">
+                <h4>Release notes drafter</h4>
+                <p>Generates summary and approval checklist from merged tasks</p>
+              </div>
+            </article>
+
+            <article class="detail-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Approach review</h3>
+                  <p>Generated from task `TM-931` before execution approval</p>
+                </div>
+                <span class="badge sync">Draft</span>
+              </div>
+              <div class="progress-stack">
+                <div class="progress-item"><strong>1. Inspect changed repositories</strong><p>Use Codex to summarize likely impact surface and missing context.</p></div>
+                <div class="progress-item"><strong>2. Optimize prompt with GEPPA</strong><p>Apply project-scoped debugging prompt before handing off to the local LLM.</p></div>
+                <div class="progress-item"><strong>3. Draft implementation plan</strong><p>Produce ordered steps, likely files, and testing strategy.</p></div>
+                <div class="progress-item"><strong>4. Await approval before any write action</strong><p>No automation step runs without explicit confirmation.</p></div>
+              </div>
+              <div class="actions" style="margin-top:18px;">
+                <span class="btn primary">Approve and run</span>
+                <span class="btn">Edit steps</span>
+                <span class="btn">Reject</span>
+              </div>
+            </article>
+
+            <article class="detail-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Run history</h3>
+                  <p>Traceability across task, project, and date</p>
+                </div>
+                <span class="badge ready">1 running</span>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>Run #842</strong><p>TM-931 • In progress • 2 of 5 steps complete • started 3 min ago</p></div><span class="badge sync">Running</span></div>
+                <div class="row"><div><strong>Run #838</strong><p>Atlas • Completed • user-edited step 2 before execution</p></div><span class="badge ready">Success</span></div>
+                <div class="row"><div><strong>Run #833</strong><p>Forge • Failed on missing Claude connector • no writes performed</p></div><span class="badge warning">Failed</span></div>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

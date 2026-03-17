@@ -28,6 +28,12 @@ Draft
 - Story 9.2: Claude Integration
 - Epic 5: Pre-Run Scripts (optional gating)
 
+## UX References
+
+- [Front-end Spec: AI Studio](../front-end-spec.md#13-ai-studio)
+- [Mockup: AI Studio](../mockups/ai-studio.html)
+- [Mockup: Tasks](../mockups/tasks.html)
+
 ## Dev Notes
 
 - Reuse patterns from IDE launch (Story 1.5) for consistency.

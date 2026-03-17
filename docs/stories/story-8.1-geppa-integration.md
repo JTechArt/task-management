@@ -26,6 +26,11 @@ Draft
 
 - Epic 7: Local AI/ML Integration (shared configuration patterns)
 
+## UX References
+
+- [Front-end Spec: AI Studio](../front-end-spec.md#13-ai-studio)
+- [Mockup: AI Studio](../mockups/ai-studio.html)
+
 ## Dev Notes
 
 - GEPPA may be a local tool or external API; design configuration to support both.

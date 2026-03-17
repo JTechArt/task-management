@@ -28,6 +28,12 @@ Draft
 - [Component Architecture: Project Management](../architecture.md#1-project-management-component)
 - [Component Architecture: Rule Management](../architecture.md#5-rule-management-component)
 
+## UX References
+
+- [Front-end Spec: Methodology & BMAD Configuration](../front-end-spec.md#12-methodology--bmad-configuration)
+- [Mockup: Methodology](../mockups/methodology.html)
+- [Mockup: Project Detail](../mockups/project-detail.html)
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Add methodology field to project and task models

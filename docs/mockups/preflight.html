@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiTask Mockup • Preflight</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="shell">
+    <div class="window">
+      <div class="window-bar">
+        <div class="traffic"><span></span><span></span><span></span></div>
+        <div class="window-meta"><span class="status-dot"></span><span>Preflight scripts</span><span>Epic 5 • Launch validation</span></div>
+      </div>
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="brand-mark">AI</div>
+            <div class="brand-copy"><h1>AiTask</h1><p>Workspace preflight</p></div>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Core</p>
+            <a class="nav-item" href="./dashboard.html"><span>Dashboard</span><small>01</small></a>
+            <a class="nav-item" href="./projects.html"><span>Projects</span><small>02</small></a>
+            <a class="nav-item" href="./project-detail.html"><span>Project Detail</span><small>03</small></a>
+            <a class="nav-item" href="./tasks.html"><span>Tasks</span><small>04</small></a>
+            <a class="nav-item" href="./task-launch.html"><span>Task Launch</span><small>05</small></a>
+            <a class="nav-item" href="./rules.html"><span>Rules</span><small>06</small></a>
+            <a class="nav-item" href="./integrations.html"><span>Integrations</span><small>07</small></a>
+            <a class="nav-item" href="./settings.html"><span>Settings</span><small>08</small></a>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Advanced</p>
+            <a class="nav-item active" href="./preflight.html"><span>Preflight</span><small>09</small></a>
+            <a class="nav-item" href="./methodology.html"><span>Methodology</span><small>10</small></a>
+            <a class="nav-item" href="./ai-studio.html"><span>AI Studio</span><small>11</small></a>
+            <a class="nav-item" href="./automation-center.html"><span>Automation</span><small>12</small></a>
+            <a class="nav-item" href="./plugins.html"><span>Plugins</span><small>13</small></a>
+            <a class="nav-item" href="./slack-analyzer.html"><span>Slack Analyzer</span><small>14</small></a>
+          </div>
+          <div class="sidebar-card">
+            <h2>Design note</h2>
+            <p>Preflight belongs close to task launch. Setup happens in project configuration, but failures must render inline during launch with clear remediation.</p>
+          </div>
+        </aside>
+        <main class="content">
+          <div class="page-head">
+            <div>
+              <span class="eyebrow">Pre-run checks and templates</span>
+              <h2>Block bad launches before developers lose time</h2>
+              <p>This screen treats environment validation as a first-class part of the launch flow. Profiles inherit from project to repository, templates speed setup, and failures explain exactly what to fix.</p>
+            </div>
+            <div class="actions">
+              <span class="btn primary">Add script profile</span>
+              <span class="btn">Preview launch order</span>
+            </div>
+          </div>
+
+          <section class="master-detail" style="grid-template-columns: 320px 1fr 420px;">
+            <article class="list-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Profiles</h3>
+                  <p>Project and repository scope</p>
+                </div>
+                <span class="badge info">4 active</span>
+              </div>
+              <div class="list-item selected">
+                <h4>Project default</h4>
+                <p>Runs before every workspace launch • Node, Python, env vars</p>
+              </div>
+              <div class="list-item">
+                <h4>payments-api</h4>
+                <p>Repository override • Java 21 and Gradle wrapper checks</p>
+              </div>
+              <div class="list-item">
+                <h4>design-system</h4>
+                <p>Repository override • pnpm and Storybook dependency check</p>
+              </div>
+            </article>
+
+            <article class="detail-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Execution order</h3>
+                  <p>Predictable inheritance prevents surprise failures</p>
+                </div>
+                <span class="badge sync">Project first</span>
+              </div>
+              <div class="stepper">
+                <div class="step done"><span>1</span><strong>Project profile</strong><p>Validate global env vars and toolchain versions.</p></div>
+                <div class="step active"><span>2</span><strong>Repo profile</strong><p>Run repository-specific checks for selected modules.</p></div>
+                <div class="step"><span>3</span><strong>Workspace prep</strong><p>Clone, branch, and copy rule packs.</p></div>
+                <div class="step"><span>4</span><strong>IDE launch</strong><p>Only enabled after all checks pass.</p></div>
+              </div>
+              <div class="grid cols-3">
+                <div class="card">
+                  <h3>Node runtime</h3>
+                  <p>Template: exact semver or range match with remediation text.</p>
+                </div>
+                <div class="card">
+                  <h3>Env variables</h3>
+                  <p>Required keys, masking rules, and optional autofix docs.</p>
+                </div>
+                <div class="card">
+                  <h3>Dependencies</h3>
+                  <p>Check binaries, package managers, or local services.</p>
+                </div>
+              </div>
+              <div class="code-panel" style="margin-top:18px;">Project default
+1. check-node --version ">=20"
+2. check-python --version "3.11.x"
+3. check-env "OPENAI_API_KEY"
+
+payments-api
+4. check-java --version "21"
+5. run "./gradlew -q help"</div>
+            </article>
+
+            <article class="detail-panel">
+              <div class="panel-header">
+                <div>
+                  <h3>Launch failure preview</h3>
+                  <p>Inline state shown from task launch</p>
+                </div>
+                <span class="badge warning">Blocking</span>
+              </div>
+              <div class="detail-hero">
+                <h3>Java runtime mismatch</h3>
+                <p>`payments-api` requires Java 21, but the detected runtime is Java 17. IDE launch remains disabled until the project profile passes or the repository is removed from this launch.</p>
+              </div>
+              <div class="row-list">
+                <div class="row"><div><strong>Suggested fix</strong><p>Switch `JAVA_HOME` to the configured JDK 21 installation and rerun validation.</p></div><span class="badge info">Primary</span></div>
+                <div class="row"><div><strong>Fallback</strong><p>Launch without `payments-api` if the task only targets the front-end repository.</p></div><span class="badge sync">Optional</span></div>
+                <div class="row"><div><strong>History record</strong><p>Failed preflight events are written into task activity with scope and timestamp.</p></div><span class="badge ready">Logged</span></div>
+              </div>
+            </article>
+          </section>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

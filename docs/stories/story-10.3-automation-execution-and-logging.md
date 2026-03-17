@@ -32,6 +32,11 @@ Draft
 - [Component Architecture: Integration](../architecture.md)
 - [Security Architecture: Credential Management](../architecture.md#credential-management)
 
+## UX References
+
+- [Front-end Spec: Automation Center](../front-end-spec.md#14-automation-center)
+- [Mockup: Automation Center](../mockups/automation-center.html)
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Implement approach review UI

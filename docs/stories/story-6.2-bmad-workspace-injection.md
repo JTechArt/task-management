@@ -31,6 +31,12 @@ Draft
 
 - [Component Architecture: Workspace Management](../architecture.md#6-workspace-management-component)
 
+## UX References
+
+- [Front-end Spec: Methodology & BMAD Configuration](../front-end-spec.md#12-methodology--bmad-configuration)
+- [Mockup: Methodology](../mockups/methodology.html)
+- [Mockup: Task Launch Flow](../mockups/task-launch.html)
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Define BMAD bundle source (local path or bundled)

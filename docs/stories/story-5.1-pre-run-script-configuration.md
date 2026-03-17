@@ -30,6 +30,12 @@ Draft
 - [Component Architecture: IDE Integration](../architecture.md#4-ide-integration-component)
 - [Component Architecture: Workspace Management](../architecture.md#6-workspace-management-component)
 
+## UX References
+
+- [Front-end Spec: Preflight Scripts & Environment Validation](../front-end-spec.md#11-preflight-scripts--environment-validation)
+- [Mockup: Preflight](../mockups/preflight.html)
+- [Mockup: Task Launch Flow](../mockups/task-launch.html)
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Add pre-run script data model and migration

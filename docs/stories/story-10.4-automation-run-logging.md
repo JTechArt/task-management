@@ -31,3 +31,8 @@ Draft
 ## Architecture References
 
 - [Component Architecture: Integration](../architecture.md)
+
+## UX References
+
+- [Front-end Spec: Automation Center](../front-end-spec.md#14-automation-center)
+- [Mockup: Automation Center](../mockups/automation-center.html)

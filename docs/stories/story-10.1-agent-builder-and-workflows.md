@@ -23,6 +23,11 @@ Draft
 - [Component Architecture: AI/ML Integration](../architecture.md) *(to be added)*
 - [Component Architecture: Rule Management](../architecture.md#5-rule-management-component)
 
+## UX References
+
+- [Front-end Spec: Automation Center](../front-end-spec.md#14-automation-center)
+- [Mockup: Automation Center](../mockups/automation-center.html)
+
 ## Requirements Mapping
 
 - PRE-5.1: Agent builder for custom automation workflows

@@ -38,6 +38,11 @@ Draft
 - Story 9.1, 9.2: Codex and Claude Integration
 - Story 10.1: Agent Builder and Custom Workflows
 
+## UX References
+
+- [Front-end Spec: Automation Center](../front-end-spec.md#14-automation-center)
+- [Mockup: Automation Center](../mockups/automation-center.html)
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Implement approach generation orchestrator

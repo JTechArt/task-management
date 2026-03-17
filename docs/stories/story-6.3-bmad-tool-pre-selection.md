@@ -32,6 +32,11 @@ Draft
 - [Component Architecture: Rule Management](../architecture.md#5-rule-management-component)
 - [Component Architecture: Project Management](../architecture.md#1-project-management-component)
 
+## UX References
+
+- [Front-end Spec: Methodology & BMAD Configuration](../front-end-spec.md#12-methodology--bmad-configuration)
+- [Mockup: Methodology](../mockups/methodology.html)
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Define BMAD default tool set (agents, checklists, tasks)
