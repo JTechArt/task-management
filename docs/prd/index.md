@@ -27,6 +27,8 @@ AiTask is a cross-platform desktop application that streamlines developer workfl
 | 8 | [GEPPA (Prompt Optimization)](./epic-8-geppa-prompt-optimization.md) | 8.1 – 8.3 |
 | 9 | [AI Tools Integration (Codex, Claude)](./epic-9-ai-tools-integration.md) | 9.1 – 9.3 |
 | 10 | [AI-Powered Task Automation](./epic-10-ai-powered-task-automation.md) | 10.1 – 10.4 |
+| 11 | [Plugin Management and Add-on Framework](./epic-11-plugin-management-and-addon-framework.md) | 11.1 – 11.4 |
+| 12 | [AI Slack Channel Analyzer](./epic-12-ai-slack-channel-analyzer.md) | 12.1 – 12.5 |
 
 ## Reference Documents
 

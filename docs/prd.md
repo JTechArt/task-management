@@ -10,6 +10,8 @@
 - Make AI-assisted development repeatable by applying project and IDE-specific rules automatically when launching task workspaces.
 - Improve visibility into active work through task lifecycle tracking, dashboard metrics, recent activity, and project-level analytics.
 - Provide secure, cross-platform desktop operations for Git credentials, OAuth-based integrations, Slack notifications, and data portability.
+- Evolve AiTask into a pluggable platform so advanced capabilities can be installed, configured, and enabled only where needed.
+- Turn Slack project channels into actionable daily intelligence by summarizing discussions, preserving references, and surfacing automation opportunities.
 
 ### Background Context
 
@@ -22,6 +24,7 @@ The product is intended to collapse that fragmented workflow into a single deskt
 | Date | Version | Description | Author |
 | --- | --- | --- | --- |
 | 2026-03-11 | v0.1 | Initial PRD draft created from product brief and features list | John (PM) |
+| 2026-03-17 | v0.2 | Added plugin platform and AI Slack analyzer requirements plus new PRD epics | John (PM) |
 
 ## Requirements
 
@@ -55,6 +58,17 @@ The product is intended to collapse that fragmented workflow into a single deskt
 26. FR26: The system shall support JSON-based backup and restore of projects, tasks, repositories, and rules across installations.
 27. FR27: The system shall support committing and pushing task changes from within the application or via its Git integration layer.
 28. FR28: The system shall allow users to configure workspace retention, cleanup, or archival behavior when a task is completed or deleted.
+29. FR29: The system shall provide a plugin framework that allows features to be installed, attached, enabled, disabled, updated, or removed without redesigning the core application.
+30. FR30: The system shall provide plugin management views where users can see installed plugins, plugin status, plugin version, and whether a plugin is attached to the current application instance or project context.
+31. FR31: The system shall allow each plugin to define and persist its own configuration, credentials, schedules, and enablement state through a standard configuration model.
+32. FR32: The system shall validate plugin prerequisites, dependencies, and required local or external services before a plugin can be enabled or executed.
+33. FR33: The system shall isolate plugin failures so that an unavailable or misconfigured plugin does not prevent the core task and project management experience from functioning.
+34. FR34: The system shall allow users to configure one or more Slack channels for AI analysis, including scheduling rules such as daily execution time or manual execution.
+35. FR35: The system shall execute Slack analysis runs incrementally, skipping already scanned messages or channel windows when there is no new content to summarize.
+36. FR36: The system shall generate summaries grouped by day, Slack channel, and detected discussion topic, with each summary preserving references to the originating channel and messages when available.
+37. FR37: The system shall display Slack analysis job history including run time, completion state, currently running jobs, and per-channel success or failure counts.
+38. FR38: The system shall support categorized or labeled AI-generated summaries that can later drive downstream workflow automation such as task creation or project assignment.
+39. FR39: The system shall retain Slack analysis summaries in active views for the most recent 7 days, archive older summaries, and enforce a maximum retained summary history of 30 days.
 
 ### Non Functional
 
@@ -68,6 +82,9 @@ The product is intended to collapse that fragmented workflow into a single deskt
 8. NFR8: The application shall be testable through automated unit and integration tests covering domain logic, persistence, Git workflows, and integration boundaries.
 9. NFR9: The application shall package into distributable installers for Windows, macOS, and Linux using the project’s native packaging workflow.
 10. NFR10: The application shall support secure import and export flows that preserve compatibility across installations without corrupting data or rule attachments.
+11. NFR11: The plugin framework shall provide stable extension points and versioned contracts so plugins can evolve without breaking the core application unexpectedly.
+12. NFR12: Slack analysis and summarization jobs shall execute asynchronously with observable progress so the desktop UI remains responsive during long-running runs.
+13. NFR13: Summary retention and archival policies shall execute predictably and without data loss for records still inside the configured retention window.
 
 ## User Interface Design Goals
 
@@ -147,6 +164,14 @@ Manual testing should also be expected for cross-platform desktop workflows that
 2. Epic 2: Multi-Repository Git Automation and Rule Application: Add advanced repository management, task branch automation, secure credential handling, repository validation, and automatic rule-aware workspace preparation.
 3. Epic 3: Visibility and Operational Control: Deliver dashboard metrics, activity history, health monitoring, workspace retention controls, and improved management views for ongoing developer operations.
 4. Epic 4: External Integrations, Portability, and Distribution: Deliver Slack notifications, OAuth-based integrations, import/export and backup/restore, and production-ready cross-platform packaging.
+5. Epic 5: Pre-Run Scripts and Environment Validation: Add configurable pre-run automation and validation so required setup steps execute before task work begins.
+6. Epic 6: BMAD Methodology Integration: Integrate BMAD planning and workflow assets into AiTask so structured delivery workflows can be managed from the app.
+7. Epic 7: Local AI/ML Integration: Enable local model configuration and AI-assisted generation without depending exclusively on cloud services.
+8. Epic 8: GEPPA (Prompt Optimization): Introduce prompt optimization workflows so prompts can be refined, versioned, and reused across AI features.
+9. Epic 9: AI Tools Integration (Codex, Claude): Integrate external AI developer tools so they can be launched with AiTask project and task context.
+10. Epic 10: AI-Powered Task Automation: Build an intelligent automation layer that combines task context, AI tools, optimized prompts, and models to generate and execute approved workflows.
+11. Epic 11: Plugin Management and Add-on Framework: Establish a pluggable application model so advanced feature sets can be installed, configured, validated, and operated as attachable add-ons.
+12. Epic 12: AI Slack Channel Analyzer: Deliver a Slack analysis plugin that summarizes channel activity, tracks run history, preserves references, and prepares categorized insights for future task automation.
 
 ## Epic 1 Foundation and First Task Launch Flow
 
@@ -457,3 +482,137 @@ so that I can install and run it as a real desktop product.
 3. Packaging outputs are versioned and suitable for repeatable release creation.
 4. Installer or package validation confirms that required runtime dependencies are included or clearly documented.
 5. Release packaging does not expose secrets, environment-specific credentials, or development-only configuration.
+
+## Epic 11 Plugin Management and Add-on Framework
+
+Create the extension foundation needed for AiTask to support optional feature packs such as local AI, prompt optimization, external AI tools, and future integrations as attachable plugins. This epic makes advanced capabilities installable and configurable without hardwiring every feature into the product core.
+
+### Story 11.1 Plugin Framework and Lifecycle Contracts
+
+As a platform administrator,
+I want AiTask to expose a standard plugin lifecycle and extension contract,
+so that new capabilities can be added consistently without destabilizing the core application.
+
+#### Acceptance Criteria
+
+1. The application defines a standard plugin contract covering discovery, initialization, configuration, health reporting, enablement, disablement, and removal.
+2. Plugins can register UI surfaces, background jobs, configuration sections, and integration hooks through approved extension points.
+3. Plugin lifecycle failures are captured with actionable diagnostics.
+4. The core application continues functioning when an optional plugin fails to initialize.
+5. Plugin contracts are versioned so compatibility can be validated before activation.
+
+### Story 11.2 Plugin Catalog, Install, Attach, and Remove
+
+As a developer,
+I want to manage optional add-ons from within AiTask,
+so that I can enable only the capabilities relevant to my workflow.
+
+#### Acceptance Criteria
+
+1. A user can view installed plugins and their current attachment or enablement state.
+2. A user can install, attach, detach, disable, or remove supported plugins through a plugin management experience.
+3. The UI clearly distinguishes core features from optional plugins.
+4. Plugin management actions confirm success or failure with clear status feedback.
+5. Plugin lifecycle actions are recorded in application history.
+
+### Story 11.3 Plugin Configuration and Dependency Validation
+
+As a developer,
+I want each plugin to expose its own configuration and prerequisite checks,
+so that a plugin only runs when its required tools and services are available.
+
+#### Acceptance Criteria
+
+1. Each plugin can define structured configuration fields, secrets, schedules, and validation rules.
+2. The application validates plugin prerequisites such as local binaries, endpoints, credentials, or companion apps before enablement.
+3. Missing prerequisites are presented with actionable remediation guidance.
+4. Plugin configuration persists between sessions and is scoped appropriately to app-wide or project-level use.
+5. Invalid plugin configuration does not corrupt previously valid plugin state.
+
+### Story 11.4 Plugin Status, Health, and Operational Visibility
+
+As a developer,
+I want operational visibility into installed plugins,
+so that I can understand whether an add-on is ready, degraded, or failing.
+
+#### Acceptance Criteria
+
+1. Plugin management surfaces current plugin status including enabled, disabled, misconfigured, degraded, or unavailable states.
+2. Health information identifies the failing dependency, service, or validation step when a plugin is not operational.
+3. A user can manually re-run plugin validation or health checks.
+4. Plugin issues are isolated and do not block unrelated AiTask workflows.
+5. Recent plugin events and failures are visible in operational history.
+
+## Epic 12 AI Slack Channel Analyzer
+
+Deliver an AI-powered Slack analysis plugin that scans configured channels, groups discussions by channel, day, and topic, and turns that activity into traceable summaries. The epic focuses on visibility, incremental analysis, retention management, and structured outputs that can later feed automated task creation.
+
+### Story 12.1 Slack Analysis Source and Schedule Configuration
+
+As a team-oriented developer,
+I want to configure which Slack channels are analyzed and when analysis runs,
+so that the system summarizes the conversations that matter without requiring manual setup every time.
+
+#### Acceptance Criteria
+
+1. A user can select one or more Slack channels as analysis sources.
+2. A user can configure analysis execution as scheduled daily runs, manual runs, or both.
+3. Scheduled runs support a configurable execution time such as daily at 10:00 AM.
+4. The plugin validates Slack connectivity and channel accessibility before saving the configuration.
+5. Disabled or inaccessible channels are clearly identified in configuration status.
+
+### Story 12.2 Incremental Slack Analysis Execution
+
+As a team-oriented developer,
+I want Slack analysis runs to process only new conversation activity,
+so that repeated runs complete efficiently and avoid generating duplicate summaries.
+
+#### Acceptance Criteria
+
+1. Each analysis run tracks the last successfully scanned time or message checkpoint per channel.
+2. Manual and scheduled runs skip channels with no new content since the previous successful scan.
+3. The run engine can continue processing remaining channels when one channel fails.
+4. A currently running analysis job is visible to the user.
+5. Failures preserve diagnostic detail without losing the last valid checkpoint for unaffected channels.
+
+### Story 12.3 Daily, Per-Channel, and Per-Topic Summaries with References
+
+As a team lead,
+I want AI-generated Slack summaries grouped by day, channel, and discussion topic,
+so that I can quickly understand what happened and trace the summary back to source conversations.
+
+#### Acceptance Criteria
+
+1. The system generates summaries for each analyzed day and channel.
+2. Distinct topics discussed within the same channel are summarized separately when the model detects meaningful topic separation.
+3. Each summary includes references to the source Slack channel and, when available, the relevant message or thread link.
+4. Summaries are labeled or categorized for later filtering and automation use.
+5. Summary generation failures for one channel or topic do not hide successful results from other analyzed content.
+
+### Story 12.4 Analysis Run History and Operational Dashboard
+
+As a team lead,
+I want to review Slack analysis run history and current processing status,
+so that I can understand coverage, failures, and whether the analyzer is operating correctly.
+
+#### Acceptance Criteria
+
+1. The UI shows analysis run history with run date and time, duration or completion state, and triggering mode.
+2. Each run displays how many channels succeeded, failed, or were skipped.
+3. The UI shows whether a run is currently in progress and which channels are still being processed.
+4. Users can inspect failure details for unsuccessful channels.
+5. Analysis run history is filterable by date, status, and trigger type.
+
+### Story 12.5 Summary Retention, Archive, and Automation Handoffs
+
+As a team lead,
+I want Slack summaries retained and surfaced according to clear lifecycle rules,
+so that recent insights stay accessible while older data is archived and structured for future automation.
+
+#### Acceptance Criteria
+
+1. The main summary views show only the most recent 7 days of summaries by default.
+2. Summaries older than 7 days move to an archive state without being immediately deleted.
+3. Archived summaries are retained for up to 30 days total before cleanup.
+4. Summary records preserve labels, references, and metadata needed for future task-creation or project-assignment automations.
+5. Retention and archival actions execute automatically and are visible in operational history.
