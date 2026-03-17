@@ -290,5 +290,23 @@ object DependencyContainer {
     val getOAuthStatusUseCase: GetOAuthStatusUseCase by lazy {
         GetOAuthStatusUseCase(oauthConnectionRepository, oauthService)
     }
+
+    val exportDataUseCase: ExportDataUseCase by lazy {
+        ExportDataUseCase(
+            projectRepository,
+            taskRepository,
+            repositoryRepository,
+            ruleRepository
+        )
+    }
+
+    val importDataUseCase: ImportDataUseCase by lazy {
+        ImportDataUseCase(
+            projectRepository,
+            taskRepository,
+            repositoryRepository,
+            ruleRepository
+        )
+    }
 }
 

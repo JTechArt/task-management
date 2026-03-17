@@ -1,0 +1,45 @@
+schema: 1
+story: "4.3"
+story_title: "Import and Export of Projects, Tasks, and Rules"
+gate: PASS
+status_reason: "All ACs met. Export with credential redaction; import with validation (validate() tested), disambiguation on apply, ID mapping for relationships; SettingsView with Export/Import, Snackbar summary. Unit tests for both use cases. AC3 satisfied via disambiguation; optional enhancement to show validate() results before apply."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-17T15:00:00Z"
+waiver: { active: false }
+top_issues: []
+
+evidence:
+  tests_reviewed: 5
+  tests:
+    - ExportDataUseCaseTest: export structure (projects/tasks/repos/rules), credential redaction
+    - ImportDataUseCaseTest: validate conflicts (project name exists), apply roundtrip (relationships), invalid JSON
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "CredentialRedactor.redactUrl on clone URLs; credentials excluded per Export Security"
+  performance:
+    status: PASS
+    notes: "Coroutine-based; file I/O on Dispatchers"
+  reliability:
+    status: PASS
+    notes: "Schema version check; error handling; disambiguation for clashes"
+  maintainability:
+    status: PASS
+    notes: "Clean DTOs; unit tests cover export and import flows"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider validate-before-apply UX: call validate(), show conflicts to user, offer proceed/cancel before apply"
+      refs:
+        - taskmanager/desktop-app/src/main/kotlin/com/aitask/desktop/ui/viewmodel/SettingsViewModel.kt

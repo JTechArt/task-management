@@ -74,13 +74,11 @@ class SlackChannelRepositoryImpl : SlackChannelRepository {
             config.copy(updatedAt = now)
         }
 
-    override suspend fun delete(id: UUID): Boolean = newSuspendedTransaction {
-        val deleted = SlackChannels.deleteWhere { SlackChannels.id eq id }
-        deleted > 0
-    }
-
-    override suspend fun deleteByProject(projectId: UUID): Int = newSuspendedTransaction {
-        SlackChannels.deleteWhere { SlackChannels.projectId eq projectId }
+    override suspend fun delete(id: UUID) {
+        newSuspendedTransaction {
+            SlackChannels.deleteWhere { SlackChannels.id eq id }
+            Unit
+        }
     }
 
     private fun ResultRow.toSlackChannelConfig(): SlackChannelConfig = SlackChannelConfig(
