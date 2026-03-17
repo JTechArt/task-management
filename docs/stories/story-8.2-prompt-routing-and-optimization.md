@@ -1,10 +1,10 @@
-# Story 8.2: Prompt Routing and Optimization
+# Story 8.2: Prompt Optimization and Persistence
 
 **Epic:** Epic 8 - GEPPA (Prompt Optimization)
 
 **As a** developer,  
-**I want** prompts sent to LLMs to be routed through GEPPA for optimization before use,  
-**so that** AI-assisted features produce more consistent and higher-quality outputs.
+**I want** to save and reuse optimized prompts,  
+**so that** I can build a library of high-quality prompts for AI-assisted workflows.
 
 ## Status
 
@@ -12,23 +12,29 @@ Draft
 
 ## Acceptance Criteria
 
-1. When GEPPA is enabled, prompts used for AI-assisted features (agents, task generation, commits) can be routed through GEPPA.
-2. The application supports opt-in or opt-out per feature (e.g., commit messages vs. task descriptions) for GEPPA routing.
-3. Optimized prompts are used in place of raw prompts when routing is active.
-4. The application handles GEPPA timeout or failure gracefully (fallback to raw prompt or clear error).
-5. Routing behavior is configurable at project or global level.
+1. A user can save an optimized prompt from GEPPA for reuse.
+2. Optimized prompts can be stored globally or per project.
+3. A user can select a saved optimized prompt when configuring agents or AI workflows.
+4. The application displays a list of saved prompts with names and scopes (global vs project).
+5. A user can edit, rename, or delete saved prompts.
 
 ## Requirements Mapping
 
-- GEPPA-2 (Should Have): Optimizable prompts for AI-assisted features
+- GEPPA-3: Persist optimized prompts per project or globally for reuse
 
 ## Dependencies
 
 - Story 8.1: GEPPA Integration Enablement
-- Epic 7: Local AI/ML Integration
+
+## UX References
+
+- [Front-end Spec: AI Studio](../front-end-spec.md#13-ai-studio)
+- [Front-end Spec: Automation Center](../front-end-spec.md#14-automation-center)
+- [Mockup: AI Studio](../mockups/ai-studio.html)
+- [Mockup: Automation Center](../mockups/automation-center.html)
 
 ## Dev Notes
 
-- Integrate with LLM invocation points from Epic 7 and future AI automation.
-- Consider async/sync behavior; GEPPA may add latency.
-- Log when prompts are optimized for traceability.
+- Consider schema for prompt storage: name, content, category, projectId, metadata.
+- UX should make prompt selection easy in agent builder and AI workflow configuration.
+- Avoid storing secrets in saved prompts; validate or warn on save.

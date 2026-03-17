@@ -1,10 +1,10 @@
-# Story 8.3: Optimized Prompt Persistence
+# Story 8.3: GEPPA Integration with AI Features
 
 **Epic:** Epic 8 - GEPPA (Prompt Optimization)
 
 **As a** developer,  
-**I want** optimized prompts to be saved and reused across projects or tasks,  
-**so that** I build a library of effective prompts without re-optimizing each time.
+**I want** AI-assisted features to use GEPPA-optimized prompts when configured,  
+**so that** task generation, commit messages, and agent prompts benefit from optimization.
 
 ## Status
 
@@ -12,23 +12,31 @@ Draft
 
 ## Acceptance Criteria
 
-1. A user can save optimized prompts with a name and optional category/tag.
-2. Saved prompts can be associated with a project, task type, or kept global.
-3. A user can browse, search, and select saved prompts when configuring AI-assisted features.
-4. Prompts can be updated or deprecated; the application preserves version history or last-used state as appropriate.
-5. Export/import of prompt library is supported (aligns with Epic 4 import/export where applicable).
+1. Task description generation uses GEPPA-optimized prompts when GEPPA is enabled.
+2. Commit message and PR description suggestions use optimized prompts when available.
+3. Agent and workflow prompts can be associated with saved GEPPA-optimized prompts.
+4. The application falls back gracefully when GEPPA is unavailable or optimization fails.
+5. Optimization activity is logged for traceability without exposing prompt content in logs.
 
 ## Requirements Mapping
 
-- GEPPA-3 (Should Have): Persist optimized prompts per project or globally
+- GEPPA-2: Prompts used for AI-assisted features should be optimizable via GEPPA
 
 ## Dependencies
 
-- Story 8.2: Prompt Routing and Optimization
-- Epic 4: Import/Export (optional integration)
+- Story 8.1: GEPPA Integration Enablement
+- Story 8.2: Prompt Optimization and Persistence
+- Epic 7: Local AI/ML Integration
+
+## UX References
+
+- [Front-end Spec: AI Studio](../front-end-spec.md#13-ai-studio)
+- [Front-end Spec: Automation Center](../front-end-spec.md#14-automation-center)
+- [Mockup: AI Studio](../mockups/ai-studio.html)
+- [Mockup: Automation Center](../mockups/automation-center.html)
 
 ## Dev Notes
 
-- Consider schema for prompt storage: name, content, category, projectId, metadata.
-- UX should make prompt selection easy in agent builder, commit flow, etc.
-- Security: avoid storing secrets in prompts; validate on save.
+- Integrate with LLM invocation points from Epic 7 and future AI automation.
+- Graceful fallback is required when optimization is unavailable or times out.
+- Log optimization usage for traceability without storing sensitive prompt bodies.
