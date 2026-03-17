@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -174,6 +176,83 @@ fun SettingsView(
                 }
             }
         }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+            ),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Backup & Restore",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Create a backup of your data for local recovery. Restore from a previously created backup.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = { viewModel.backupData() },
+                        enabled = !uiState.isLoading
+                    ) {
+                        Icon(Icons.Default.Backup, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Run backup now")
+                    }
+                    Button(
+                        onClick = { viewModel.initiateRestore() },
+                        enabled = !uiState.isLoading,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
+                        )
+                    ) {
+                        Icon(Icons.Default.Upload, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Restore from file")
+                    }
+                }
+            }
+        }
+        if (uiState.showRestoreConfirmation && uiState.pendingRestoreSummary != null) {
+            AlertDialog(
+                onDismissRequest = { viewModel.cancelRestore() },
+                title = { Text("Confirm Restore") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "Restoring will add the backup data alongside your current data. Projects and items with matching names or paths may be renamed to avoid conflicts.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = uiState.pendingRestoreSummary!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = { viewModel.confirmRestore() }) {
+                        Text("Restore")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.cancelRestore() }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
         if (uiState.exportFeedback != null) {
             Snackbar(
                 modifier = Modifier.padding(8.dp),
@@ -196,6 +275,18 @@ fun SettingsView(
                 }
             ) {
                 Text(uiState.importFeedback!!)
+            }
+        }
+        if (uiState.restoreFeedback != null) {
+            Snackbar(
+                modifier = Modifier.padding(8.dp),
+                action = {
+                    TextButton(onClick = { viewModel.clearRestoreFeedback() }) {
+                        Text("Dismiss")
+                    }
+                }
+            ) {
+                Text(uiState.restoreFeedback!!)
             }
         }
         if (uiState.error != null) {

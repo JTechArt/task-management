@@ -308,5 +308,13 @@ object DependencyContainer {
             ruleRepository
         )
     }
+
+    val createBackupUseCase: CreateBackupUseCase by lazy {
+        CreateBackupUseCase(exportDataUseCase, activityRepository)
+    }
+
+    val restoreFromBackupUseCase: RestoreFromBackupUseCase by lazy {
+        RestoreFromBackupUseCase(importDataUseCase, activityRepository)
+    }
 }
 
