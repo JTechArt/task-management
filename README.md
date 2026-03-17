@@ -119,6 +119,10 @@ taskmanager/logs/taskmanager-console.log
 
 ## Packaging
 
+The application is packaged into installable distributions for Windows (MSI), macOS (DMG), and Linux (.deb, .rpm) using Compose Desktop and jlink. Package version comes from the project version (`gradle.properties` / root `version`).
+
+### Build commands
+
 Build the desktop artifact:
 
 ```bash
@@ -130,4 +134,32 @@ Build the native package for the current OS:
 
 ```bash
 ./taskmanager/scripts/build-jpackage.sh
+```
+
+Or directly via Gradle:
+
+```bash
+./gradlew :desktop-app:packageDistributionForCurrentOS
+```
+
+Outputs are written to `taskmanager/desktop-app/build/compose/binaries/` (e.g. `main/dmg`, `main/msi`, `main/deb`, `main/rpm`).
+
+### Runtime dependencies (included or required)
+
+| Dependency | Included in package? | Notes |
+| --- | --- | --- |
+| Java Runtime | Yes | Bundled via jlink; no separate JDK required |
+| PostgreSQL | No | User must run PostgreSQL (local or Docker). See [Database](#database). |
+| Git | No | Required for workspace generation; must be installed on the system |
+
+Configuration (DB connection, OAuth, etc.) is read from environment variables at runtime. No secrets or credentials are bundled in the packaged output.
+
+### Validation
+
+After building, run the packaged app to confirm startup:
+
+```bash
+# From the built image (path varies by format)
+taskmanager/desktop-app/build/compose/binaries/main/dmg/TaskManager.app/Contents/MacOS/TaskManager  # macOS
+# Or install the .dmg/.msi/.deb/.rpm and launch from the OS.
 ```

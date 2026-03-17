@@ -39,11 +39,11 @@ dependencies {
     api("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     api("org.postgresql:postgresql:$postgresVersion")
 
-    // HTTP (Slack webhooks)
-    implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-client-cio-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
+    // HTTP (Slack webhooks, OAuth)
+    api("io.ktor:ktor-client-core-jvm:$ktorVersion")
+    api("io.ktor:ktor-client-cio-jvm:$ktorVersion")
+    api("io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion")
+    api("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
 
     // Git
     api("org.eclipse.jgit:org.eclipse.jgit:$jgitVersion")

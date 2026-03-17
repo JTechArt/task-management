@@ -10,6 +10,7 @@ import org.gradle.api.tasks.SourceSetContainer
 
 val composeVersion: String by project
 val coroutinesVersion: String by project
+val ktorVersion: String by project
 val kotlinLoggingVersion: String by project
 val logbackVersion: String by project
 val junitVersion: String by project
@@ -60,21 +61,29 @@ compose.desktop {
             targetFormats(
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg,
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
-                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Rpm
             )
             packageName = "TaskManager"
-            packageVersion = "1.0.0"
+            // Native formats reject -SNAPSHOT; DMG requires MAJOR>0. Sanitize: 1.0.0-SNAPSHOT->1.0.0, 0.1.0->1.0.0
+            packageVersion = run {
+                val v = project.version.toString().substringBefore("-")
+                if (v.startsWith("0.")) "1.0.0" else v
+            }
             description = "AI-assisted task workspace manager"
             vendor = "AiTask"
-            
-            macOS {
-                iconFile.set(project.file("src/main/resources/icon.icns"))
+
+            val iconIcns = project.file("src/main/resources/icon.icns")
+            if (iconIcns.exists()) {
+                macOS { iconFile.set(iconIcns) }
             }
-            windows {
-                iconFile.set(project.file("src/main/resources/icon.ico"))
+            val iconIco = project.file("src/main/resources/icon.ico")
+            if (iconIco.exists()) {
+                windows { iconFile.set(iconIco) }
             }
-            linux {
-                iconFile.set(project.file("src/main/resources/icon.png"))
+            val iconPng = project.file("src/main/resources/icon.png")
+            if (iconPng.exists()) {
+                linux { iconFile.set(iconPng) }
             }
         }
     }
