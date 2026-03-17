@@ -14,13 +14,13 @@ Enable an intelligent automation layer that combines AI tools (Codex, Claude), G
 
 ## Dependencies
 
-- **Depends on:** Epic 7 (Local AI/ML Integration), Epic 8 (GEPPA), Epic 9 (AI Tools Integration)
+- **Depends on:** Epic 7 (Local AI/ML Integration), Epic 8 (GEPPA), Epic 9 (AI Tools Integration), Epic 11 (plugin framework)
 - **Integrates with:** BMAD Methodology (Epic 6) for agent/workflow definitions
 
 ## Architecture References
 
-- [Component Architecture: Integration](docs/architecture.md)
-- [AI/LLM Integration Patterns](docs/architecture.md)
+- [Architecture Overview](../architecture.md)
+- [Plugin and AI Integration Patterns](../architecture.md)
 
 ## UX References
 

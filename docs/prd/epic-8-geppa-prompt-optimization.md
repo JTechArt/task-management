@@ -12,13 +12,13 @@ Integrate GEPPA or equivalent prompt-optimization tooling into AiTask so that pr
 
 ## Dependencies
 
-- **Depends on:** Epic 7 (Local AI/ML Integration) — GEPPA operates on prompts sent to LLMs
+- **Depends on:** Epic 7 (Local AI/ML Integration), Epic 11 (plugin framework)
 - **Enables:** Epic 10 (AI-Powered Task Automation)
 
 ## Architecture References
 
-- [Component Architecture: Integration](docs/architecture.md)
-- [AI/LLM Integration Patterns](docs/architecture.md)
+- [Architecture Overview](../architecture.md)
+- [Plugin and AI Integration Patterns](../architecture.md)
 
 ## UX References
 

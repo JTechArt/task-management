@@ -11,13 +11,14 @@ Enable local AI/ML usage via Llama and compatible models for text generation, de
 
 ## Dependencies
 
-- Foundation for Epic 8 (GEPPA), Epic 9 (AI Tools), Epic 10 (AI Automation)
-- May integrate with Epic 4 (OAuth) for cloud fallback
+- **Depends on:** Epic 11 (plugin framework for optional AI capability delivery)
+- **May integrate with:** Epic 4 (OAuth) for cloud fallback
+- **Enables:** Epic 8 (GEPPA), Epic 9 (AI Tools), Epic 10 (AI Automation)
 
 ## Architecture References
 
-- [Component Architecture: Integration](../../architecture.md#7-integration-component)
-- [Security Architecture: Credential Management](../../architecture.md#credential-management)
+- [Architecture Overview](../architecture.md)
+- [Security Architecture: Credential Management](../architecture.md#credential-management)
 
 ---
 

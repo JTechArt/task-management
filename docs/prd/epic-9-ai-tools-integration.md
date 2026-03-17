@@ -13,13 +13,13 @@ Integrate with AI coding assistants such as Codex and Claude so users can invoke
 
 ## Dependencies
 
-- **Depends on:** Core task and project management (Epic 1)
+- **Depends on:** Core task and project management (Epic 1), Epic 11 (plugin framework)
 - **Enables:** Epic 10 (AI-Powered Task Automation)
 
 ## Architecture References
 
-- [Component Architecture: Integration](docs/architecture.md)
-- [IDE Integration Patterns](docs/architecture.md)
+- [Architecture Overview](../architecture.md)
+- [Plugin and Tool Launch Integration Patterns](../architecture.md)
 
 ## UX References
 

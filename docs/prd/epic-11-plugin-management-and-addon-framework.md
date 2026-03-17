@@ -12,12 +12,13 @@ Establish a pluggable application model for AiTask so advanced capabilities can 
 ## Dependencies
 
 - **Depends on:** Epic 1 (core application shell and persistence), Epic 3 (operational visibility patterns), Epic 4 (integration and packaging foundations)
+- **Should be implemented before:** Epic 7, Epic 8, Epic 9, Epic 10, Epic 12, and future add-on features
 - **Enables:** Epic 7, Epic 8, Epic 9, Epic 10, Epic 12, and future add-on features
 
 ## Architecture References
 
-- Application shell and navigation architecture
-- Integration and background job architecture
+- [Architecture Overview](../architecture.md)
+- Plugin host and lifecycle architecture
 - Settings, configuration, and credential management architecture
 
 ## UX References

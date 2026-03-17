@@ -25,6 +25,7 @@ The product is intended to collapse that fragmented workflow into a single deskt
 | --- | --- | --- | --- |
 | 2026-03-11 | v0.1 | Initial PRD draft created from product brief and features list | John (PM) |
 | 2026-03-17 | v0.2 | Added plugin platform and AI Slack analyzer requirements plus new PRD epics | John (PM) |
+| 2026-03-17 | v0.3 | Rebased epic dependencies and delivery order so plugin architecture precedes remaining AI add-on epics | Winston (Architect) |
 
 ## Requirements
 
@@ -136,9 +137,9 @@ The project should use a single repository for the desktop application, packagin
 
 ### Service Architecture
 
-AiTask should be implemented as a desktop-first monolith with modular internal boundaries for UI, application services, persistence, Git integration, rule management, and external integrations. The application will run locally as a standalone desktop client while connecting to a PostgreSQL database and external services such as Git providers and Slack.
+AiTask should be implemented as a desktop-first modular monolith with a plugin host inside the application boundary. Core capabilities such as projects, tasks, repositories, workspaces, rules, activity history, packaging, and baseline integrations remain part of the product core, while advanced AI and analysis features are attached through versioned extension contracts. The application will run locally as a standalone desktop client while connecting to a PostgreSQL database and external services such as Git providers, Slack, and optional AI runtimes.
 
-This assumption fits the current product scope because the product’s main complexity is orchestration of local workflows and integrations, not distributed runtime scale. A modular monolith reduces delivery overhead, simplifies packaging, and keeps early architecture focused on reliability and developer productivity.
+This assumption fits the current product scope because the product’s main complexity is orchestration of local workflows and integrations, not distributed runtime scale. A modular monolith with plugin boundaries reduces delivery overhead, simplifies packaging, and keeps early architecture focused on reliability and developer productivity while still allowing later AI-centric capabilities to remain optional.
 
 ### Testing Requirements
 
@@ -157,6 +158,7 @@ Manual testing should also be expected for cross-platform desktop workflows that
 - Secrets and credentials should be encrypted at rest, excluded from logs and exports unless intentionally included in a secure backup design, and handled through a dedicated credential management component.
 - Native distribution should target Windows, macOS, and Linux installers using the current packaging approach, including `jpackage`-based builds.
 - The architecture should allow adding additional integrations later without reworking the core task, project, and workspace domain model.
+- Advanced AI features should be attachable as optional plugins so non-AI users are not forced to install, configure, or operate those capabilities.
 
 ## Epic List
 
@@ -172,6 +174,16 @@ Manual testing should also be expected for cross-platform desktop workflows that
 10. Epic 10: AI-Powered Task Automation: Build an intelligent automation layer that combines task context, AI tools, optimized prompts, and models to generate and execute approved workflows.
 11. Epic 11: Plugin Management and Add-on Framework: Establish a pluggable application model so advanced feature sets can be installed, configured, validated, and operated as attachable add-ons.
 12. Epic 12: AI Slack Channel Analyzer: Deliver a Slack analysis plugin that summarizes channel activity, tracks run history, preserves references, and prepares categorized insights for future task automation.
+
+### Recommended Implementation Order
+
+Epic numbering remains stable for traceability, but the recommended build order should change to:
+
+1. Epics 1 through 6
+2. Epic 11 before any remaining AI or analysis add-ons
+3. Epics 7, 8, and 9 on top of the plugin framework
+4. Epic 10 after the plugin-hosted AI building blocks are in place
+5. Epic 12 after Epic 11 and the Slack/OAuth foundations, with optional automation handoff integration deferred until Epic 10 is available
 
 ## Epic 1 Foundation and First Task Launch Flow
 

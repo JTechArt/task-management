@@ -16,6 +16,7 @@ Deliver an AI-powered Slack analysis plugin that scans configured channels, grou
 
 ## Architecture References
 
+- [Architecture Overview](../architecture.md)
 - Slack integration and credential handling architecture
 - Background job scheduling and processing architecture
 - Plugin extension architecture

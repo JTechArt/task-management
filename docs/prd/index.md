@@ -30,6 +30,8 @@ AiTask is a cross-platform desktop application that streamlines developer workfl
 | 11 | [Plugin Management and Add-on Framework](./epic-11-plugin-management-and-addon-framework.md) | 11.1 – 11.4 |
 | 12 | [AI Slack Channel Analyzer](./epic-12-ai-slack-channel-analyzer.md) | 12.1 – 12.5 |
 
+> Recommended delivery order: keep epic numbering as-is for traceability, but implement Epics 1-6, then Epic 11, then Epics 7-10, and finally Epic 12.
+
 ## Reference Documents
 
 - **Architecture:** [docs/architecture.md](../architecture.md)

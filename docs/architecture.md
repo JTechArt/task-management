@@ -4,12 +4,12 @@
 
 | Property | Value |
 |----------|-------|
-| Version | 1.1 |
-| Date | 2026-03-12 |
+| Version | 1.2 |
+| Date | 2026-03-17 |
 | Status | Draft |
 | Author | Architecture Team |
-| Based On | [PRD v0.1](prd.md) |
-| Last Updated | 2026-03-12 - Kotlin 2.1.0 & Compose 1.8.0 upgrade |
+| Based On | [PRD v0.3](prd.md) |
+| Last Updated | 2026-03-17 - Plugin host architecture and epic sequencing update |
 
 ## Table of Contents
 
@@ -30,11 +30,12 @@
 
 ## Executive Summary
 
-AiTask is a cross-platform desktop application designed to streamline developer workflows by automating task workspace creation, repository preparation, branch setup, and IDE launch with AI-assisted development rules. This document defines the architectural blueprint for implementing AiTask as a desktop-first monolith using Kotlin, Compose Multiplatform, and PostgreSQL.
+AiTask is a cross-platform desktop application designed to streamline developer workflows by automating task workspace creation, repository preparation, branch setup, and IDE launch with AI-assisted development rules. This document defines the architectural blueprint for implementing AiTask as a desktop-first modular monolith with a plugin host using Kotlin, Compose Multiplatform, and PostgreSQL.
 
 ### Key Architectural Decisions
 
 - **Desktop-First Monolith**: Single application with modular internal boundaries
+- **Plugin-Ready Core**: Optional AI and analysis capabilities attach through versioned extension contracts rather than being hardwired into the base product
 - **Clean Architecture**: Layered design with clear separation of concerns
 - **Kotlin/JVM**: Type-safe, modern language with excellent tooling
 - **Compose Multiplatform**: Cross-platform UI framework for Windows, macOS, and Linux
@@ -59,6 +60,9 @@ AiTask reduces per-task development environment setup time by automating workspa
 - IDE integration (Cursor, VS Code, JetBrains IDEs)
 - Rule management and automatic application
 - Slack notifications
+- Plugin management and extension lifecycle handling
+- Optional AI runtimes, AI tool launchers, prompt optimization, and task automation as add-ons
+- Slack analysis and summarization as an optional plugin
 - Import/export and backup/restore
 - Health monitoring and activity tracking
 
@@ -69,6 +73,7 @@ AiTask reduces per-task development environment setup time by automating workspa
 - Built-in code editor
 - CI/CD pipeline management
 - Issue tracker integration (beyond basic task management)
+- A remote plugin marketplace or signed auto-update channel in the MVP
 
 ### Stakeholders
 
@@ -103,6 +108,9 @@ All business logic should be unit-testable. Integration points should be testabl
 
 ### 8. Cross-Platform Consistency
 The application should provide a consistent experience across Windows, macOS, and Linux while respecting platform conventions.
+
+### 9. Extension Isolation
+Optional plugins must fail independently from core workflows. A broken AI, Slack analysis, or tool-launch plugin cannot block task, repository, rule, or workspace management.
 
 ---
 
@@ -187,6 +195,30 @@ AiTask follows a **Clean Architecture** pattern with four distinct layers:
 - **Technology**: PostgreSQL, Git, Slack API, File System
 - **Responsibility**: External systems and resources
 - **Components**: Database, Git repositories, External APIs, File system
+
+### Extension-Ready Modular Monolith
+
+The runtime remains a single desktop application, but it now includes an internal plugin host. Core modules own the stable domain and lifecycle surfaces, and optional feature packs attach through explicit contracts instead of taking direct dependencies on internal implementation details.
+
+**Core boundary:**
+- Projects, repositories, tasks, workspaces, rules, activity, health, credentials, OAuth, packaging
+
+**Plugin boundary:**
+- Local AI providers
+- Prompt optimization providers
+- External AI tool launchers
+- AI automation workflows
+- Slack analysis and future derived automations
+
+### Recommended Delivery Order
+
+Epic numbering should stay unchanged for traceability, but the architecture requires the following implementation order:
+
+1. Epics 1 through 6
+2. Epic 11 to establish the plugin host, lifecycle, and extension contracts
+3. Epics 7, 8, and 9 as plugin-backed capabilities
+4. Epic 10 after those AI building blocks exist
+5. Epic 12 after Epic 11 and Slack/OAuth foundations, with automation handoff integration layered in when Epic 10 is available
 
 ---
 
@@ -628,6 +660,60 @@ interface ActivityRepository {
 - Activity filtering and search
 - Failed operation tracking
 
+#### 9. Plugin Platform Component
+
+**Purpose**: Discover, validate, install, initialize, isolate, and operate optional add-ons.
+
+**Key Classes:**
+```kotlin
+interface AiTaskPlugin {
+    val id: String
+    val version: String
+    val apiVersion: String
+    suspend fun initialize(context: PluginContext): PluginInitResult
+    suspend fun healthCheck(): PluginHealth
+    suspend fun shutdown(): Result<Unit>
+}
+
+data class PluginManifest(
+    val id: String,
+    val version: String,
+    val apiVersion: String,
+    val displayName: String,
+    val capabilities: Set<PluginCapability>
+)
+
+enum class PluginCapability {
+    UI_SURFACE, BACKGROUND_JOB, TOOL_LAUNCHER, LLM_PROVIDER,
+    PROMPT_OPTIMIZER, AUTOMATION_WORKFLOW, SLACK_ANALYZER
+}
+
+interface PluginRegistry {
+    suspend fun discoverInstalled(): List<PluginManifest>
+    suspend fun install(source: PluginSource): Result<PluginManifest>
+    suspend fun enable(pluginId: String): Result<Unit>
+    suspend fun disable(pluginId: String): Result<Unit>
+}
+```
+
+**Responsibilities:**
+- Plugin manifest discovery and compatibility checks
+- Plugin lifecycle and state transitions
+- Capability registration for UI, jobs, tools, and AI services
+- Plugin failure isolation and restart/revalidation flows
+- Per-plugin configuration and secret scoping
+
+#### 10. AI Automation Component
+
+**Purpose**: Coordinate plugin-backed AI providers, tool launchers, prompt optimizers, and automation workflows.
+
+**Responsibilities:**
+- Resolve which enabled plugin provides each AI capability
+- Generate proposed automation plans from task context
+- Route prompts through optional optimization plugins
+- Execute only user-approved automation steps
+- Log sanitized automation runs and outcomes
+
 ---
 
 ## Data Architecture
@@ -635,6 +721,8 @@ interface ActivityRepository {
 ### Database Schema
 
 AiTask uses PostgreSQL 16+ with the following core tables:
+
+The schema is split between the stable core model and extension-owned plugin data. Plugin tables use explicit foreign keys into core entities but keep plugin-specific state isolated from baseline project and task records.
 
 #### Entity Relationship Diagram
 
@@ -693,6 +781,54 @@ AiTask uses PostgreSQL 16+ with the following core tables:
 │ description      │
 │ status           │
 └──────────────────┘
+                                                       │
+┌──────────────────┐       ┌────────────────────────┐  │
+│ Plugins          │1    * │ PluginConfigurations   │  │
+│──────────────────│◄──────│────────────────────────│  │
+│ id (PK)          │       │ id (PK)                │  │
+│ plugin_key       │       │ plugin_id (FK)         │  │
+│ version          │       │ scope_type             │  │
+│ api_version      │       │ scope_id               │  │
+│ status           │       │ config_json            │  │
+└──────────────────┘       │ secrets_ref            │  │
+                           └────────────────────────┘  │
+
+┌────────────────────────┐   ┌───────────────────────┐
+│ PluginHealthSnapshots  │   │ PluginEvents          │
+│────────────────────────│   │───────────────────────│
+│ id (PK)                │   │ id (PK)               │
+│ plugin_id (FK)         │   │ plugin_id (FK)        │
+│ status                 │   │ event_type            │
+│ checked_at             │   │ details_json          │
+│ details_json           │   │ created_at            │
+└────────────────────────┘   └───────────────────────┘
+
+┌────────────────────────┐   ┌───────────────────────┐
+│ AutomationRuns         │   │ SlackAnalysisRuns     │
+│────────────────────────│   │───────────────────────│
+│ id (PK)                │   │ id (PK)               │
+│ plugin_id (FK)         │   │ plugin_id (FK)        │
+│ task_id (FK)           │   │ trigger_type          │
+│ project_id (FK)        │   │ started_at            │
+│ status                 │   │ completed_at          │
+│ plan_json              │   │ status                │
+│ result_json            │   │ checkpoint_json       │
+└────────────────────────┘   └───────────────────────┘
+
+┌────────────────────────┐
+│ SlackSummaries         │
+│────────────────────────│
+│ id (PK)                │
+│ plugin_id (FK)         │
+│ channel_id             │
+│ summary_day            │
+│ topic_key              │
+│ summary_text           │
+│ source_refs_json       │
+│ labels                 │
+│ archived_at            │
+│ purge_after            │
+└────────────────────────┘
 ```
 
 #### Core Tables
@@ -810,6 +946,102 @@ CREATE TABLE activity_log (
 );
 ```
 
+**8. Plugins**
+```sql
+CREATE TABLE plugins (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plugin_key VARCHAR(150) NOT NULL UNIQUE,
+    version VARCHAR(50) NOT NULL,
+    api_version VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    install_path VARCHAR(1000),
+    enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**9. Plugin Configurations**
+```sql
+CREATE TABLE plugin_configurations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plugin_id UUID NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+    scope_type VARCHAR(50) NOT NULL,
+    scope_id UUID,
+    config_json JSONB NOT NULL,
+    secrets_ref VARCHAR(255),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**10. Plugin Health Snapshots**
+```sql
+CREATE TABLE plugin_health_snapshots (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plugin_id UUID NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+    status VARCHAR(50) NOT NULL,
+    details_json JSONB,
+    checked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**11. Plugin Events**
+```sql
+CREATE TABLE plugin_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plugin_id UUID NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+    event_type VARCHAR(100) NOT NULL,
+    details_json JSONB,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**12. Automation Runs**
+```sql
+CREATE TABLE automation_runs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plugin_id UUID REFERENCES plugins(id) ON DELETE SET NULL,
+    task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+    project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+    status VARCHAR(50) NOT NULL,
+    plan_json JSONB NOT NULL,
+    result_json JSONB,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP
+);
+```
+
+**13. Slack Analysis Runs**
+```sql
+CREATE TABLE slack_analysis_runs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plugin_id UUID NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+    trigger_type VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    checkpoint_json JSONB,
+    started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP
+);
+```
+
+**14. Slack Summaries**
+```sql
+CREATE TABLE slack_summaries (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plugin_id UUID NOT NULL REFERENCES plugins(id) ON DELETE CASCADE,
+    channel_id VARCHAR(100) NOT NULL,
+    summary_day DATE NOT NULL,
+    topic_key VARCHAR(200) NOT NULL,
+    summary_text TEXT NOT NULL,
+    source_refs_json JSONB,
+    labels TEXT[],
+    archived_at TIMESTAMP,
+    purge_after TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
 ### Database Indexes
 
 ```sql
@@ -836,6 +1068,16 @@ CREATE INDEX idx_activity_timestamp ON activity_log(timestamp DESC);
 CREATE INDEX idx_activity_entity ON activity_log(entity_type, entity_id);
 CREATE INDEX idx_activity_type ON activity_log(activity_type);
 
+-- Plugins
+CREATE INDEX idx_plugins_status ON plugins(status);
+CREATE INDEX idx_plugin_config_scope ON plugin_configurations(scope_type, scope_id);
+CREATE INDEX idx_plugin_health_plugin ON plugin_health_snapshots(plugin_id, checked_at DESC);
+CREATE INDEX idx_plugin_events_plugin ON plugin_events(plugin_id, created_at DESC);
+CREATE INDEX idx_automation_runs_task ON automation_runs(task_id, created_at DESC);
+CREATE INDEX idx_automation_runs_project ON automation_runs(project_id, created_at DESC);
+CREATE INDEX idx_slack_analysis_runs_plugin ON slack_analysis_runs(plugin_id, started_at DESC);
+CREATE INDEX idx_slack_summaries_lookup ON slack_summaries(channel_id, summary_day DESC, topic_key);
+
 -- Full-text search
 CREATE INDEX idx_tasks_search ON tasks
     USING gin(to_tsvector('english', title || ' ' || COALESCE(description, '')));
@@ -851,6 +1093,9 @@ CREATE INDEX idx_projects_search ON projects
 - `V3__add_full_text_search.sql`: Full-text search indexes
 - `V4__add_repositories_table.sql`: Multi-repository support
 - `V5__add_activity_log.sql`: Activity tracking
+- `V6__plugin_runtime_tables.sql`: Plugin catalog, configuration, health, and events
+- `V7__automation_run_tables.sql`: Automation plans and run results
+- `V8__slack_analysis_tables.sql`: Slack analyzer checkpoints, runs, and summaries
 
 **Migration Execution:**
 ```kotlin
@@ -963,7 +1208,31 @@ class SlackNotificationService(
 }
 ```
 
-#### 3. IDE Integration
+#### 3. Plugin Runtime Integration
+
+**Integration Flow:**
+```
+1. Application startup loads plugin manifests from the configured plugin directory
+2. Plugin registry validates contract version compatibility
+3. Enabled plugins receive a constrained PluginContext with approved services
+4. Plugins register declared capabilities such as settings panels, jobs, or tool launchers
+5. Initialization, validation, and health events are recorded in plugin events and activity history
+6. A failing plugin is isolated, marked degraded, and excluded from unrelated workflows
+```
+
+**Capability Resolution Pattern:**
+```kotlin
+class PluginCapabilityResolver(
+    private val pluginRegistry: PluginRegistry
+) {
+    suspend fun llmProvider(id: String): LlmProviderPlugin? =
+        pluginRegistry.enabledPlugins()
+            .filterIsInstance<LlmProviderPlugin>()
+            .firstOrNull { it.id == id }
+}
+```
+
+#### 4. IDE Integration
 
 **Cross-Platform IDE Launching:**
 ```kotlin
@@ -1027,7 +1296,7 @@ object IDEPaths {
 }
 ```
 
-#### 4. File System Integration
+#### 5. File System Integration
 
 **Workspace Structure:**
 ```
@@ -1455,6 +1724,7 @@ class StartupBootstrapper {
 3. **Data Validation**: Input validation at all boundaries
 4. **Graceful Degradation**: Offline mode for local operations
 5. **Backup/Restore**: User-initiated backup and restore
+6. **Plugin Isolation**: Core workflows remain available when optional plugins are disabled, degraded, or incompatible
 
 **Error Handling:**
 ```kotlin
@@ -1484,6 +1754,7 @@ class WorkspaceCreationException(reason: String) :
 3. **Automated Testing**: Unit and integration tests
 4. **Code Reviews**: Required for all changes
 5. **Continuous Integration**: Automated builds and tests
+6. **Versioned Extension Contracts**: Plugin API evolution is explicit and compatibility-tested
 
 ### Usability
 
@@ -1514,6 +1785,20 @@ class WorkspaceCreationException(reason: String) :
 3. **Least Privilege**: Minimal file system permissions
 4. **No Secrets in Logs**: Credentials never logged
 5. **Secure Export**: Optional encryption for exports
+6. **Plugin Secret Scoping**: Plugin credentials and config secrets are stored separately from plugin manifests and sanitized in diagnostics
+
+### Extensibility
+
+**Extensibility Goals:**
+- Add optional capability packs without changing core domain flows
+- Keep plugin contracts stable across minor releases
+- Support plugin-specific UI, jobs, and configuration without coupling plugins to internal tables
+
+**Extensibility Strategies:**
+1. **Versioned Plugin API**: Contract compatibility checked at load time
+2. **Capability-Based Registration**: Plugins declare what they expose rather than patching core internals
+3. **Scoped Plugin Context**: Plugins receive only approved services
+4. **Plugin-Owned Data**: Extension data lives in dedicated tables and JSON payloads
 
 ---
 
@@ -1531,6 +1816,7 @@ class WorkspaceCreationException(reason: String) :
 | **ORM** | Exposed | 0.50+ | Type-safe SQL DSL |
 | **Connection Pool** | HikariCP | 5.1+ | Database connection pooling |
 | **Migrations** | Flyway | 10+ | Database schema migrations |
+| **Plugin Runtime** | JVM ServiceLoader + manifest descriptors | JDK 21 | Lightweight plugin discovery and contract-based capability loading |
 | **Git Library** | JGit | 6.9+ | Pure Java Git implementation |
 | **HTTP Client** | Ktor Client | 2.3+ | HTTP client for APIs |
 | **Serialization** | kotlinx.serialization | 1.6+ | JSON serialization |
@@ -1579,6 +1865,12 @@ class WorkspaceCreationException(reason: String) :
 - Lightweight
 - Flexible (DSL and DAO)
 - Good PostgreSQL support
+
+**ServiceLoader + Manifest Descriptors:**
+- Boring JVM-native plugin discovery model
+- Keeps the MVP simpler than building a full marketplace or remote extension platform
+- Works well with versioned contracts and packaged add-on JARs
+- Supports optional capability loading without changing the core application binary layout
 
 ### Development Tools
 
@@ -1955,4 +2247,3 @@ object DependencyContainer {
 ---
 
 **End of Architecture Documentation**
-
