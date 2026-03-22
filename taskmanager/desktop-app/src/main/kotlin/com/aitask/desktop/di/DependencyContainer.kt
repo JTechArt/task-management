@@ -152,6 +152,9 @@ object DependencyContainer {
     val archiveProjectUseCase: ArchiveProjectUseCase by lazy {
         ArchiveProjectUseCase(projectRepository)
     }
+    val unarchiveProjectUseCase: UnarchiveProjectUseCase by lazy {
+        UnarchiveProjectUseCase(projectRepository)
+    }
 
     // Repository Use Cases
     val createRepositoryUseCase: CreateRepositoryUseCase by lazy {
@@ -185,11 +188,11 @@ object DependencyContainer {
     }
     
     val updateTaskUseCase: UpdateTaskUseCase by lazy {
-        UpdateTaskUseCase(taskRepository)
+        UpdateTaskUseCase(taskRepository, activityRepository)
     }
     
     val deleteTaskUseCase: DeleteTaskUseCase by lazy {
-        DeleteTaskUseCase(taskRepository)
+        DeleteTaskUseCase(taskRepository, activityRepository)
     }
     
     // Workspace Use Cases

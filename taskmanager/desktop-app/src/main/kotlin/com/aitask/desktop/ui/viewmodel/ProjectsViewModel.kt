@@ -19,6 +19,7 @@ class ProjectsViewModel(
     private val createProjectUseCase: CreateProjectUseCase = DependencyContainer.createProjectUseCase,
     private val updateProjectUseCase: UpdateProjectUseCase = DependencyContainer.updateProjectUseCase,
     private val archiveProjectUseCase: ArchiveProjectUseCase = DependencyContainer.archiveProjectUseCase,
+    private val unarchiveProjectUseCase: UnarchiveProjectUseCase = DependencyContainer.unarchiveProjectUseCase,
     private val createRepositoryUseCase: CreateRepositoryUseCase = DependencyContainer.createRepositoryUseCase,
     private val updateRepositoryUseCase: UpdateRepositoryUseCase = DependencyContainer.updateRepositoryUseCase,
     private val deleteRepositoryUseCase: DeleteRepositoryUseCase = DependencyContainer.deleteRepositoryUseCase,
@@ -40,7 +41,7 @@ class ProjectsViewModel(
     fun loadProjects() {
         uiState = uiState.copy(isLoading = true, error = null)
         scope.launch {
-            val result = getProjectsUseCase(includeArchived = false)
+            val result = getProjectsUseCase(includeArchived = uiState.showArchivedProjects)
             result.fold(
                 onSuccess = { projects ->
                     uiState = uiState.copy(
@@ -157,6 +158,28 @@ class ProjectsViewModel(
                 }
             )
         }
+    }
+    fun unarchiveProject(projectId: java.util.UUID) {
+        scope.launch {
+            val result = unarchiveProjectUseCase(projectId)
+            result.fold(
+                onSuccess = {
+                    loadProjects()
+                    if (uiState.selectedProject?.id == projectId) {
+                        uiState = uiState.copy(selectedProject = it)
+                    }
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to restore project"
+                    )
+                }
+            )
+        }
+    }
+    fun setShowArchivedProjects(show: Boolean) {
+        uiState = uiState.copy(showArchivedProjects = show)
+        loadProjects()
     }
     
     fun showCreateDialog() {
@@ -385,6 +408,7 @@ class ProjectsViewModel(
 
 data class ProjectsUiState(
     val projects: List<Project> = emptyList(),
+    val showArchivedProjects: Boolean = false,
     val selectedProject: Project? = null,
     val selectedProjectRepositories: List<Repository> = emptyList(),
     val selectedProjectSlackChannels: List<SlackChannelConfig> = emptyList(),

@@ -1,9 +1,11 @@
 package com.aitask.core.domain.usecase
 
+import com.aitask.core.domain.model.ActivityType
 import com.aitask.core.domain.model.Task
 import com.aitask.core.domain.model.TaskStatus
 import com.aitask.core.domain.model.TaskType
 import com.aitask.core.domain.model.UpdateTaskRequest
+import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.TaskRepository
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
@@ -15,12 +17,15 @@ import java.util.UUID
 
 class UpdateTaskUseCaseTest {
     private lateinit var taskRepository: TaskRepository
+    private lateinit var activityRepository: ActivityRepository
     private lateinit var useCase: UpdateTaskUseCase
     
     @BeforeEach
     fun setup() {
         taskRepository = mockk()
-        useCase = UpdateTaskUseCase(taskRepository)
+        activityRepository = mockk(relaxed = true)
+        coEvery { activityRepository.create(any()) } answers { firstArg() }
+        useCase = UpdateTaskUseCase(taskRepository, activityRepository)
     }
     
     private fun createTask(
@@ -51,13 +56,10 @@ class UpdateTaskUseCaseTest {
             taskType = TaskType.BUG_FIX,
             status = TaskStatus.IN_PROGRESS
         )
-        
         coEvery { taskRepository.findById(taskId) } returns existingTask
         coEvery { taskRepository.update(any()) } answers { firstArg() }
-        
         // When
         val result = useCase(taskId, request)
-        
         // Then
         assertTrue(result.isSuccess)
         val updatedTask = result.getOrThrow()
@@ -65,8 +67,8 @@ class UpdateTaskUseCaseTest {
         assertEquals("Updated description", updatedTask.description)
         assertEquals(TaskType.BUG_FIX, updatedTask.taskType)
         assertEquals(TaskStatus.IN_PROGRESS, updatedTask.status)
-        
         coVerify { taskRepository.update(any()) }
+        coVerify { activityRepository.create(match { it.type == ActivityType.TASK_STATUS_CHANGED }) }
     }
     
     @Test

@@ -76,7 +76,13 @@ class ProjectRepositoryImpl : ProjectRepository {
         }
         findById(id)
     }
-    
+    override suspend fun unarchive(id: UUID): Project? = newSuspendedTransaction {
+        Projects.update({ Projects.id eq id }) {
+            it[archivedAt] = null
+            it[updatedAt] = Instant.now()
+        }
+        findById(id)
+    }
     override suspend fun delete(id: UUID) = newSuspendedTransaction {
         Projects.deleteWhere { Projects.id eq id }
         Unit

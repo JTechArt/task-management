@@ -147,6 +147,7 @@ class TasksViewModel(
             val result = deleteTaskUseCase(taskId)
             result.fold(
                 onSuccess = {
+                    loadProjects()
                     loadTasks()
                     if (uiState.selectedTask?.id == taskId) {
                         uiState = uiState.copy(selectedTask = null)

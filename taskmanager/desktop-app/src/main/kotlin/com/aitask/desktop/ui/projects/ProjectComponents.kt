@@ -138,6 +138,7 @@ fun ProjectFilters(
 @Composable
 fun EmptyProjectsState(
     onCreateClick: () -> Unit,
+    onShowArchivedClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -171,6 +172,16 @@ fun EmptyProjectsState(
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Create Project")
+            }
+            onShowArchivedClick?.let { onShow ->
+                TextButton(
+                    onClick = onShow,
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Icon(Icons.Default.Archive, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Show archived projects")
+                }
             }
         }
     }
@@ -236,6 +247,7 @@ fun ProjectDetailView(
     project: Project,
     repositories: List<Repository>,
     onArchive: (UUID) -> Unit,
+    onUnarchive: ((UUID) -> Unit)? = null,
     onAddRepository: () -> Unit = {},
     onEditRepository: (Repository) -> Unit = {},
     onDeleteRepository: (UUID) -> Unit = {},
@@ -267,8 +279,19 @@ fun ProjectDetailView(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
-            IconButton(onClick = { onArchive(project.id) }) {
-                Icon(Icons.Default.Archive, contentDescription = "Archive project")
+            if (project.isArchived && onUnarchive != null) {
+                Button(
+                    onClick = { onUnarchive(project.id) },
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Icon(Icons.Default.Unarchive, contentDescription = "Restore project", modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Restore")
+                }
+            } else if (!project.isArchived) {
+                IconButton(onClick = { onArchive(project.id) }) {
+                    Icon(Icons.Default.Archive, contentDescription = "Archive project")
+                }
             }
         }
         project.description?.let { desc ->

@@ -43,6 +43,7 @@ dependencies {
 }
 
 kotlin {
+    jvmToolchain(21)
     sourceSets {
         main {
             kotlin.srcDir("src/main/kotlin")
@@ -50,6 +51,12 @@ kotlin {
         test {
             kotlin.srcDir("src/test/kotlin")
         }
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions {
+        jvmTarget = "21"
     }
 }
 

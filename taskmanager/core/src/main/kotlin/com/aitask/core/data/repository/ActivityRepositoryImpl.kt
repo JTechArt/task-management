@@ -5,6 +5,7 @@ import com.aitask.core.domain.model.Activity
 import com.aitask.core.domain.model.ActivityStatus
 import com.aitask.core.domain.model.ActivityType
 import com.aitask.core.domain.repository.ActivityRepository
+import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -16,6 +17,7 @@ import java.time.Instant
 import java.util.UUID
 
 private val json = Json { ignoreUnknownKeys = true }
+private val logger = KotlinLogging.logger {}
 
 class ActivityRepositoryImpl : ActivityRepository {
 
@@ -34,6 +36,7 @@ class ActivityRepositoryImpl : ActivityRepository {
             )
             it[status] = activity.status.name
         }
+        logger.debug { "Activity logged: ${activity.type} ${activity.description}" }
         activity
     }
 

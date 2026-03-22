@@ -54,13 +54,18 @@ To verify Java 21 and run a clean build:
 
 ## Cursor / VS Code launch configs
 
-The workspace launch configs are set up for the common cases:
+**To get Run/Debug configurations to appear:** Open the workspace file `taskmanager.code-workspace` (File → Open Workspace from File) instead of opening the folder directly. This lets the Java/Gradle extensions find the project.
 
-- `TaskManager: Run Local App`
-- `TaskManager: Debug Local App`
-- `TaskManager: Run App Without DB Bootstrap`
+Launch configs in `.vscode/launch.json`:
 
-Use `Run Local App` for most work. It is the safest default.
+- **TaskManager: Debug Desktop App** – Rebuilds, starts Postgres, then launches with debugger (DB enabled)
+- **TaskManager: Debug Desktop App (No DB)** – Rebuilds, then launches without database
+- **TaskManager: Attach Debugger (port 5005)** – Attach to an app started via `./taskmanager/scripts/debug-local.sh`
+
+Tasks (Terminal → Run Task):
+
+- **TaskManager: Run Desktop App** – Run without debugger
+- **TaskManager: Run App Without DB Bootstrap** – Run without database
 
 ## Manual Gradle commands
 
@@ -108,6 +113,23 @@ docker compose down
 ```
 
 The local Docker mapping is `5433 -> 5432`.
+
+## Troubleshooting
+
+### Projects disappeared from UI
+
+If projects show as archived in the database but you did not archive them:
+
+1. **In the app**: Go to Projects. If the list is empty, click **Show archived projects**. Select each project and click **Restore**.
+2. **Via SQL** (emergency recovery): From project root, run `psql -h localhost -p 5433 -U taskmanager -d taskmanager -f scripts/unarchive-all-projects.sql` to unarchive all projects.
+
+### Activity log empty
+
+If the Activity tab shows no entries:
+
+1. Ensure `BOOTSTRAP_DATABASE=true` (default) so migrations run and the `activity_log` table exists.
+2. Verify the table: From project root, run `psql -h localhost -p 5433 -U taskmanager -d taskmanager -f scripts/verify-activity-log.sql`
+3. Create a task or perform another action; activity should be logged. Check `taskmanager/logs/taskmanager-console.log` for any database errors.
 
 ## Logs
 
