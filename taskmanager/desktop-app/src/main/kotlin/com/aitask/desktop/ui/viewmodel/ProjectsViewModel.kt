@@ -24,6 +24,7 @@ class ProjectsViewModel(
     private val updateRepositoryUseCase: UpdateRepositoryUseCase = DependencyContainer.updateRepositoryUseCase,
     private val deleteRepositoryUseCase: DeleteRepositoryUseCase = DependencyContainer.deleteRepositoryUseCase,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
+    private val preRunScriptRepository: com.aitask.core.domain.repository.PreRunScriptRepository = DependencyContainer.preRunScriptRepository,
     private val getSlackChannelsUseCase: GetSlackChannelsUseCase = DependencyContainer.getSlackChannelsUseCase,
     private val createSlackChannelUseCase: CreateSlackChannelUseCase = DependencyContainer.createSlackChannelUseCase,
     private val updateSlackChannelUseCase: UpdateSlackChannelUseCase = DependencyContainer.updateSlackChannelUseCase,
@@ -113,9 +114,13 @@ class ProjectsViewModel(
         uiState = uiState.copy(selectedProject = project, selectedDetailTab = com.aitask.desktop.ui.projects.ProjectDetailTab.REPOSITORIES)
         if (project != null) {
             loadProjectRepositories(project.id)
+            loadPreRunScripts(project.id)
             loadSlackChannels(project.id)
         } else {
-            uiState = uiState.copy(selectedProjectSlackChannels = emptyList())
+            uiState = uiState.copy(
+                selectedProjectSlackChannels = emptyList(),
+                selectedProjectPreRunScripts = emptyList()
+            )
         }
     }
     
@@ -137,6 +142,17 @@ class ProjectsViewModel(
                 uiState = uiState.copy(selectedProjectSlackChannels = channels)
             } catch (e: Exception) {
                 uiState = uiState.copy(selectedProjectSlackChannels = emptyList())
+            }
+        }
+    }
+
+    private fun loadPreRunScripts(projectId: java.util.UUID) {
+        scope.launch {
+            try {
+                val scripts = preRunScriptRepository.findByProject(projectId)
+                uiState = uiState.copy(selectedProjectPreRunScripts = scripts)
+            } catch (e: Exception) {
+                uiState = uiState.copy(selectedProjectPreRunScripts = emptyList())
             }
         }
     }
@@ -321,6 +337,122 @@ class ProjectsViewModel(
         uiState = uiState.copy(selectedDetailTab = tab)
     }
 
+    fun showAddPreRunScriptDialog() {
+        uiState = uiState.copy(showPreRunScriptDialog = true, editingPreRunScript = null, error = null)
+    }
+
+    fun showEditPreRunScriptDialog(script: PreRunScript) {
+        uiState = uiState.copy(showPreRunScriptDialog = true, editingPreRunScript = script, error = null)
+    }
+
+    fun hidePreRunScriptDialog() {
+        uiState = uiState.copy(showPreRunScriptDialog = false, editingPreRunScript = null, error = null)
+    }
+
+    fun savePreRunScript(
+        name: String,
+        type: PreRunScriptType,
+        repositoryId: java.util.UUID?,
+        executionOrder: Int,
+        scriptPath: String?,
+        inlineScript: String?,
+        requiredValue: String?
+    ) {
+        val projectId = uiState.selectedProject?.id ?: return
+        val trimmedName = name.trim()
+        if (trimmedName.isEmpty()) {
+            uiState = uiState.copy(error = "Script name is required")
+            return
+        }
+
+        uiState = uiState.copy(isSaving = true, error = null)
+        scope.launch {
+            try {
+                val existing = uiState.editingPreRunScript
+                val script = if (existing == null) {
+                    PreRunScript(
+                        id = java.util.UUID.randomUUID(),
+                        projectId = projectId,
+                        repositoryId = repositoryId,
+                        name = trimmedName,
+                        type = type,
+                        scriptPath = scriptPath?.trim()?.ifBlank { null },
+                        inlineScript = inlineScript?.trim()?.ifBlank { null },
+                        requiredValue = requiredValue?.trim()?.ifBlank { null },
+                        executionOrder = executionOrder,
+                        createdAt = java.time.Instant.now(),
+                        updatedAt = java.time.Instant.now()
+                    )
+                } else {
+                    existing.update(
+                        name = trimmedName,
+                        type = type,
+                        repositoryId = repositoryId,
+                        executionOrder = executionOrder,
+                        scriptPath = scriptPath?.trim()?.ifBlank { null },
+                        inlineScript = inlineScript?.trim()?.ifBlank { null },
+                        requiredValue = requiredValue?.trim()?.ifBlank { null }
+                    )
+                }
+
+                validatePreRunScript(script)
+
+                if (existing == null) {
+                    preRunScriptRepository.create(script)
+                } else {
+                    preRunScriptRepository.update(script)
+                }
+
+                uiState = uiState.copy(
+                    isSaving = false,
+                    showPreRunScriptDialog = false,
+                    editingPreRunScript = null
+                )
+                loadPreRunScripts(projectId)
+            } catch (e: Exception) {
+                uiState = uiState.copy(
+                    isSaving = false,
+                    error = e.message ?: "Failed to save pre-run script"
+                )
+            }
+        }
+    }
+
+    fun deletePreRunScript(scriptId: java.util.UUID) {
+        val projectId = uiState.selectedProject?.id ?: return
+        scope.launch {
+            try {
+                preRunScriptRepository.delete(scriptId)
+                loadPreRunScripts(projectId)
+            } catch (e: Exception) {
+                uiState = uiState.copy(error = e.message ?: "Failed to delete pre-run script")
+            }
+        }
+    }
+
+    private fun validatePreRunScript(script: PreRunScript) {
+        when (script.type) {
+            PreRunScriptType.INLINE_COMMAND ->
+                require(!script.inlineScript.isNullOrBlank()) { "Inline command is required" }
+
+            PreRunScriptType.SCRIPT_PATH ->
+                require(!script.scriptPath.isNullOrBlank()) { "Script path is required" }
+
+            PreRunScriptType.NODE_VERSION,
+            PreRunScriptType.JAVA_VERSION,
+            PreRunScriptType.PYTHON_VERSION,
+            PreRunScriptType.ENVIRONMENT_VARIABLE,
+            PreRunScriptType.DEPENDENCY_PRESENT -> {
+                val requiredValue = requireNotNull(script.requiredValue?.takeIf { it.isNotBlank() }) {
+                    "Required value is required"
+                }
+                require(requiredValue.matches(Regex("^[a-zA-Z0-9._-]+$"))) {
+                    "Required value can only contain letters, numbers, dots, underscores, and hyphens"
+                }
+            }
+        }
+    }
+
     fun showAddSlackChannelDialog() {
         uiState = uiState.copy(showSlackChannelDialog = true, editingSlackChannel = null, error = null)
     }
@@ -411,6 +543,7 @@ data class ProjectsUiState(
     val showArchivedProjects: Boolean = false,
     val selectedProject: Project? = null,
     val selectedProjectRepositories: List<Repository> = emptyList(),
+    val selectedProjectPreRunScripts: List<PreRunScript> = emptyList(),
     val selectedProjectSlackChannels: List<SlackChannelConfig> = emptyList(),
     val selectedDetailTab: com.aitask.desktop.ui.projects.ProjectDetailTab = com.aitask.desktop.ui.projects.ProjectDetailTab.REPOSITORIES,
     val searchQuery: String = "",
@@ -420,10 +553,11 @@ data class ProjectsUiState(
     val isSaving: Boolean = false,
     val showCreateDialog: Boolean = false,
     val showAddRepositoryDialog: Boolean = false,
+    val showPreRunScriptDialog: Boolean = false,
     val showSlackChannelDialog: Boolean = false,
     val editingRepository: Repository? = null,
+    val editingPreRunScript: PreRunScript? = null,
     val editingSlackChannel: SlackChannelConfig? = null,
     val isSendingSlackTest: Boolean = false,
     val error: String? = null
 )
-

@@ -2,15 +2,23 @@ package com.aitask.core.domain.usecase
 
 import com.aitask.core.domain.model.*
 import com.aitask.core.domain.repository.ActivityRepository
+import com.aitask.core.domain.repository.PreRunScriptRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
 import com.aitask.core.domain.service.IDEService
+import com.aitask.core.domain.service.PreRunScriptService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import java.io.File
 import java.time.Instant
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
+private val workspaceMetadataJson = Json { ignoreUnknownKeys = true }
 
 /**
  * Request to launch an IDE for a task
@@ -43,6 +51,8 @@ class LaunchIDEUseCase(
     private val taskRepository: TaskRepository,
     private val projectRepository: ProjectRepository,
     private val repositoryRepository: RepositoryRepository,
+    private val preRunScriptRepository: PreRunScriptRepository,
+    private val preRunScriptService: PreRunScriptService,
     private val ideService: IDEService,
     private val activityRepository: ActivityRepository
 ) {
@@ -75,8 +85,69 @@ class LaunchIDEUseCase(
                 logger.warn { "IDE type ${request.ideType} is not configured for project ${project.name}" }
                 // We'll allow it but log a warning - user might want to use a different IDE
             }
+
+            // 5. Execute configured pre-run scripts before IDE launch
+            val allScripts = preRunScriptRepository.findByProject(project.id)
+            val selectedRepositoryIds = loadSelectedRepositoryIds(task.workspacePath)
+            val projectScripts = allScripts
+                .filter { it.repositoryId == null }
+                .sortedBy { it.executionOrder }
+            val repositoryScripts = selectedRepositoryIds.flatMap { repositoryId ->
+                allScripts
+                    .filter { it.repositoryId == repositoryId }
+                    .sortedBy { it.executionOrder }
+            }
+            val orderedScripts = projectScripts + repositoryScripts
+
+            if (orderedScripts.isNotEmpty()) {
+                val executionResult = preRunScriptService.executeScripts(
+                    scripts = orderedScripts,
+                    workingDirectory = task.workspacePath
+                )
+
+                if (executionResult.isFailure) {
+                    val failure = executionResult.exceptionOrNull() ?: Exception("Pre-run scripts failed")
+                    activityRepository.create(
+                        Activity(
+                            id = UUID.randomUUID(),
+                            type = ActivityType.PRE_RUN_FAILED,
+                            entityType = "task",
+                            entityId = task.id,
+                            description = "Pre-run scripts failed for task: ${task.title}",
+                            metadata = mapOf(
+                                "projectName" to project.name,
+                                "executionOrder" to "project-then-repository",
+                                "error" to (failure.message ?: "Unknown pre-run error")
+                            ),
+                            status = ActivityStatus.FAILED,
+                            createdAt = Instant.now(),
+                            projectId = task.projectId
+                        )
+                    )
+                    return Result.failure(failure)
+                }
+
+                val details = executionResult.getOrThrow()
+                activityRepository.create(
+                    Activity(
+                        id = UUID.randomUUID(),
+                        type = ActivityType.PRE_RUN_SUCCESS,
+                        entityType = "task",
+                        entityId = task.id,
+                        description = "Completed ${details.size} pre-run script(s) for task: ${task.title}",
+                        metadata = mapOf(
+                            "projectName" to project.name,
+                            "scriptCount" to details.size.toString(),
+                            "executionOrder" to "project-then-repository"
+                        ),
+                        status = ActivityStatus.SUCCESS,
+                        createdAt = Instant.now(),
+                        projectId = task.projectId
+                    )
+                )
+            }
             
-            // 5. Create task context
+            // 6. Create task context
             val taskContext = TaskContext(
                 taskId = task.id,
                 title = task.title,
@@ -85,7 +156,7 @@ class LaunchIDEUseCase(
                 branchName = task.branchName
             )
             
-            // 6. Launch IDE
+            // 7. Launch IDE
             val launchResult = ideService.launchIDE(
                 ideType = request.ideType,
                 workspacePath = task.workspacePath,
@@ -111,7 +182,7 @@ class LaunchIDEUseCase(
                 return Result.failure(err)
             }
             
-            // 7. Update task status to IN_PROGRESS if requested
+            // 8. Update task status to IN_PROGRESS if requested
             val updatedTask = if (request.updateTaskStatus && task.status == TaskStatus.PENDING) {
                 val newTask = task.updateStatus(TaskStatus.IN_PROGRESS)
                 taskRepository.update(newTask)
@@ -121,7 +192,7 @@ class LaunchIDEUseCase(
                 task
             }
             
-            // 8. Record activity (success)
+            // 9. Record activity (success)
             val activity = Activity(
                 id = UUID.randomUUID(),
                 type = ActivityType.IDE_LAUNCHED,
@@ -147,5 +218,24 @@ class LaunchIDEUseCase(
             Result.failure(e)
         }
     }
-}
 
+    private fun loadSelectedRepositoryIds(workspacePath: String): List<UUID> {
+        return runCatching {
+            val metadataFile = File(workspacePath, "workspace-metadata.json")
+            if (!metadataFile.exists()) {
+                emptyList()
+            } else {
+                workspaceMetadataJson.parseToJsonElement(metadataFile.readText())
+                    .jsonObject["repositories"]
+                    ?.jsonArray
+                    ?.mapNotNull { element ->
+                        element.jsonObject["repositoryId"]?.jsonPrimitive?.content?.let { UUID.fromString(it) }
+                    }
+                    ?: emptyList()
+            }
+        }.getOrElse { error ->
+            logger.warn(error) { "Failed to load workspace metadata for pre-run resolution from $workspacePath" }
+            emptyList()
+        }
+    }
+}

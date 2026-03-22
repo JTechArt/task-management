@@ -1,0 +1,66 @@
+schema: 1
+story: "5.1"
+story_title: "Pre-Run Script Configuration and Execution"
+gate: PASS
+status_reason: "All ACs met. Pre-run scripts integrated into IDE launch flow with activity logging, configuration UI, and execution order. Path traversal fix applied during review. INLINE_COMMAND and requiredValue usage documented as known risks."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-22T12:00:00Z"
+waiver: { active: false }
+top_issues:
+  - id: SEC-001
+    severity: medium
+    finding: "SCRIPT_PATH allowed path traversal (relative paths could escape workspace)"
+    suggested_action: "Validate resolved script path is within workspace directory"
+    status: RESOLVED
+    resolution: "Added isPathWithinWorkspace() check; rejects absolute paths outside workspace and relative paths with .."
+  - id: MNT-001
+    severity: low
+    finding: "INLINE_COMMAND passes user input to bash -lc (inherent command-injection surface)"
+    suggested_action: "Document as accepted risk; consider UI warning for power users"
+    status: ACCEPTED
+    resolution: "By design per AC; add UI hint in future sprint if needed"
+  - id: MNT-002
+    severity: low
+    finding: "requiredValue interpolated into shell commands (NODE/JAVA/PYTHON/ENV)"
+    suggested_action: "Consider allowlist validation for version/env-var identifiers"
+    status: ACCEPTED
+    resolution: "grep -F used for most; acceptable for MVP; strengthen in future if needed"
+
+evidence:
+  tests_reviewed: 9
+  tests:
+    - LaunchIDEUseCaseTest: pre-run success, pre-run failure, ordering, no IDE launch on failure
+    - LocalPreRunScriptServiceTest: inline command, env var, script path, path traversal rejection
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Path traversal fixed. INLINE_COMMAND and requiredValue noted. Script paths constrained to workspace."
+  performance:
+    status: PASS
+    notes: "Pre-run executes sequentially; blocks launch until complete (by design)."
+  reliability:
+    status: PASS
+    notes: "Result-based execution; PRE_RUN_SUCCESS/PRE_RUN_FAILED recorded; IDE launch blocked on failure."
+  maintainability:
+    status: PASS
+    notes: "PreRunScriptService + LocalPreRunScriptServiceTest; LaunchIDEUseCaseTest covers orchestration."
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 2 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Add UI warning for INLINE_COMMAND about arbitrary command execution"
+      - "Consider sanitizing requiredValue for version checks (alphanumeric + dots)"
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Add integration test for full launch flow with pre-run scripts"
+      refs: ["taskmanager/core/src/test/"]
+    - action: "Add unit tests for NODE_VERSION, JAVA_VERSION, PYTHON_VERSION execution paths"
+      refs: ["taskmanager/core/src/test/kotlin/com/aitask/core/infrastructure/prerun/LocalPreRunScriptServiceTest.kt"]

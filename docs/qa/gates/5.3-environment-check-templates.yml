@@ -1,0 +1,50 @@
+schema: 1
+story: "5.3"
+story_title: "Environment Check Templates"
+gate: PASS
+status_reason: "All ACs met. EnvironmentCheckTemplateRegistry provides Node, Java, Python, env var, dependency templates with cross-platform script generation. Template picker UI with preview. Parameter validation added during review to prevent command injection."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-22T12:00:00Z"
+waiver: { active: false }
+top_issues:
+  - id: SEC-001
+    severity: medium
+    finding: "Template parameter (requiredValue) interpolated into shell/batch without validation"
+    suggested_action: "Validate requiredValue against allowlist (alphanumeric, dots, underscores, hyphens)"
+    status: RESOLVED
+    resolution: "Added regex validation in ProjectsViewModel and LocalPreRunScriptService; reject values with shell metacharacters"
+
+evidence:
+  tests_reviewed: 6
+  tests:
+    - EnvironmentCheckTemplateRegistryTest: all templates, preview generation, generateName
+    - EnvironmentTemplateExecutionTest: dependency missing (actionable message), reject invalid parameter
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Template parameter validation added; allowlist prevents shell metacharacters in requiredValue."
+  performance:
+    status: PASS
+    notes: "Template resolution in-memory; no extra I/O."
+  reliability:
+    status: PASS
+    notes: "Actionable failure messages in generatePreview; PreRunScriptExecutionException surfaces stderr."
+  maintainability:
+    status: PASS
+    notes: "EnvironmentCheckTemplateRegistry centralizes templates; tests cover registry and execution."
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Add tests for Windows script generation (generatePreview isWindows=true)"
+      refs: ["taskmanager/core/src/main/kotlin/com/aitask/core/domain/model/EnvironmentCheckTemplate.kt"]

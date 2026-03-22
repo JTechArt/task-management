@@ -20,6 +20,8 @@ enum class ActivityType {
     PROJECT_CREATED,
     PROJECT_UPDATED,
     REPOSITORY_ADDED,
+    PRE_RUN_SUCCESS,
+    PRE_RUN_FAILED,
     NOTIFICATION_SENT,
     BACKUP_CREATED,
     RESTORE_COMPLETED
@@ -61,4 +63,3 @@ data class CreateActivityRequest(
     val status: ActivityStatus = ActivityStatus.SUCCESS,
     val projectId: UUID? = null
 )
-

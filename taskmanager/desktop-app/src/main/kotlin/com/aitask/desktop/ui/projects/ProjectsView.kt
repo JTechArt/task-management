@@ -196,9 +196,13 @@ fun ProjectsView(
                                     onAddRepository = { viewModel.showAddRepositoryDialog() },
                                     onEditRepository = { viewModel.showEditRepositoryDialog(it) },
                                     onDeleteRepository = { viewModel.deleteRepository(it) },
+                                    preRunScripts = uiState.selectedProjectPreRunScripts,
                                     slackChannels = uiState.selectedProjectSlackChannels,
                                     selectedDetailTab = uiState.selectedDetailTab,
                                     onDetailTabChange = { viewModel.setDetailTab(it) },
+                                    onAddPreRunScript = { viewModel.showAddPreRunScriptDialog() },
+                                    onEditPreRunScript = { viewModel.showEditPreRunScriptDialog(it) },
+                                    onDeletePreRunScript = { viewModel.deletePreRunScript(it) },
                                     onAddSlackChannel = { viewModel.showAddSlackChannelDialog() },
                                     onEditSlackChannel = { viewModel.showEditSlackChannelDialog(it) },
                                     onDeleteSlackChannel = { viewModel.deleteSlackChannel(it) },
@@ -211,6 +215,28 @@ fun ProjectsView(
                 }
             }
         }
+    }
+
+    if (uiState.showPreRunScriptDialog && uiState.selectedProject != null) {
+        PreRunScriptDialog(
+            script = uiState.editingPreRunScript,
+            repositories = uiState.selectedProjectRepositories,
+            onDismiss = { viewModel.hidePreRunScriptDialog() },
+            onConfirm = { name, type, repositoryId, executionOrder, scriptPath, inlineScript, requiredValue ->
+                viewModel.savePreRunScript(
+                    name = name,
+                    type = type,
+                    repositoryId = repositoryId,
+                    executionOrder = executionOrder,
+                    scriptPath = scriptPath,
+                    inlineScript = inlineScript,
+                    requiredValue = requiredValue
+                )
+            },
+            isSaving = uiState.isSaving,
+            error = uiState.error,
+            onDismissError = { viewModel.clearError() }
+        )
     }
     
     // Create project dialog
@@ -267,4 +293,3 @@ fun ProjectsView(
         )
     }
 }
-

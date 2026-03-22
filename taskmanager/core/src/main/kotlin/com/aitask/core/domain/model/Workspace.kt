@@ -1,5 +1,4 @@
 package com.aitask.core.domain.model
-
 import java.time.Instant
 import java.util.UUID
 
@@ -67,4 +66,3 @@ data class WorkspaceRepositoryMetadata(
     val branchName: String?,
     val cloneStatus: String
 )
-
