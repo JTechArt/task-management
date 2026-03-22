@@ -260,7 +260,6 @@ class FileSystemWorkspaceService(
                 appendLine("  ]")
                 append("}")
             }
-
             metadataFile.writeText(json)
         } catch (e: Exception) {
             // Log error but don't fail workspace creation

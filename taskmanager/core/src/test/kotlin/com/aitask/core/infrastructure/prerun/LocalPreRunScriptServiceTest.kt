@@ -79,8 +79,7 @@ class LocalPreRunScriptServiceTest {
         val result = service.executeScripts(listOf(script), workingDir.absolutePath)
 
         assertTrue(result.isFailure)
-        val error = result.exceptionOrNull()
-        assertNotNull(error)
+        val error = requireNotNull(result.exceptionOrNull())
         assertTrue(error.message!!.contains("within workspace"))
     }
 

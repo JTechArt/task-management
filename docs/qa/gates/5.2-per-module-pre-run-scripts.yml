@@ -1,0 +1,44 @@
+schema: 1
+story: "5.2"
+story_title: "Per-Module Pre-Run Script Configuration"
+gate: PASS
+status_reason: "All ACs met. Repository-scoped pre-run scripts resolved via workspace-metadata.json; project scripts first, then repository scripts in workspace order. UI separates project-level and repository-level groups with documented execution order."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-22T12:00:00Z"
+waiver: { active: false }
+top_issues: []
+
+evidence:
+  tests_reviewed: 8
+  tests:
+    - LaunchIDEUseCaseTest: project-then-repository ordering, only selected repositories, workspace-metadata.json parsing
+    - LocalPreRunScriptServiceTest: unchanged from 5.1; repository filtering exercised via LaunchIDEUseCase
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Reuses 5.1 PreRunScriptService; workspace-metadata.json written by app during workspace preparation (not user input)."
+  performance:
+    status: PASS
+    notes: "Script resolution in-memory; no additional I/O beyond metadata file read."
+  reliability:
+    status: PASS
+    notes: "Missing/malformed workspace-metadata.json degrades gracefully to project scripts only (emptyList())."
+  maintainability:
+    status: PASS
+    notes: "LaunchIDEUseCaseTest covers ordering; PreRunScriptGroup UI components clear."
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider integration test: workspace creation → workspace-metadata.json present → LaunchIDE runs correct script order"
+      refs: ["taskmanager/core/src/test/"]

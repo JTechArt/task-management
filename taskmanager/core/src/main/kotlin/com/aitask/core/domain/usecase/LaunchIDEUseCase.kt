@@ -9,10 +9,16 @@ import com.aitask.core.domain.repository.TaskRepository
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.PreRunScriptService
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import java.io.File
 import java.time.Instant
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
+private val workspaceMetadataJson = Json { ignoreUnknownKeys = true }
 
 /**
  * Request to launch an IDE for a task
@@ -82,13 +88,20 @@ class LaunchIDEUseCase(
 
             // 5. Execute configured pre-run scripts before IDE launch
             val allScripts = preRunScriptRepository.findByProject(project.id)
-                .sortedWith(
-                    compareBy<PreRunScript>({ it.executionOrder }, { it.repositoryId != null }, { it.name.lowercase() })
-                )
+            val selectedRepositoryIds = loadSelectedRepositoryIds(task.workspacePath)
+            val projectScripts = allScripts
+                .filter { it.repositoryId == null }
+                .sortedBy { it.executionOrder }
+            val repositoryScripts = selectedRepositoryIds.flatMap { repositoryId ->
+                allScripts
+                    .filter { it.repositoryId == repositoryId }
+                    .sortedBy { it.executionOrder }
+            }
+            val orderedScripts = projectScripts + repositoryScripts
 
-            if (allScripts.isNotEmpty()) {
+            if (orderedScripts.isNotEmpty()) {
                 val executionResult = preRunScriptService.executeScripts(
-                    scripts = allScripts,
+                    scripts = orderedScripts,
                     workingDirectory = task.workspacePath
                 )
 
@@ -103,6 +116,7 @@ class LaunchIDEUseCase(
                             description = "Pre-run scripts failed for task: ${task.title}",
                             metadata = mapOf(
                                 "projectName" to project.name,
+                                "executionOrder" to "project-then-repository",
                                 "error" to (failure.message ?: "Unknown pre-run error")
                             ),
                             status = ActivityStatus.FAILED,
@@ -123,7 +137,8 @@ class LaunchIDEUseCase(
                         description = "Completed ${details.size} pre-run script(s) for task: ${task.title}",
                         metadata = mapOf(
                             "projectName" to project.name,
-                            "scriptCount" to details.size.toString()
+                            "scriptCount" to details.size.toString(),
+                            "executionOrder" to "project-then-repository"
                         ),
                         status = ActivityStatus.SUCCESS,
                         createdAt = Instant.now(),
@@ -201,6 +216,26 @@ class LaunchIDEUseCase(
         } catch (e: Exception) {
             logger.error(e) { "Error launching IDE for task ${request.taskId}" }
             Result.failure(e)
+        }
+    }
+
+    private fun loadSelectedRepositoryIds(workspacePath: String): List<UUID> {
+        return runCatching {
+            val metadataFile = File(workspacePath, "workspace-metadata.json")
+            if (!metadataFile.exists()) {
+                emptyList()
+            } else {
+                workspaceMetadataJson.parseToJsonElement(metadataFile.readText())
+                    .jsonObject["repositories"]
+                    ?.jsonArray
+                    ?.mapNotNull { element ->
+                        element.jsonObject["repositoryId"]?.jsonPrimitive?.content?.let { UUID.fromString(it) }
+                    }
+                    ?: emptyList()
+            }
+        }.getOrElse { error ->
+            logger.warn(error) { "Failed to load workspace metadata for pre-run resolution from $workspacePath" }
+            emptyList()
         }
     }
 }

@@ -385,6 +385,8 @@ fun ProjectDetailView(
                 }
             }
             ProjectDetailTab.PRE_RUN -> {
+                val projectLevelScripts = preRunScripts.filter { it.repositoryId == null }
+                val repositoryScripts = preRunScripts.filter { it.repositoryId != null }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -398,6 +400,11 @@ fun ProjectDetailView(
                         )
                         Text(
                             text = "Run checks before opening the IDE",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                        Text(
+                            text = "Execution order: project scripts first, then repository scripts in workspace repository order.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
@@ -418,17 +425,23 @@ fun ProjectDetailView(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                 } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(preRunScripts) { script ->
-                            PreRunScriptCard(
-                                script = script,
-                                repositories = repositories,
-                                onEdit = { onEditPreRunScript(script) },
-                                onDelete = { onDeletePreRunScript(script.id) }
-                            )
-                        }
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        PreRunScriptGroup(
+                            title = "Project-Level Scripts",
+                            emptyText = "No project-level scripts configured",
+                            scripts = projectLevelScripts,
+                            repositories = repositories,
+                            onEditPreRunScript = onEditPreRunScript,
+                            onDeletePreRunScript = onDeletePreRunScript
+                        )
+                        PreRunScriptGroup(
+                            title = "Repository-Level Scripts",
+                            emptyText = "No repository-level scripts configured",
+                            scripts = repositoryScripts,
+                            repositories = repositories,
+                            onEditPreRunScript = onEditPreRunScript,
+                            onDeletePreRunScript = onDeletePreRunScript
+                        )
                     }
                 }
             }
@@ -441,6 +454,49 @@ fun ProjectDetailView(
                     onTestMessage = onTestSlackMessage,
                     isSendingTest = isSendingSlackTest
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreRunScriptGroup(
+    title: String,
+    emptyText: String,
+    scripts: List<PreRunScript>,
+    repositories: List<Repository>,
+    onEditPreRunScript: (PreRunScript) -> Unit,
+    onDeletePreRunScript: (UUID) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        if (scripts.isEmpty()) {
+            Text(
+                text = emptyText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.heightIn(max = 220.dp)
+            ) {
+                items(scripts) { script ->
+                    PreRunScriptCard(
+                        script = script,
+                        repositories = repositories,
+                        onEdit = { onEditPreRunScript(script) },
+                        onDelete = { onDeletePreRunScript(script.id) }
+                    )
+                }
             }
         }
     }

@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.nio.file.Files
 import java.time.Instant
 import java.util.UUID
 
@@ -309,7 +310,8 @@ class LaunchIDEUseCaseTest {
     fun `should execute pre-run scripts before launching IDE`() = runTest {
         val taskId = UUID.randomUUID()
         val projectId = UUID.randomUUID()
-        val task = createTask(taskId, projectId, "/workspace/test")
+        val workspaceDir = Files.createTempDirectory("launch-ide-test").toFile()
+        val task = createTask(taskId, projectId, workspaceDir.absolutePath)
         val project = createProject(projectId)
         val scripts = listOf(
             PreRunScript(
@@ -322,6 +324,13 @@ class LaunchIDEUseCaseTest {
                 createdAt = Instant.now(),
                 updatedAt = Instant.now()
             )
+        )
+        workspaceDir.resolve("workspace-metadata.json").writeText(
+            """
+            {
+              "repositories": []
+            }
+            """.trimIndent()
         )
 
         coEvery { taskRepository.findById(taskId) } returns task
@@ -347,7 +356,8 @@ class LaunchIDEUseCaseTest {
     fun `should fail before IDE launch when pre-run scripts fail`() = runTest {
         val taskId = UUID.randomUUID()
         val projectId = UUID.randomUUID()
-        val task = createTask(taskId, projectId, "/workspace/test")
+        val workspaceDir = Files.createTempDirectory("launch-ide-test-failure").toFile()
+        val task = createTask(taskId, projectId, workspaceDir.absolutePath)
         val project = createProject(projectId)
         val scripts = listOf(
             PreRunScript(
@@ -360,6 +370,13 @@ class LaunchIDEUseCaseTest {
                 createdAt = Instant.now(),
                 updatedAt = Instant.now()
             )
+        )
+        workspaceDir.resolve("workspace-metadata.json").writeText(
+            """
+            {
+              "repositories": []
+            }
+            """.trimIndent()
         )
         val failure = PreRunScriptExecutionException(
             PreRunExecutionResult(
@@ -386,6 +403,52 @@ class LaunchIDEUseCaseTest {
         coVerify { activityRepository.create(match { it.type == ActivityType.PRE_RUN_FAILED }) }
     }
 
+    @Test
+    fun `should execute project scripts before selected repository scripts only`() = runTest {
+        val taskId = UUID.randomUUID()
+        val projectId = UUID.randomUUID()
+        val repositoryA = UUID.randomUUID()
+        val repositoryB = UUID.randomUUID()
+        val repositoryC = UUID.randomUUID()
+        val workspaceDir = Files.createTempDirectory("launch-ide-order").toFile()
+        workspaceDir.resolve("workspace-metadata.json").writeText(
+            """
+            {
+              "repositories": [
+                { "repositoryId": "$repositoryB" },
+                { "repositoryId": "$repositoryA" }
+              ]
+            }
+            """.trimIndent()
+        )
+        val task = createTask(taskId, projectId, workspaceDir.absolutePath)
+        val project = createProject(projectId)
+        val orderedScripts = listOf(
+            createScript(projectId, "Project First", 1, repositoryId = null),
+            createScript(projectId, "Repo A", 1, repositoryId = repositoryA),
+            createScript(projectId, "Repo B", 1, repositoryId = repositoryB),
+            createScript(projectId, "Repo C", 1, repositoryId = repositoryC)
+        )
+        val capturedScripts = slot<List<PreRunScript>>()
+
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { projectRepository.findById(projectId) } returns project
+        coEvery { repositoryRepository.findByProject(projectId) } returns emptyList()
+        coEvery { preRunScriptRepository.findByProject(projectId) } returns orderedScripts
+        coEvery { preRunScriptService.executeScripts(capture(capturedScripts), task.workspacePath!!) } returns Result.success(emptyList())
+        coEvery { ideService.launchIDE(any(), any(), any()) } returns Result.success(Unit)
+        coEvery { taskRepository.update(any()) } answers { firstArg() }
+        coEvery { activityRepository.create(any()) } answers { firstArg() }
+
+        val result = useCase(LaunchIDERequest(taskId, IDEType.CURSOR))
+
+        assertTrue(result.isSuccess)
+        assertEquals(
+            listOf("Project First", "Repo B", "Repo A"),
+            capturedScripts.captured.map { it.name }
+        )
+    }
+
     private fun createTask(taskId: UUID, projectId: UUID, workspacePath: String) = Task(
         id = taskId,
         title = "Test Task",
@@ -406,6 +469,23 @@ class LaunchIDEUseCaseTest {
         description = null,
         workspacePath = "/workspace",
         branchTemplate = "task-{taskId}",
+        createdAt = Instant.now(),
+        updatedAt = Instant.now()
+    )
+
+    private fun createScript(
+        projectId: UUID,
+        name: String,
+        executionOrder: Int,
+        repositoryId: UUID?
+    ) = PreRunScript(
+        id = UUID.randomUUID(),
+        projectId = projectId,
+        repositoryId = repositoryId,
+        name = name,
+        type = PreRunScriptType.INLINE_COMMAND,
+        inlineScript = "echo ok",
+        executionOrder = executionOrder,
         createdAt = Instant.now(),
         updatedAt = Instant.now()
     )
