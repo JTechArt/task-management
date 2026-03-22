@@ -441,8 +441,13 @@ class ProjectsViewModel(
             PreRunScriptType.NODE_VERSION,
             PreRunScriptType.JAVA_VERSION,
             PreRunScriptType.PYTHON_VERSION,
-            PreRunScriptType.ENVIRONMENT_VARIABLE ->
+            PreRunScriptType.ENVIRONMENT_VARIABLE,
+            PreRunScriptType.DEPENDENCY_PRESENT -> {
                 require(!script.requiredValue.isNullOrBlank()) { "Required value is required" }
+                require(script.requiredValue.matches(Regex("^[a-zA-Z0-9._-]+$"))) {
+                    "Required value can only contain letters, numbers, dots, underscores, and hyphens"
+                }
+            }
         }
     }
 

@@ -1,6 +1,7 @@
 package com.aitask.core.infrastructure.prerun
 
 import com.aitask.core.domain.model.PreRunExecutionResult
+import com.aitask.core.domain.model.EnvironmentCheckTemplateRegistry
 import com.aitask.core.domain.model.PreRunScript
 import com.aitask.core.domain.model.PreRunScriptExecutionException
 import com.aitask.core.domain.model.PreRunScriptType
@@ -85,22 +86,27 @@ class LocalPreRunScriptService : PreRunScriptService {
 
             PreRunScriptType.NODE_VERSION -> {
                 val required = requireRequiredValue(script)
-                shellCommand("node --version | grep -E '^v?$required([.]|$)'")
+                templateCommand(PreRunScriptType.NODE_VERSION, required)
             }
 
             PreRunScriptType.JAVA_VERSION -> {
                 val required = requireRequiredValue(script)
-                shellCommand("java -version 2>&1 | grep -F '$required'")
+                templateCommand(PreRunScriptType.JAVA_VERSION, required)
             }
 
             PreRunScriptType.PYTHON_VERSION -> {
                 val required = requireRequiredValue(script)
-                shellCommand("(python --version 2>&1 || python3 --version 2>&1) | grep -F '$required'")
+                templateCommand(PreRunScriptType.PYTHON_VERSION, required)
             }
 
             PreRunScriptType.ENVIRONMENT_VARIABLE -> {
                 val required = requireRequiredValue(script)
-                shellCommand("if [ -n \"${'$'}$required\" ]; then exit 0; else echo 'Missing required environment variable: $required' >&2; exit 1; fi")
+                templateCommand(PreRunScriptType.ENVIRONMENT_VARIABLE, required)
+            }
+
+            PreRunScriptType.DEPENDENCY_PRESENT -> {
+                val required = requireRequiredValue(script)
+                templateCommand(PreRunScriptType.DEPENDENCY_PRESENT, required)
             }
         }
     }
@@ -116,6 +122,16 @@ class LocalPreRunScriptService : PreRunScriptService {
         } else {
             CommandSpec(listOf("bash", "-lc", command), command)
         }
+    }
+
+    private fun templateCommand(type: PreRunScriptType, value: String): CommandSpec {
+        require(value.matches(Regex("^[a-zA-Z0-9._-]+$"))) {
+            "Template parameter value must be alphanumeric (letters, numbers, dots, underscores, hyphens)"
+        }
+        val template = requireNotNull(EnvironmentCheckTemplateRegistry.findByType(type)) {
+            "No environment check template registered for $type"
+        }
+        return shellCommand(template.generatePreview(value, isWindows()))
     }
 
     private fun isWindows(): Boolean =

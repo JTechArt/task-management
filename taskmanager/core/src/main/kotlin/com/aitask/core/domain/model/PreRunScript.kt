@@ -9,7 +9,8 @@ enum class PreRunScriptType {
     NODE_VERSION,
     JAVA_VERSION,
     PYTHON_VERSION,
-    ENVIRONMENT_VARIABLE
+    ENVIRONMENT_VARIABLE,
+    DEPENDENCY_PRESENT
 }
 
 data class PreRunScript(

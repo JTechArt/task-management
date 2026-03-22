@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aitask.core.domain.model.EnvironmentCheckTemplateId
+import com.aitask.core.domain.model.EnvironmentCheckTemplateRegistry
 import com.aitask.core.domain.model.PreRunScript
 import com.aitask.core.domain.model.PreRunScriptType
 import com.aitask.core.domain.model.Project
@@ -511,6 +513,7 @@ fun PreRunScriptCard(
     modifier: Modifier = Modifier
 ) {
     val scopeLabel = repositories.find { it.id == script.repositoryId }?.name ?: "Project"
+    val template = EnvironmentCheckTemplateRegistry.findByType(script.type)
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -533,7 +536,7 @@ fun PreRunScriptCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = script.type.name.replace('_', ' '),
+                        text = template?.name ?: script.type.name.replace('_', ' '),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
@@ -590,6 +593,18 @@ fun PreRunScriptDialog(
     var requiredValue by remember(script) { mutableStateOf(script?.requiredValue ?: "") }
     var typeExpanded by remember { mutableStateOf(false) }
     var scopeExpanded by remember { mutableStateOf(false) }
+    val templates = remember { EnvironmentCheckTemplateRegistry.all() }
+    val selectedTemplate = remember(type) { EnvironmentCheckTemplateRegistry.findByType(type) }
+    var templateExpanded by remember { mutableStateOf(false) }
+    val previewScript = remember(type, requiredValue, inlineScript, scriptPath) {
+        when {
+            selectedTemplate != null && requiredValue.isNotBlank() ->
+                selectedTemplate.generatePreview(requiredValue.trim(), isWindows = false)
+            type == PreRunScriptType.INLINE_COMMAND -> inlineScript
+            type == PreRunScriptType.SCRIPT_PATH -> scriptPath
+            else -> ""
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -609,6 +624,54 @@ fun PreRunScriptDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                ExposedDropdownMenuBox(
+                    expanded = templateExpanded,
+                    onExpandedChange = { templateExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = selectedTemplate?.name ?: "Custom Script",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Template") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = templateExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = templateExpanded,
+                        onDismissRequest = { templateExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Custom Script") },
+                            onClick = {
+                                templateExpanded = false
+                            }
+                        )
+                        templates.forEach { template ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(template.name)
+                                        Text(
+                                            text = template.description,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    type = template.scriptType
+                                    if (requiredValue.isBlank()) {
+                                        requiredValue = template.exampleValue
+                                    }
+                                    if (script == null || name.isBlank() || EnvironmentCheckTemplateRegistry.findByType(script.type) != null) {
+                                        name = template.generateName(requiredValue.ifBlank { template.exampleValue })
+                                    }
+                                    templateExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
                 ExposedDropdownMenuBox(
                     expanded = typeExpanded,
                     onExpandedChange = { typeExpanded = it }
@@ -630,6 +693,9 @@ fun PreRunScriptDialog(
                                 text = { Text(option.name.replace('_', ' ')) },
                                 onClick = {
                                     type = option
+                                    if (EnvironmentCheckTemplateRegistry.findByType(option) == null) {
+                                        requiredValue = ""
+                                    }
                                     typeExpanded = false
                                 }
                             )
@@ -702,19 +768,49 @@ fun PreRunScriptDialog(
                         OutlinedTextField(
                             value = requiredValue,
                             onValueChange = { requiredValue = it },
-                            label = { Text("Required Version") },
+                            label = { Text(selectedTemplate?.parameterLabel ?: "Required Version") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
                         )
                     }
-                    PreRunScriptType.ENVIRONMENT_VARIABLE -> {
+                    PreRunScriptType.ENVIRONMENT_VARIABLE,
+                    PreRunScriptType.DEPENDENCY_PRESENT -> {
                         OutlinedTextField(
                             value = requiredValue,
                             onValueChange = { requiredValue = it },
-                            label = { Text("Environment Variable") },
+                            label = { Text(selectedTemplate?.parameterLabel ?: "Required Value") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
                         )
+                    }
+                }
+                if (selectedTemplate != null) {
+                    Text(
+                        text = selectedTemplate.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+                if (previewScript.isNotBlank()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Generated Script Preview",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Surface(
+                            tonalElevation = 1.dp,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = previewScript,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                            )
+                        }
                     }
                 }
             }
