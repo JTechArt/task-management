@@ -3,6 +3,8 @@ package com.aitask.desktop.ui.projects
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -13,12 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aitask.core.domain.model.PreRunScript
+import com.aitask.core.domain.model.PreRunScriptType
 import com.aitask.core.domain.model.Project
 import com.aitask.core.domain.model.Repository
 import com.aitask.core.domain.model.SlackChannelConfig
 import java.util.UUID
 
-enum class ProjectDetailTab { REPOSITORIES, SLACK }
+enum class ProjectDetailTab { REPOSITORIES, PRE_RUN, SLACK }
 
 @Composable
 fun ProjectFilters(
@@ -251,9 +255,13 @@ fun ProjectDetailView(
     onAddRepository: () -> Unit = {},
     onEditRepository: (Repository) -> Unit = {},
     onDeleteRepository: (UUID) -> Unit = {},
+    preRunScripts: List<PreRunScript> = emptyList(),
     slackChannels: List<SlackChannelConfig> = emptyList(),
     selectedDetailTab: ProjectDetailTab = ProjectDetailTab.REPOSITORIES,
     onDetailTabChange: (ProjectDetailTab) -> Unit = {},
+    onAddPreRunScript: () -> Unit = {},
+    onEditPreRunScript: (PreRunScript) -> Unit = {},
+    onDeletePreRunScript: (UUID) -> Unit = {},
     onAddSlackChannel: () -> Unit = {},
     onEditSlackChannel: (SlackChannelConfig) -> Unit = {},
     onDeleteSlackChannel: (SlackChannelConfig) -> Unit = {},
@@ -323,6 +331,14 @@ fun ProjectDetailView(
                 text = { Text("Repositories") }
             )
             Tab(
+                selected = selectedTab == ProjectDetailTab.PRE_RUN,
+                onClick = {
+                    selectedTab = ProjectDetailTab.PRE_RUN
+                    onDetailTabChange(ProjectDetailTab.PRE_RUN)
+                },
+                text = { Text("Pre-Run") }
+            )
+            Tab(
                 selected = selectedTab == ProjectDetailTab.SLACK,
                 onClick = {
                     selectedTab = ProjectDetailTab.SLACK
@@ -368,6 +384,54 @@ fun ProjectDetailView(
                     }
                 }
             }
+            ProjectDetailTab.PRE_RUN -> {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Pre-Run Scripts",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Run checks before opening the IDE",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                    Button(
+                        onClick = onAddPreRunScript,
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Add Check", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                if (preRunScripts.isEmpty()) {
+                    Text(
+                        text = "No pre-run scripts configured",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(preRunScripts) { script ->
+                            PreRunScriptCard(
+                                script = script,
+                                repositories = repositories,
+                                onEdit = { onEditPreRunScript(script) },
+                                onDelete = { onDeletePreRunScript(script.id) }
+                            )
+                        }
+                    }
+                }
+            }
             ProjectDetailTab.SLACK -> {
                 SlackConfigView(
                     channels = slackChannels,
@@ -380,6 +444,252 @@ fun ProjectDetailView(
             }
         }
     }
+}
+
+@Composable
+fun PreRunScriptCard(
+    script: PreRunScript,
+    repositories: List<Repository>,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scopeLabel = repositories.find { it.id == script.repositoryId }?.name ?: "Project"
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = script.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = script.type.name.replace('_', ' '),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit pre-run script", modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete pre-run script",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+            DetailRow("Scope", scopeLabel)
+            DetailRow("Order", script.executionOrder.toString())
+            when (script.type) {
+                PreRunScriptType.INLINE_COMMAND -> DetailRow("Command", script.inlineScript ?: "")
+                PreRunScriptType.SCRIPT_PATH -> DetailRow("Path", script.scriptPath ?: "")
+                else -> DetailRow("Requirement", script.requiredValue ?: "")
+            }
+        }
+    }
+}
+
+@Composable
+fun PreRunScriptDialog(
+    script: PreRunScript?,
+    repositories: List<Repository>,
+    onDismiss: () -> Unit,
+    onConfirm: (
+        name: String,
+        type: PreRunScriptType,
+        repositoryId: UUID?,
+        executionOrder: Int,
+        scriptPath: String?,
+        inlineScript: String?,
+        requiredValue: String?
+    ) -> Unit,
+    isSaving: Boolean,
+    error: String?,
+    onDismissError: () -> Unit
+) {
+    var name by remember(script) { mutableStateOf(script?.name ?: "") }
+    var type by remember(script) { mutableStateOf(script?.type ?: PreRunScriptType.INLINE_COMMAND) }
+    var repositoryId by remember(script) { mutableStateOf(script?.repositoryId) }
+    var executionOrder by remember(script) { mutableStateOf((script?.executionOrder ?: 0).toString()) }
+    var scriptPath by remember(script) { mutableStateOf(script?.scriptPath ?: "") }
+    var inlineScript by remember(script) { mutableStateOf(script?.inlineScript ?: "") }
+    var requiredValue by remember(script) { mutableStateOf(script?.requiredValue ?: "") }
+    var typeExpanded by remember { mutableStateOf(false) }
+    var scopeExpanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (script == null) "Add Pre-Run Script" else "Edit Pre-Run Script") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                error?.let {
+                    AssistChip(
+                        onClick = onDismissError,
+                        label = { Text(it) }
+                    )
+                }
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                ExposedDropdownMenuBox(
+                    expanded = typeExpanded,
+                    onExpandedChange = { typeExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = type.name.replace('_', ' '),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Type") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = typeExpanded,
+                        onDismissRequest = { typeExpanded = false }
+                    ) {
+                        PreRunScriptType.entries.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option.name.replace('_', ' ')) },
+                                onClick = {
+                                    type = option
+                                    typeExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                ExposedDropdownMenuBox(
+                    expanded = scopeExpanded,
+                    onExpandedChange = { scopeExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = repositories.find { it.id == repositoryId }?.name ?: "Project",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Scope") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = scopeExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = scopeExpanded,
+                        onDismissRequest = { scopeExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Project") },
+                            onClick = {
+                                repositoryId = null
+                                scopeExpanded = false
+                            }
+                        )
+                        repositories.forEach { repository ->
+                            DropdownMenuItem(
+                                text = { Text(repository.name) },
+                                onClick = {
+                                    repositoryId = repository.id
+                                    scopeExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = executionOrder,
+                    onValueChange = { executionOrder = it.filter(Char::isDigit) },
+                    label = { Text("Execution Order") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                when (type) {
+                    PreRunScriptType.INLINE_COMMAND -> {
+                        OutlinedTextField(
+                            value = inlineScript,
+                            onValueChange = { inlineScript = it },
+                            label = { Text("Command") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3
+                        )
+                    }
+                    PreRunScriptType.SCRIPT_PATH -> {
+                        OutlinedTextField(
+                            value = scriptPath,
+                            onValueChange = { scriptPath = it },
+                            label = { Text("Script Path") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                    PreRunScriptType.NODE_VERSION,
+                    PreRunScriptType.JAVA_VERSION,
+                    PreRunScriptType.PYTHON_VERSION -> {
+                        OutlinedTextField(
+                            value = requiredValue,
+                            onValueChange = { requiredValue = it },
+                            label = { Text("Required Version") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                    PreRunScriptType.ENVIRONMENT_VARIABLE -> {
+                        OutlinedTextField(
+                            value = requiredValue,
+                            onValueChange = { requiredValue = it },
+                            label = { Text("Environment Variable") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm(
+                        name,
+                        type,
+                        repositoryId,
+                        executionOrder.toIntOrNull() ?: 0,
+                        scriptPath,
+                        inlineScript,
+                        requiredValue
+                    )
+                },
+                enabled = !isSaving
+            ) {
+                Text(if (isSaving) "Saving..." else "Save")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isSaving
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -541,4 +851,3 @@ fun RepositoryCard(
         }
     }
 }
-

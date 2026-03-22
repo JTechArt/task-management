@@ -22,6 +22,7 @@ import com.aitask.core.infrastructure.ide.DesktopIDEService
 import com.aitask.core.infrastructure.rules.FileSystemRuleApplicationService
 import com.aitask.core.config.OAuthConfig
 import com.aitask.core.infrastructure.oauth.OAuthServiceImpl
+import com.aitask.core.infrastructure.prerun.LocalPreRunScriptService
 import com.aitask.core.infrastructure.security.AesGcmEncryptionService
 import com.aitask.core.infrastructure.slack.SlackWebhookClient
 import com.aitask.core.infrastructure.workspace.FileSystemWorkspaceService
@@ -49,6 +50,10 @@ object DependencyContainer {
     
     val activityRepository: ActivityRepository by lazy {
         ActivityRepositoryImpl()
+    }
+
+    val preRunScriptRepository: PreRunScriptRepository by lazy {
+        PreRunScriptRepositoryImpl()
     }
 
     val ruleRepository: RuleRepository by lazy {
@@ -129,6 +134,10 @@ object DependencyContainer {
             activityRepository,
             CoroutineScope(Dispatchers.Default)
         )
+    }
+
+    val preRunScriptService by lazy {
+        LocalPreRunScriptService()
     }
 
     // Project Use Cases
@@ -231,6 +240,8 @@ object DependencyContainer {
             taskRepository,
             projectRepository,
             repositoryRepository,
+            preRunScriptRepository,
+            preRunScriptService,
             ideService,
             activityRepository
         )
@@ -320,4 +331,3 @@ object DependencyContainer {
         RestoreFromBackupUseCase(importDataUseCase, activityRepository)
     }
 }
-
