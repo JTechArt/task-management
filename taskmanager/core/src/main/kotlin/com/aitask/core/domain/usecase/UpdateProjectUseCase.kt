@@ -32,6 +32,7 @@ class UpdateProjectUseCase(
                 description = request.description,
                 workspacePath = request.workspacePath,
                 branchTemplate = request.branchTemplate,
+                methodology = request.methodology,
                 retentionPolicy = request.retentionPolicy,
                 tags = request.tags,
                 team = request.team
@@ -47,4 +48,3 @@ class UpdateProjectUseCase(
 
 class ProjectNotFoundException(message: String) : Exception(message)
 class ArchivedProjectException(message: String) : Exception(message)
-

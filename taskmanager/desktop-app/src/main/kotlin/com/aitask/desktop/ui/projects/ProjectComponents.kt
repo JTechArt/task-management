@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.EnvironmentCheckTemplateId
 import com.aitask.core.domain.model.EnvironmentCheckTemplateRegistry
+import com.aitask.core.domain.model.Methodology
 import com.aitask.core.domain.model.PreRunScript
 import com.aitask.core.domain.model.PreRunScriptType
 import com.aitask.core.domain.model.Project
@@ -254,6 +255,8 @@ fun ProjectDetailView(
     repositories: List<Repository>,
     onArchive: (UUID) -> Unit,
     onUnarchive: ((UUID) -> Unit)? = null,
+    onSaveMethodology: (UUID, Methodology) -> Unit = { _, _ -> },
+    hasAttachedRules: Boolean = false,
     onAddRepository: () -> Unit = {},
     onEditRepository: (Repository) -> Unit = {},
     onDeleteRepository: (UUID) -> Unit = {},
@@ -272,7 +275,11 @@ fun ProjectDetailView(
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember(selectedDetailTab) { mutableStateOf(selectedDetailTab) }
+    var selectedMethodology by remember(project.methodology) { mutableStateOf(project.methodology) }
+    var methodologyExpanded by remember { mutableStateOf(false) }
+    var showMethodologyConfirmation by remember { mutableStateOf(false) }
     LaunchedEffect(selectedDetailTab) { selectedTab = selectedDetailTab }
+    LaunchedEffect(project.methodology) { selectedMethodology = project.methodology }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -313,6 +320,56 @@ fun ProjectDetailView(
         }
         DetailRow("Workspace Path", project.workspacePath)
         DetailRow("Branch Template", project.branchTemplate)
+        DetailRow("Methodology", project.methodology.name)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = methodologyExpanded,
+                onExpandedChange = { methodologyExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = selectedMethodology.name,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Project Methodology") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = methodologyExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    supportingText = { Text("Tasks inherit this unless they override it") }
+                )
+                ExposedDropdownMenu(
+                    expanded = methodologyExpanded,
+                    onDismissRequest = { methodologyExpanded = false }
+                ) {
+                    Methodology.values().forEach { methodology ->
+                        DropdownMenuItem(
+                            text = { Text(methodology.name) },
+                            onClick = {
+                                selectedMethodology = methodology
+                                methodologyExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            Button(
+                onClick = {
+                    if (hasAttachedRules && selectedMethodology != project.methodology) {
+                        showMethodologyConfirmation = true
+                    } else {
+                        onSaveMethodology(project.id, selectedMethodology)
+                    }
+                },
+                enabled = selectedMethodology != project.methodology
+            ) {
+                Text("Save")
+            }
+        }
         if (project.tags.isNotEmpty()) {
             DetailRow("Tags", project.tags.joinToString(", "))
         }
@@ -458,6 +515,30 @@ fun ProjectDetailView(
                 )
             }
         }
+    }
+    if (showMethodologyConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showMethodologyConfirmation = false },
+            title = { Text("Change methodology?") },
+            text = {
+                Text("This project already has attached rule sets. Changing methodology will not delete them, but BMAD-specific behavior may change.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showMethodologyConfirmation = false
+                        onSaveMethodology(project.id, selectedMethodology)
+                    }
+                ) {
+                    Text("Change Methodology")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMethodologyConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

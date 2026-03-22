@@ -193,6 +193,10 @@ fun ProjectsView(
                                     repositories = uiState.selectedProjectRepositories,
                                     onArchive = { viewModel.archiveProject(it) },
                                     onUnarchive = { viewModel.unarchiveProject(it) },
+                                    onSaveMethodology = { projectId, methodology ->
+                                        viewModel.updateProjectMethodology(projectId, methodology)
+                                    },
+                                    hasAttachedRules = uiState.selectedProjectHasAttachedRules,
                                     onAddRepository = { viewModel.showAddRepositoryDialog() },
                                     onEditRepository = { viewModel.showEditRepositoryDialog(it) },
                                     onDeleteRepository = { viewModel.deleteRepository(it) },
@@ -243,10 +247,10 @@ fun ProjectsView(
     if (uiState.showCreateDialog) {
         CreateProjectDialog(
             onDismiss = { viewModel.hideCreateDialog() },
-            onConfirm = { name, description, workspacePath, branchTemplate, retentionPolicy,
+            onConfirm = { name, description, workspacePath, branchTemplate, methodology, retentionPolicy,
                           repoName, cloneUrl, provider, authType, ides ->
                 viewModel.createProject(
-                    name, description, workspacePath, branchTemplate, retentionPolicy,
+                    name, description, workspacePath, branchTemplate, methodology, retentionPolicy,
                     repoName, cloneUrl, provider, authType, ides
                 )
             },

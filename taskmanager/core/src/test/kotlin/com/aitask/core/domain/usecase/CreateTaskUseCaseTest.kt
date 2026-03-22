@@ -44,7 +44,8 @@ class CreateTaskUseCaseTest {
             title = "Implement feature",
             description = "Add new feature",
             taskType = TaskType.FEATURE,
-            projectId = projectId
+            projectId = projectId,
+            methodologyOverride = Methodology.BMAD
         )
         
         val project = Project(
@@ -53,6 +54,7 @@ class CreateTaskUseCaseTest {
             description = null,
             workspacePath = "/workspace",
             branchTemplate = "task-{taskId}",
+            methodology = Methodology.NONE,
             createdAt = Instant.now(),
             updatedAt = Instant.now()
         )
@@ -71,6 +73,7 @@ class CreateTaskUseCaseTest {
         assertEquals(TaskType.FEATURE, task.taskType)
         assertEquals(TaskStatus.PENDING, task.status)
         assertEquals(projectId, task.projectId)
+        assertEquals(Methodology.BMAD, task.methodologyOverride)
         
         coVerify { taskRepository.create(any()) }
     }
@@ -135,6 +138,7 @@ class CreateTaskUseCaseTest {
             description = null,
             workspacePath = "/workspace",
             branchTemplate = "task-{taskId}",
+            methodology = Methodology.NONE,
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
             archivedAt = Instant.now()
@@ -151,4 +155,3 @@ class CreateTaskUseCaseTest {
         assertTrue(result.exceptionOrNull() is ArchivedProjectException)
     }
 }
-

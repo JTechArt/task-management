@@ -26,6 +26,7 @@ data class Task(
     val taskType: TaskType,
     val status: TaskStatus,
     val projectId: UUID,
+    val methodologyOverride: Methodology? = null,
     val workspacePath: String?,
     val workspaceCleanedAt: Instant? = null,
     val branchName: String?,
@@ -41,6 +42,9 @@ data class Task(
     
     val isActive: Boolean
         get() = status == TaskStatus.PENDING || status == TaskStatus.IN_PROGRESS
+
+    fun effectiveMethodology(projectMethodology: Methodology): Methodology =
+        methodologyOverride ?: projectMethodology
     
     fun updateStatus(newStatus: TaskStatus): Task {
         val now = Instant.now()
@@ -56,6 +60,7 @@ data class Task(
         description: String? = null,
         taskType: TaskType? = null,
         status: TaskStatus? = null,
+        methodologyOverride: Methodology? = this.methodologyOverride,
         workspacePath: String? = null,
         branchName: String? = null
     ): Task {
@@ -66,6 +71,7 @@ data class Task(
             description = description ?: this.description,
             taskType = taskType ?: this.taskType,
             status = newStatus,
+            methodologyOverride = methodologyOverride,
             workspacePath = workspacePath ?: this.workspacePath,
             branchName = branchName ?: this.branchName,
             updatedAt = now,
@@ -83,6 +89,7 @@ data class CreateTaskRequest(
     val description: String? = null,
     val taskType: TaskType,
     val projectId: UUID,
+    val methodologyOverride: Methodology? = null,
     val workspacePath: String? = null,
     val branchName: String? = null
 )
@@ -92,7 +99,8 @@ data class UpdateTaskRequest(
     val description: String? = null,
     val taskType: TaskType? = null,
     val status: TaskStatus? = null,
+    val methodologyOverride: Methodology? = null,
+    val clearMethodologyOverride: Boolean = false,
     val workspacePath: String? = null,
     val branchName: String? = null
 )
-

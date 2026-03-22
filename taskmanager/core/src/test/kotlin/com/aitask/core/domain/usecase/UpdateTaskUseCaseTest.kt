@@ -1,6 +1,7 @@
 package com.aitask.core.domain.usecase
 
 import com.aitask.core.domain.model.ActivityType
+import com.aitask.core.domain.model.Methodology
 import com.aitask.core.domain.model.Task
 import com.aitask.core.domain.model.TaskStatus
 import com.aitask.core.domain.model.TaskType
@@ -38,6 +39,7 @@ class UpdateTaskUseCaseTest {
         taskType = TaskType.FEATURE,
         status = status,
         projectId = UUID.randomUUID(),
+        methodologyOverride = null,
         workspacePath = null,
         branchName = null,
         createdAt = Instant.now(),
@@ -149,5 +151,19 @@ class UpdateTaskUseCaseTest {
         assertEquals(TaskStatus.COMPLETED, updatedTask.status)
         assertNotNull(updatedTask.completedAt)
     }
-}
 
+    @Test
+    fun `should clear methodology override when requested`() = runTest {
+        val taskId = UUID.randomUUID()
+        val existingTask = createTask(id = taskId).copy(methodologyOverride = Methodology.BMAD)
+        val request = UpdateTaskRequest(clearMethodologyOverride = true)
+
+        coEvery { taskRepository.findById(taskId) } returns existingTask
+        coEvery { taskRepository.update(any()) } answers { firstArg() }
+
+        val result = useCase(taskId, request)
+
+        assertTrue(result.isSuccess)
+        assertNull(result.getOrThrow().methodologyOverride)
+    }
+}

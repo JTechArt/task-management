@@ -46,6 +46,7 @@ class CreateTaskUseCase(
                 taskType = request.taskType,
                 status = TaskStatus.PENDING,
                 projectId = request.projectId,
+                methodologyOverride = request.methodologyOverride,
                 workspacePath = request.workspacePath,
                 branchName = request.branchName,
                 createdAt = now,
@@ -87,4 +88,3 @@ class CreateTaskUseCase(
         }
     }
 }
-

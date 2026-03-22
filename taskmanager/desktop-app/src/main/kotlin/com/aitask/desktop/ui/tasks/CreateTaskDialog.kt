@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.aitask.core.domain.model.Methodology
 import com.aitask.core.domain.model.Project
 import com.aitask.core.domain.model.TaskType
 import java.util.UUID
@@ -20,7 +21,8 @@ fun CreateTaskDialog(
         title: String,
         description: String?,
         taskType: TaskType,
-        projectId: UUID
+        projectId: UUID,
+        methodologyOverride: Methodology?
     ) -> Unit,
     isSaving: Boolean,
     modifier: Modifier = Modifier
@@ -28,6 +30,7 @@ fun CreateTaskDialog(
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var taskType by remember { mutableStateOf(TaskType.FEATURE) }
+    var methodologyOverride by remember { mutableStateOf<Methodology?>(null) }
     var selectedProject by remember { mutableStateOf<Project?>(projects.firstOrNull()) }
     var showDiscardConfirm by remember { mutableStateOf(false) }
     val hasUnsavedChanges = title.isNotBlank() || description.isNotBlank() ||
@@ -143,6 +146,46 @@ fun CreateTaskDialog(
                     }
                 }
 
+                var methodologyExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = methodologyExpanded,
+                    onExpandedChange = { if (!isSaving) methodologyExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = methodologyOverride?.name ?: "Project Default",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Methodology Override") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = methodologyExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        enabled = !isSaving,
+                        supportingText = { Text("Leave unset to inherit the project methodology") }
+                    )
+                    ExposedDropdownMenu(
+                        expanded = methodologyExpanded,
+                        onDismissRequest = { methodologyExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Project Default") },
+                            onClick = {
+                                methodologyOverride = null
+                                methodologyExpanded = false
+                            }
+                        )
+                        Methodology.values().forEach { methodology ->
+                            DropdownMenuItem(
+                                text = { Text(methodology.name) },
+                                onClick = {
+                                    methodologyOverride = methodology
+                                    methodologyExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Divider()
 
                 // Action buttons
@@ -167,7 +210,8 @@ fun CreateTaskDialog(
                                     title.trim(),
                                     description.trim().takeIf { it.isNotEmpty() },
                                     taskType,
-                                    project.id
+                                    project.id,
+                                    methodologyOverride
                                 )
                             }
                         },
@@ -211,4 +255,3 @@ fun CreateTaskDialog(
         )
     }
 }
-

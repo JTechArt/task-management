@@ -13,6 +13,7 @@ import androidx.compose.ui.window.Dialog
 import com.aitask.core.domain.model.AuthType
 import com.aitask.core.domain.model.GitProvider
 import com.aitask.core.domain.model.IDEType
+import com.aitask.core.domain.model.Methodology
 import com.aitask.core.domain.service.RetentionPolicy
 
 @Composable
@@ -23,6 +24,7 @@ fun CreateProjectDialog(
         description: String?,
         workspacePath: String,
         branchTemplate: String,
+        methodology: Methodology,
         retentionPolicy: RetentionPolicy,
         repositoryName: String,
         cloneUrl: String,
@@ -43,6 +45,7 @@ fun CreateProjectDialog(
     var workspacePath by remember { mutableStateOf("") }
     var workspacePathManuallyEdited by remember { mutableStateOf(false) }
     var branchTemplate by remember { mutableStateOf("task-{taskId}") }
+    var methodology by remember { mutableStateOf(Methodology.NONE) }
     var cloneUrl by remember { mutableStateOf("") }
     var retentionPolicy by remember { mutableStateOf(RetentionPolicy.KEEP_ALL) }
     var provider by remember { mutableStateOf(GitProvider.GITHUB) }
@@ -184,6 +187,39 @@ fun CreateProjectDialog(
                     singleLine = true,
                     supportingText = { Text("Use {taskId} as placeholder") }
                 )
+
+                var methodologyExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = methodologyExpanded,
+                    onExpandedChange = { if (!isSaving) methodologyExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = methodology.name,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Methodology") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = methodologyExpanded) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        enabled = !isSaving,
+                        supportingText = { Text("Select BMAD to enable methodology-specific workflow behavior") }
+                    )
+                    ExposedDropdownMenu(
+                        expanded = methodologyExpanded,
+                        onDismissRequest = { methodologyExpanded = false }
+                    ) {
+                        Methodology.values().forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option.name) },
+                                onClick = {
+                                    methodology = option
+                                    methodologyExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
 
                 var retentionExpanded by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
@@ -364,6 +400,7 @@ fun CreateProjectDialog(
                                 description.trim().takeIf { it.isNotEmpty() },
                                 workspacePath.trim(),
                                 branchTemplate.trim(),
+                                methodology,
                                 retentionPolicy,
                                 repositoryName.trim(),
                                 cloneUrl.trim(),

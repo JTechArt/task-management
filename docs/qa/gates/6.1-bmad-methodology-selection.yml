@@ -1,0 +1,37 @@
+schema: 1
+story: "6.1"
+story_title: "BMAD as Selectable Methodology"
+gate: PASS
+status_reason: "All acceptance criteria met. Methodology enum (NONE, BMAD, CUSTOM) persisted at project level with optional task override. UI dropdowns in create/edit flows and detail views. Confirmation shown when changing project methodology with attached rule sets."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-23T12:00:00Z"
+top_issues: []
+waiver: { active: false }
+
+evidence:
+  tests_reviewed: 5
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Enum-based methodology; no user input injection. Migration uses VARCHAR with safe defaults."
+  performance:
+    status: PASS
+    notes: "Standard CRUD; no performance concerns."
+  reliability:
+    status: PASS
+    notes: "Migration V11 additive; default NONE for projects, nullable override for tasks."
+  maintainability:
+    status: PASS
+    notes: "Methodology in domain model; tests for create/update/clear override."
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider integration test for methodology change with rule sets confirmation flow"
+      refs: ["taskmanager/desktop-app/"]
+    - action: "Add E2E or UI test for methodology dropdown visibility in project/task detail"
+      refs: ["taskmanager/desktop-app/"]

@@ -24,6 +24,7 @@ class ProjectsViewModel(
     private val updateRepositoryUseCase: UpdateRepositoryUseCase = DependencyContainer.updateRepositoryUseCase,
     private val deleteRepositoryUseCase: DeleteRepositoryUseCase = DependencyContainer.deleteRepositoryUseCase,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
+    private val ruleRepository: com.aitask.core.domain.repository.RuleRepository = DependencyContainer.ruleRepository,
     private val preRunScriptRepository: com.aitask.core.domain.repository.PreRunScriptRepository = DependencyContainer.preRunScriptRepository,
     private val getSlackChannelsUseCase: GetSlackChannelsUseCase = DependencyContainer.getSlackChannelsUseCase,
     private val createSlackChannelUseCase: CreateSlackChannelUseCase = DependencyContainer.createSlackChannelUseCase,
@@ -65,6 +66,7 @@ class ProjectsViewModel(
         description: String?,
         workspacePath: String,
         branchTemplate: String,
+        methodology: Methodology,
         retentionPolicy: com.aitask.core.domain.service.RetentionPolicy,
         repositoryName: String,
         cloneUrl: String,
@@ -79,6 +81,7 @@ class ProjectsViewModel(
                 description = description,
                 workspacePath = workspacePath,
                 branchTemplate = branchTemplate,
+                methodology = methodology,
                 retentionPolicy = retentionPolicy
             )
             
@@ -114,10 +117,12 @@ class ProjectsViewModel(
         uiState = uiState.copy(selectedProject = project, selectedDetailTab = com.aitask.desktop.ui.projects.ProjectDetailTab.REPOSITORIES)
         if (project != null) {
             loadProjectRepositories(project.id)
+            loadProjectRules(project.id)
             loadPreRunScripts(project.id)
             loadSlackChannels(project.id)
         } else {
             uiState = uiState.copy(
+                selectedProjectHasAttachedRules = false,
                 selectedProjectSlackChannels = emptyList(),
                 selectedProjectPreRunScripts = emptyList()
             )
@@ -142,6 +147,18 @@ class ProjectsViewModel(
                 uiState = uiState.copy(selectedProjectSlackChannels = channels)
             } catch (e: Exception) {
                 uiState = uiState.copy(selectedProjectSlackChannels = emptyList())
+            }
+        }
+    }
+
+    private fun loadProjectRules(projectId: java.util.UUID) {
+        scope.launch {
+            try {
+                uiState = uiState.copy(
+                    selectedProjectHasAttachedRules = ruleRepository.findByProject(projectId).isNotEmpty()
+                )
+            } catch (e: Exception) {
+                uiState = uiState.copy(selectedProjectHasAttachedRules = false)
             }
         }
     }
@@ -208,6 +225,29 @@ class ProjectsViewModel(
     
     fun clearError() {
         uiState = uiState.copy(error = null)
+    }
+
+    fun updateProjectMethodology(projectId: java.util.UUID, methodology: Methodology) {
+        uiState = uiState.copy(isSaving = true, error = null)
+        scope.launch {
+            val result = updateProjectUseCase(projectId, UpdateProjectRequest(methodology = methodology))
+            result.fold(
+                onSuccess = { updatedProject ->
+                    uiState = uiState.copy(
+                        isSaving = false,
+                        selectedProject = updatedProject
+                    )
+                    loadProjects()
+                    loadProjectRules(projectId)
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isSaving = false,
+                        error = error.message ?: "Failed to update project methodology"
+                    )
+                }
+            )
+        }
     }
 
     fun setSearchQuery(query: String) {
@@ -545,6 +585,7 @@ data class ProjectsUiState(
     val selectedProjectRepositories: List<Repository> = emptyList(),
     val selectedProjectPreRunScripts: List<PreRunScript> = emptyList(),
     val selectedProjectSlackChannels: List<SlackChannelConfig> = emptyList(),
+    val selectedProjectHasAttachedRules: Boolean = false,
     val selectedDetailTab: com.aitask.desktop.ui.projects.ProjectDetailTab = com.aitask.desktop.ui.projects.ProjectDetailTab.REPOSITORIES,
     val searchQuery: String = "",
     val selectedTagFilter: String? = null,

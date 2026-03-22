@@ -290,8 +290,10 @@ fun TaskListItem(
 @Composable
 fun TaskDetailView(
     task: Task,
+    projectMethodology: Methodology,
     onDelete: (UUID) -> Unit,
     onStatusChange: (UUID, TaskStatus) -> Unit,
+    onSaveMethodologyOverride: (UUID, Methodology?) -> Unit = { _, _ -> },
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
     onCleanupWorkspace: ((Task) -> Unit)? = null,
@@ -303,6 +305,11 @@ fun TaskDetailView(
     isCleaningUpWorkspace: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    var methodologyExpanded by remember { mutableStateOf(false) }
+    var selectedMethodologyOverride by remember(task.methodologyOverride) { mutableStateOf(task.methodologyOverride) }
+    LaunchedEffect(task.methodologyOverride) {
+        selectedMethodologyOverride = task.methodologyOverride
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -348,6 +355,58 @@ fun TaskDetailView(
         // Task details
         DetailRow("Created", formatDate(task.createdAt))
         DetailRow("Updated", formatDate(task.updatedAt))
+        DetailRow("Effective Methodology", task.effectiveMethodology(projectMethodology).name)
+        DetailRow("Methodology Override", task.methodologyOverride?.name ?: "Project Default")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = methodologyExpanded,
+                onExpandedChange = { methodologyExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = selectedMethodologyOverride?.name ?: "Project Default",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Task Methodology") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = methodologyExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    supportingText = { Text("Effective: ${(selectedMethodologyOverride ?: projectMethodology).name}") }
+                )
+                ExposedDropdownMenu(
+                    expanded = methodologyExpanded,
+                    onDismissRequest = { methodologyExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Project Default") },
+                        onClick = {
+                            selectedMethodologyOverride = null
+                            methodologyExpanded = false
+                        }
+                    )
+                    Methodology.values().forEach { methodology ->
+                        DropdownMenuItem(
+                            text = { Text(methodology.name) },
+                            onClick = {
+                                selectedMethodologyOverride = methodology
+                                methodologyExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            Button(
+                onClick = { onSaveMethodologyOverride(task.id, selectedMethodologyOverride) },
+                enabled = selectedMethodologyOverride != task.methodologyOverride
+            ) {
+                Text("Save")
+            }
+        }
 
         task.completedAt?.let { completed ->
             DetailRow("Completed", formatDate(completed))
@@ -665,4 +724,3 @@ private fun formatDate(instant: java.time.Instant): String {
     val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")
     return formatter.format(instant.atZone(java.time.ZoneId.systemDefault()))
 }
-

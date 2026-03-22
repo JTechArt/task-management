@@ -11,6 +11,7 @@ object Tasks : UUIDTable("tasks") {
     val taskType = varchar("task_type", 50)
     val status = varchar("status", 50).default("PENDING")
     val projectId = reference("project_id", Projects, onDelete = ReferenceOption.CASCADE)
+    val methodologyOverride = varchar("methodology_override", 50).nullable()
     val workspacePath = varchar("workspace_path", 1000).nullable()
     val branchName = varchar("branch_name", 200).nullable()
     val workspaceCleanedAt = timestamp("workspace_cleaned_at").nullable()
@@ -18,4 +19,3 @@ object Tasks : UUIDTable("tasks") {
     val updatedAt = timestamp("updated_at").defaultExpression(CurrentTimestamp)
     val completedAt = timestamp("completed_at").nullable()
 }
-

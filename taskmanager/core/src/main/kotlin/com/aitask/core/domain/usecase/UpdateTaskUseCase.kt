@@ -26,6 +26,7 @@ class UpdateTaskUseCase(
                 description = request.description,
                 taskType = request.taskType,
                 status = request.status,
+                methodologyOverride = if (request.clearMethodologyOverride) null else request.methodologyOverride ?: existing.methodologyOverride,
                 workspacePath = request.workspacePath,
                 branchName = request.branchName
             )
@@ -58,4 +59,3 @@ class UpdateTaskUseCase(
 
 class TaskNotFoundException(message: String) : Exception(message)
 class ArchivedTaskException(message: String) : Exception(message)
-

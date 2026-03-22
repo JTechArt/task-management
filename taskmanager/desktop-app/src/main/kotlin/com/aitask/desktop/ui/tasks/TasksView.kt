@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aitask.core.domain.model.Methodology
 import com.aitask.core.domain.model.Task
 import com.aitask.core.domain.model.TaskStatus
 import com.aitask.desktop.ui.viewmodel.TasksViewModel
@@ -243,9 +244,13 @@ fun TasksView(
                     ) {
                         TaskDetailView(
                             task = uiState.selectedTask,
+                            projectMethodology = uiState.projects.find { it.id == uiState.selectedTask.projectId }?.methodology ?: Methodology.NONE,
                             onDelete = { viewModel.deleteTask(it) },
                             onStatusChange = { taskId, status ->
                                 viewModel.updateTaskStatus(taskId, status)
+                            },
+                            onSaveMethodologyOverride = { taskId, methodologyOverride ->
+                                viewModel.updateTaskMethodology(taskId, methodologyOverride)
                             },
                             onGenerateWorkspace = { taskId ->
                                 viewModel.showRepositorySelectionDialog(taskId)
@@ -272,8 +277,8 @@ fun TasksView(
         CreateTaskDialog(
             projects = uiState.projects,
             onDismiss = { viewModel.hideCreateDialog() },
-            onConfirm = { title, description, taskType, projectId ->
-                viewModel.createTask(title, description, taskType, projectId)
+            onConfirm = { title, description, taskType, projectId, methodologyOverride ->
+                viewModel.createTask(title, description, taskType, projectId, methodologyOverride)
             },
             isSaving = uiState.isSaving
         )
@@ -308,4 +313,3 @@ fun TasksView(
         )
     }
 }
-

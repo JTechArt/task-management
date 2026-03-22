@@ -80,7 +80,8 @@ class TasksViewModel(
         title: String,
         description: String?,
         taskType: TaskType,
-        projectId: UUID
+        projectId: UUID,
+        methodologyOverride: Methodology?
     ) {
         uiState = uiState.copy(isSaving = true, error = null)
         scope.launch {
@@ -88,7 +89,8 @@ class TasksViewModel(
                 title = title,
                 description = description,
                 taskType = taskType,
-                projectId = projectId
+                projectId = projectId,
+                methodologyOverride = methodologyOverride
             )
 
             val result = createTaskUseCase(request)
@@ -136,6 +138,29 @@ class TasksViewModel(
                 onFailure = { error ->
                     uiState = uiState.copy(
                         error = error.message ?: "Failed to update task"
+                    )
+                }
+            )
+        }
+    }
+
+    fun updateTaskMethodology(taskId: UUID, methodologyOverride: Methodology?) {
+        scope.launch {
+            val result = updateTaskUseCase(
+                taskId,
+                UpdateTaskRequest(
+                    methodologyOverride = methodologyOverride,
+                    clearMethodologyOverride = methodologyOverride == null
+                )
+            )
+            result.fold(
+                onSuccess = { updatedTask ->
+                    uiState = uiState.copy(selectedTask = updatedTask)
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to update task methodology"
                     )
                 }
             )
