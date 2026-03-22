@@ -1,0 +1,45 @@
+schema: 1
+story: "4.5"
+story_title: "Cross-Platform Packaging and Installer Readiness"
+gate: PASS
+status_reason: "All ACs met. Compose Desktop native distributions target dmg, msi, deb, rpm with sanitized package versioning. README documents packaging commands, output paths, and runtime dependencies (Java bundled, PostgreSQL/Git external). No secrets bundled—configuration read from environment variables at runtime."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-17T23:00:00Z"
+waiver: { active: false }
+top_issues: []
+
+evidence:
+  tests_reviewed: 3
+  tests:
+    - IntegrationsViewModelTest: loadHealth, refreshHealth, error handling; now isolated from real OAuth via mocks
+    - EnvConfigLoaderTest: loadAppConfig defaults and env overrides
+    - ApplyRulesToWorkspaceUseCase: regression fix for rule/config validation alignment
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "localDevelopmentEnvironment used only for runDesktopApp/debugDesktopApp; packaging uses packageDistributionForCurrentOS with no env baked in. README states secrets remain runtime-provided."
+  performance:
+    status: PASS
+    notes: "Standard Compose Desktop packaging; startup goals referenced in story."
+  reliability:
+    status: PASS
+    notes: "Repeatable build scripts and documented output paths."
+  maintainability:
+    status: PASS
+    notes: "build-jpackage.sh, README Packaging section, and Gradle task clearly documented."
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider adding packaging smoke test (launch packaged app headless) if CI supports it"
+      refs: ["taskmanager/scripts/build-jpackage.sh"]

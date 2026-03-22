@@ -11,6 +11,7 @@ interface ProjectRepository {
     suspend fun create(project: Project): Project
     suspend fun update(project: Project): Project
     suspend fun archive(id: UUID): Project?
+    suspend fun unarchive(id: UUID): Project?
     suspend fun delete(id: UUID)
 }
 

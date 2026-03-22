@@ -50,13 +50,26 @@ Notes:
 
 ## 3. Run from Cursor
 
-Open the repo root in Cursor, then use one of these:
+**Important:** Open the workspace file `taskmanager.code-workspace` (File → Open Workspace from File). The project includes `.vscode/tasks.json` and `.vscode/launch.json` so Run/Debug configs appear.
 
-- `Terminal -> Run Task -> TaskManager: Run Local Desktop App`
-- `F5 -> TaskManager: Debug Local App`
-- `Run and Debug -> TaskManager: Run App Without DB Bootstrap`
+**If the Run button is missing:**
 
-The Cursor tasks call repo-local scripts instead of hardcoded absolute JDK paths.
+1. Open `taskmanager.code-workspace` (File → Open Workspace from File) — do not open the folder directly.
+2. Reload the window: `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac) → "Developer: Reload Window".
+3. Install recommended extensions when prompted:
+   - Java Extension Pack (redhat.java)
+   - Gradle for Java (vscjava.vscode-gradle)
+   - Kotlin Language (fwcd.kotlin or mathiasfrohlich.Kotlin)
+4. Wait for Gradle project import to complete (bottom status bar will show "Gradle: Importing...")
+5. Run a task: `Ctrl+Shift+P` → "Tasks: Run Task" → choose one of the TaskManager tasks.
+
+**Ways to run:**
+
+- **Run button** (top-right): Select "Gradle: Run Desktop App" from the Run dropdown, then click the green play button.
+- **Terminal → Run Task**: Choose from `TaskManager: Run Desktop App`, `Gradle: Run Desktop App With DB`, `Gradle: Run Desktop App Without DB`, or `Gradle: Debug Desktop App`.
+- **Run and Debug** (F5): Choose `Gradle: Run Desktop App` or `Gradle: Debug Desktop App`.
+
+The default task uses `scripts/run-local.sh`, which starts Postgres if needed and runs the app with Java 21.
 
 ## 4. Manual commands
 

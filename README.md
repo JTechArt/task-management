@@ -54,13 +54,18 @@ To verify Java 21 and run a clean build:
 
 ## Cursor / VS Code launch configs
 
-The workspace launch configs are set up for the common cases:
+**To get Run/Debug configurations to appear:** Open the workspace file `taskmanager.code-workspace` (File → Open Workspace from File) instead of opening the folder directly. This lets the Java/Gradle extensions find the project.
 
-- `TaskManager: Run Local App`
-- `TaskManager: Debug Local App`
-- `TaskManager: Run App Without DB Bootstrap`
+Launch configs in `.vscode/launch.json`:
 
-Use `Run Local App` for most work. It is the safest default.
+- **TaskManager: Debug Desktop App** – Rebuilds, starts Postgres, then launches with debugger (DB enabled)
+- **TaskManager: Debug Desktop App (No DB)** – Rebuilds, then launches without database
+- **TaskManager: Attach Debugger (port 5005)** – Attach to an app started via `./taskmanager/scripts/debug-local.sh`
+
+Tasks (Terminal → Run Task):
+
+- **TaskManager: Run Desktop App** – Run without debugger
+- **TaskManager: Run App Without DB Bootstrap** – Run without database
 
 ## Manual Gradle commands
 
@@ -109,6 +114,23 @@ docker compose down
 
 The local Docker mapping is `5433 -> 5432`.
 
+## Troubleshooting
+
+### Projects disappeared from UI
+
+If projects show as archived in the database but you did not archive them:
+
+1. **In the app**: Go to Projects. If the list is empty, click **Show archived projects**. Select each project and click **Restore**.
+2. **Via SQL** (emergency recovery): From project root, run `psql -h localhost -p 5433 -U taskmanager -d taskmanager -f scripts/unarchive-all-projects.sql` to unarchive all projects.
+
+### Activity log empty
+
+If the Activity tab shows no entries:
+
+1. Ensure `BOOTSTRAP_DATABASE=true` (default) so migrations run and the `activity_log` table exists.
+2. Verify the table: From project root, run `psql -h localhost -p 5433 -U taskmanager -d taskmanager -f scripts/verify-activity-log.sql`
+3. Create a task or perform another action; activity should be logged. Check `taskmanager/logs/taskmanager-console.log` for any database errors.
+
 ## Logs
 
 Local run and debug scripts append console output to:
@@ -118,6 +140,10 @@ taskmanager/logs/taskmanager-console.log
 ```
 
 ## Packaging
+
+The application is packaged into installable distributions for Windows (MSI), macOS (DMG), and Linux (.deb, .rpm) using Compose Desktop and jlink. Package version comes from the project version (`gradle.properties` / root `version`).
+
+### Build commands
 
 Build the desktop artifact:
 
@@ -130,4 +156,32 @@ Build the native package for the current OS:
 
 ```bash
 ./taskmanager/scripts/build-jpackage.sh
+```
+
+Or directly via Gradle:
+
+```bash
+./gradlew :desktop-app:packageDistributionForCurrentOS
+```
+
+Outputs are written to `taskmanager/desktop-app/build/compose/binaries/` (e.g. `main/dmg`, `main/msi`, `main/deb`, `main/rpm`).
+
+### Runtime dependencies (included or required)
+
+| Dependency | Included in package? | Notes |
+| --- | --- | --- |
+| Java Runtime | Yes | Bundled via jlink; no separate JDK required |
+| PostgreSQL | No | User must run PostgreSQL (local or Docker). See [Database](#database). |
+| Git | No | Required for workspace generation; must be installed on the system |
+
+Configuration (DB connection, OAuth, etc.) is read from environment variables at runtime. No secrets or credentials are bundled in the packaged output.
+
+### Validation
+
+After building, run the packaged app to confirm startup:
+
+```bash
+# From the built image (path varies by format)
+taskmanager/desktop-app/build/compose/binaries/main/dmg/TaskManager.app/Contents/MacOS/TaskManager  # macOS
+# Or install the .dmg/.msi/.deb/.rpm and launch from the OS.
 ```

@@ -1,8 +1,10 @@
 package com.aitask.core.domain.usecase
 
+import com.aitask.core.domain.model.ActivityType
 import com.aitask.core.domain.model.Task
 import com.aitask.core.domain.model.TaskStatus
 import com.aitask.core.domain.model.TaskType
+import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.TaskRepository
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
@@ -14,12 +16,15 @@ import java.util.UUID
 
 class DeleteTaskUseCaseTest {
     private lateinit var taskRepository: TaskRepository
+    private lateinit var activityRepository: ActivityRepository
     private lateinit var useCase: DeleteTaskUseCase
     
     @BeforeEach
     fun setup() {
         taskRepository = mockk()
-        useCase = DeleteTaskUseCase(taskRepository)
+        activityRepository = mockk(relaxed = true)
+        coEvery { activityRepository.create(any()) } answers { firstArg() }
+        useCase = DeleteTaskUseCase(taskRepository, activityRepository)
     }
     
     private fun createTask(id: UUID = UUID.randomUUID()) = Task(
@@ -41,17 +46,14 @@ class DeleteTaskUseCaseTest {
         // Given
         val taskId = UUID.randomUUID()
         val task = createTask(id = taskId)
-        
         coEvery { taskRepository.findById(taskId) } returns task
         coEvery { taskRepository.delete(taskId) } just Runs
-        
         // When
         val result = useCase(taskId)
-        
         // Then
         assertTrue(result.isSuccess)
-        
         coVerify { taskRepository.findById(taskId) }
+        coVerify { activityRepository.create(match { it.type == ActivityType.TASK_DELETED }) }
         coVerify { taskRepository.delete(taskId) }
     }
     

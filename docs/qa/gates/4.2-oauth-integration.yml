@@ -1,0 +1,46 @@
+schema: 1
+story: "4.2"
+story_title: "OAuth-Based External Integration Access"
+gate: PASS
+status_reason: "All previously identified issues resolved. OAuth code compiles (submitForm→FormDataContent, OAuthConnections insert fixed). Task 5 complete: OAuthServiceImplTest (8 tests) and AesGcmEncryptionServiceTest (9 tests) added. Duplicate OAuthStatusCard removed. Project build blocked by Story 4.1 SlackChannelRepositoryImpl errors (unrelated)."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-17T14:00:00Z"
+waiver: { active: false }
+top_issues: []
+
+evidence:
+  tests_reviewed: 17
+  tests:
+    - OAuthServiceImplTest: buildAuthorizationUrl (config validation, encryption check, success), handleCallback (invalid state, provider mismatch), validateConnection (expired, no token), unsupported provider
+    - AesGcmEncryptionServiceTest: isAvailable (null, invalid length, non-hex, valid), encrypt/decrypt roundtrip, IV randomness, failure cases
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "AES-256-GCM, state validation (CSRF), env-based secrets. Unit tests cover encryption and OAuth flow. Port 38473/redirect URI doc'd."
+  performance:
+    status: PASS
+    notes: "Coroutine-based; callback server lightweight"
+  reliability:
+    status: PASS
+    notes: "Result-based error handling; state validation"
+  maintainability:
+    status: PASS
+    notes: "Unit tests for OAuthServiceImpl and AesGcmEncryptionService; single OAuthStatusCard"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Parse port from OAuthConfig.redirectUri if AITASK_OAUTH_REDIRECT_URI customized (future)"
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Parse port from OAuthConfig.redirectUri for callback server when redirect URI customized"
+      refs:
+        - taskmanager/desktop-app/src/main/kotlin/com/aitask/desktop/ui/viewmodel/IntegrationsViewModel.kt

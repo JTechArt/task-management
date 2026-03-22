@@ -1,0 +1,42 @@
+schema: 1
+story: "4.4"
+story_title: "Backup and Restore for Local Recovery"
+gate: PASS
+status_reason: "All ACs met. CreateBackupUseCase exports via ExportDataUseCase, writes to file, records BACKUP_CREATED. RestoreFromBackupUseCase validates integrity (JSON + schema), applies via ImportDataUseCase, records RESTORE_COMPLETED. SettingsView provides guided flow with confirmation dialog warning about merge/overwrite. Unit tests pass for both use cases."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-17T18:00:00Z"
+waiver: { active: false }
+top_issues: []
+
+evidence:
+  tests_reviewed: 2
+  tests:
+    - CreateBackupUseCaseTest: invoke writes export to file and records BACKUP_CREATED; records FAILED activity when export fails
+    - RestoreFromBackupUseCaseTest: validateIntegrity valid/invalid JSON/schema; apply validates then imports; apply fails when invalid
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Backup/restore reuses ExportDataUseCase (credential redaction) and ImportDataUseCase; no new secrets."
+  performance:
+    status: PASS
+    notes: "Coroutine-based; file I/O on Dispatchers."
+  reliability:
+    status: PASS
+    notes: "Integrity validation before apply; schema version check; activity recording on success/failure."
+  maintainability:
+    status: PASS
+    notes: "Use cases follow existing patterns; unit tests cover backup and restore flows."
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor: []
+
+recommendations:
+  immediate: []
+  future: []

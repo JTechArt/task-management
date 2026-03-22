@@ -120,16 +120,15 @@ class ApplyRulesToWorkspaceUseCase(
         
         // 1. Get global rules
         val globalRules = ruleRepository.findByScope(RuleScope.GLOBAL)
-        rules.addAll(globalRules.filter { !it.isArchived })
+        rules.addAll(globalRules)
         
         // 2. Get project-specific rules
         val projectRules = ruleRepository.findByProject(projectId)
-        rules.addAll(projectRules.filter { !it.isArchived })
+        rules.addAll(projectRules)
         
         // 3. Get IDE-specific rules if IDE type is specified
         if (ideType != null) {
             val ideRules = ruleRepository.findByScope(RuleScope.IDE)
-                .filter { !it.isArchived && it.targetIDE == ideType }
             rules.addAll(ideRules)
         }
         
@@ -174,4 +173,3 @@ class ApplyRulesToWorkspaceUseCase(
         return Pair(applicable, skipped)
     }
 }
-

@@ -1,0 +1,47 @@
+schema: 1
+story: "4.1"
+story_title: "Slack Notification Configuration and Delivery"
+gate: PASS
+status_reason: "All ACs met. Slack integration implemented with webhook validation (SSRF mitigation), fire-and-forget delivery, activity recording for success/failure, and config UI. Unit tests cover SlackNotificationService; optional tests not added per story."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-17T12:00:00Z"
+waiver: { active: false }
+top_issues: []
+
+evidence:
+  tests_reviewed: 2
+  tests:
+    - SlackNotificationServiceTest: success path (sends to channels, records SUCCESS activity)
+    - SlackNotificationServiceTest: failure path (records FAILED activity when send fails)
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Webhook URL restricted to https://hooks.slack.com/services/* (Create/Update use cases + DB constraint). SlackChannelConfig.toString excludes webhookUrl. No webhook URL in activity metadata or logs."
+  performance:
+    status: PASS
+    notes: "Notifications fire-and-forget via CoroutineScope; do not block task actions."
+  reliability:
+    status: PASS
+    notes: "Result-based SlackService; failures recorded in activity. AC4 satisfied."
+  maintainability:
+    status: CONCERNS
+    notes: "Optional CreateSlackChannelUseCase and SlackWebhookClient tests not added. Would strengthen validation logic coverage."
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "SlackWebhookClient logs full response body on failure; consider truncating if very long"
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Add CreateSlackChannelUseCase unit tests for invalid/valid webhook URL validation"
+      refs: ["taskmanager/core/src/main/kotlin/com/aitask/core/domain/usecase/CreateSlackChannelUseCase.kt"]
+    - action: "Consider masking webhook URL in edit dialog (e.g. show last 4 chars only) for defense in depth"
+      refs: ["taskmanager/desktop-app/src/main/kotlin/com/aitask/desktop/ui/projects/SlackChannelDialog.kt"]

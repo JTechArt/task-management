@@ -46,13 +46,23 @@ fun ProjectsView(
                 )
             }
             
-            Button(
-                onClick = { viewModel.showCreateDialog() },
-                enabled = !uiState.isLoading
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("New Project")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (uiState.showArchivedProjects) {
+                    OutlinedButton(
+                        onClick = { viewModel.setShowArchivedProjects(false) },
+                        enabled = !uiState.isLoading
+                    ) {
+                        Text("Hide archived")
+                    }
+                }
+                Button(
+                    onClick = { viewModel.showCreateDialog() },
+                    enabled = !uiState.isLoading
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("New Project")
+                }
             }
         }
         
@@ -92,9 +102,10 @@ fun ProjectsView(
                 CircularProgressIndicator()
             }
         } else if (uiState.projects.isEmpty()) {
-            // Empty state
+            // Empty state - show option to view archived when not already showing archived
             EmptyProjectsState(
-                onCreateClick = { viewModel.showCreateDialog() }
+                onCreateClick = { viewModel.showCreateDialog() },
+                onShowArchivedClick = if (uiState.showArchivedProjects) null else { { viewModel.setShowArchivedProjects(true) } }
             )
         } else {
             val availableTags = remember(uiState.projects) {
@@ -181,9 +192,18 @@ fun ProjectsView(
                                     project = uiState.selectedProject,
                                     repositories = uiState.selectedProjectRepositories,
                                     onArchive = { viewModel.archiveProject(it) },
+                                    onUnarchive = { viewModel.unarchiveProject(it) },
                                     onAddRepository = { viewModel.showAddRepositoryDialog() },
                                     onEditRepository = { viewModel.showEditRepositoryDialog(it) },
-                                    onDeleteRepository = { viewModel.deleteRepository(it) }
+                                    onDeleteRepository = { viewModel.deleteRepository(it) },
+                                    slackChannels = uiState.selectedProjectSlackChannels,
+                                    selectedDetailTab = uiState.selectedDetailTab,
+                                    onDetailTabChange = { viewModel.setDetailTab(it) },
+                                    onAddSlackChannel = { viewModel.showAddSlackChannelDialog() },
+                                    onEditSlackChannel = { viewModel.showEditSlackChannelDialog(it) },
+                                    onDeleteSlackChannel = { viewModel.deleteSlackChannel(it) },
+                                    onTestSlackMessage = { viewModel.sendSlackTestMessage(it) },
+                                    isSendingSlackTest = uiState.isSendingSlackTest
                                 )
                             }
                         }

@@ -3,7 +3,9 @@ package com.aitask.desktop.ui.viewmodel
 import com.aitask.core.domain.model.ComponentHealth
 import com.aitask.core.domain.model.HealthState
 import com.aitask.core.domain.model.HealthStatus
+import com.aitask.core.domain.model.OAuthProvider
 import com.aitask.core.domain.service.HealthCheckService
+import com.aitask.core.domain.usecase.GetOAuthStatusUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -26,14 +28,17 @@ import java.time.Instant
 class IntegrationsViewModelTest {
 
     private val healthCheckService = mockk<HealthCheckService>()
+    private val getOAuthStatusUseCase = mockk<GetOAuthStatusUseCase>()
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var viewModel: IntegrationsViewModel
 
     @BeforeEach
     fun setUp() {
+        coEvery { getOAuthStatusUseCase.getStatusForProviders(listOf(OAuthProvider.SLACK)) } returns emptyList()
         viewModel = IntegrationsViewModel(
             healthCheckService = healthCheckService,
+            getOAuthStatusUseCase = getOAuthStatusUseCase,
             scope = CoroutineScope(testDispatcher)
         )
     }
