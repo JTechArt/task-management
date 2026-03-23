@@ -5,6 +5,7 @@ import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
+import com.aitask.core.domain.service.BmadWorkspaceInjectionService
 import com.aitask.core.domain.service.WorkspaceService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.Instant
@@ -17,6 +18,7 @@ class GenerateWorkspaceUseCase(
     private val projectRepository: ProjectRepository,
     private val repositoryRepository: RepositoryRepository,
     private val workspaceService: WorkspaceService,
+    private val bmadWorkspaceInjectionService: BmadWorkspaceInjectionService,
     private val applyRulesToWorkspaceUseCase: ApplyRulesToWorkspaceUseCase,
     private val activityRepository: ActivityRepository
 ) {
@@ -119,13 +121,65 @@ class GenerateWorkspaceUseCase(
                 metadata = mapOf("workspacePath" to preparedWorkspace.path)
             )
 
+            var workspaceWithBmad = preparedWorkspace
+            if (preparedWorkspace.isCompleted && task.effectiveMethodology(project.methodology) == Methodology.BMAD) {
+                onProgress?.invoke("Injecting BMAD setup files...")
+                val injectionResult = bmadWorkspaceInjectionService.injectIntoWorkspace(preparedWorkspace.path)
+                if (injectionResult.isFailure) {
+                    val err = injectionResult.exceptionOrNull()!!
+                    logger.error(err) { "BMAD injection failed for workspace ${preparedWorkspace.path}: ${err.rootCauseMessage()}" }
+                    recordActivity(
+                        type = ActivityType.BMAD_INJECTION_FAILED,
+                        task = task,
+                        projectId = project.id,
+                        status = ActivityStatus.FAILED,
+                        description = "BMAD injection failed for task: ${task.title}",
+                        metadata = mapOf(
+                            "workspacePath" to preparedWorkspace.path,
+                            "error" to (err.message ?: "Unknown")
+                        )
+                    )
+                    onProgress?.invoke("BMAD injection failed: ${err.rootCauseMessage()}")
+                    return Result.failure(err)
+                }
+
+                val injection = injectionResult.getOrThrow()
+                workspaceWithBmad = preparedWorkspace.copy(
+                    errorMessage = preparedWorkspace.errorMessage
+                )
+                recordActivity(
+                    type = ActivityType.BMAD_INJECTION_APPLIED,
+                    task = task,
+                    projectId = project.id,
+                    status = ActivityStatus.SUCCESS,
+                    description = "BMAD injection applied for task: ${task.title}",
+                    metadata = mapOf(
+                        "workspacePath" to preparedWorkspace.path,
+                        "sourcePath" to (injection.sourcePath ?: ""),
+                        "copiedPaths" to injection.copiedPaths.joinToString(","),
+                        "skippedPaths" to injection.skippedPaths.joinToString(","),
+                        "overwriteExisting" to injection.overwriteExisting.toString()
+                    )
+                )
+                val progressSummary = buildString {
+                    append("BMAD setup ready")
+                    if (injection.copiedPaths.isNotEmpty()) {
+                        append(": copied ${injection.copiedPaths.joinToString(", ")}")
+                    }
+                    if (injection.skippedPaths.isNotEmpty()) {
+                        append(" (skipped existing ${injection.skippedPaths.joinToString(", ")})")
+                    }
+                }
+                onProgress?.invoke(progressSummary)
+            }
+
             // Apply rules to workspace if preparation was successful
-            var workspaceWithRules = preparedWorkspace
-            if (preparedWorkspace.isCompleted) {
+            var workspaceWithRules = workspaceWithBmad
+            if (workspaceWithBmad.isCompleted) {
                 onProgress?.invoke("Applying rules to workspace...")
 
                 val applyRulesRequest = ApplyRulesRequest(
-                    workspacePath = preparedWorkspace.path,
+                    workspacePath = workspaceWithBmad.path,
                     projectId = project.id,
                     ideType = request.ideType,
                     selectedRepositories = request.selectedRepositories
@@ -135,7 +189,7 @@ class GenerateWorkspaceUseCase(
 
                 if (rulesResult.isSuccess) {
                     val appliedRules = rulesResult.getOrThrow()
-                    workspaceWithRules = preparedWorkspace.copy(
+                    workspaceWithRules = workspaceWithBmad.copy(
                         appliedRules = appliedRules.appliedRuleIds
                     )
 
