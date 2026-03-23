@@ -260,6 +260,9 @@ fun TasksView(
                             onResetBmadToolOverride = { taskId ->
                                 viewModel.clearTaskBmadToolOverride(taskId)
                             },
+                            onSaveBmadInjectionOverride = { taskId, enabled ->
+                                viewModel.updateTaskBmadInjectionOverride(taskId, enabled)
+                            },
                             onGenerateWorkspace = { taskId ->
                                 viewModel.showRepositorySelectionDialog(taskId)
                             },

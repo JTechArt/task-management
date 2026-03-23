@@ -55,6 +55,7 @@ class CreateTaskUseCase(
                 } else {
                     request.bmadToolOverrideIds
                 },
+                bmadInjectionEnabledOverride = request.bmadInjectionEnabledOverride,
                 workspacePath = request.workspacePath,
                 branchName = request.branchName,
                 createdAt = now,

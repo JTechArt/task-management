@@ -28,6 +28,7 @@ data class Task(
     val projectId: UUID,
     val methodologyOverride: Methodology? = null,
     val bmadToolOverrideIds: List<String>? = null,
+    val bmadInjectionEnabledOverride: Boolean? = null,
     val workspacePath: String?,
     val workspaceCleanedAt: Instant? = null,
     val branchName: String?,
@@ -66,6 +67,7 @@ data class Task(
         status: TaskStatus? = null,
         methodologyOverride: Methodology? = this.methodologyOverride,
         bmadToolOverrideIds: List<String>? = this.bmadToolOverrideIds,
+        bmadInjectionEnabledOverride: Boolean? = this.bmadInjectionEnabledOverride,
         workspacePath: String? = null,
         branchName: String? = null
     ): Task {
@@ -78,6 +80,7 @@ data class Task(
             status = newStatus,
             methodologyOverride = methodologyOverride,
             bmadToolOverrideIds = bmadToolOverrideIds,
+            bmadInjectionEnabledOverride = bmadInjectionEnabledOverride,
             workspacePath = workspacePath ?: this.workspacePath,
             branchName = branchName ?: this.branchName,
             updatedAt = now,
@@ -97,6 +100,7 @@ data class CreateTaskRequest(
     val projectId: UUID,
     val methodologyOverride: Methodology? = null,
     val bmadToolOverrideIds: List<String>? = null,
+    val bmadInjectionEnabledOverride: Boolean? = null,
     val workspacePath: String? = null,
     val branchName: String? = null
 )
@@ -110,6 +114,8 @@ data class UpdateTaskRequest(
     val clearMethodologyOverride: Boolean = false,
     val bmadToolOverrideIds: List<String>? = null,
     val clearBmadToolOverrideIds: Boolean = false,
+    val bmadInjectionEnabledOverride: Boolean? = null,
+    val clearBmadInjectionEnabledOverride: Boolean = false,
     val workspacePath: String? = null,
     val branchName: String? = null
 )

@@ -298,6 +298,7 @@ fun TaskDetailView(
     onSaveMethodologyOverride: (UUID, Methodology?) -> Unit = { _, _ -> },
     onSaveBmadToolOverride: (UUID, List<String>) -> Unit = { _, _ -> },
     onResetBmadToolOverride: (UUID) -> Unit = {},
+    onSaveBmadInjectionOverride: (UUID, Boolean?) -> Unit = { _, _ -> },
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
     onCleanupWorkspace: ((Task) -> Unit)? = null,
@@ -316,11 +317,17 @@ fun TaskDetailView(
             task.effectiveBmadToolIds(projectBmadToolIds)
         )
     }
+    var selectedInjectionOverride by remember(task.bmadInjectionEnabledOverride) {
+        mutableStateOf(task.bmadInjectionEnabledOverride)
+    }
     LaunchedEffect(task.methodologyOverride) {
         selectedMethodologyOverride = task.methodologyOverride
     }
     LaunchedEffect(task.bmadToolOverrideIds, projectBmadToolIds) {
         selectedBmadToolIds = task.effectiveBmadToolIds(projectBmadToolIds)
+    }
+    LaunchedEffect(task.bmadInjectionEnabledOverride) {
+        selectedInjectionOverride = task.bmadInjectionEnabledOverride
     }
     Column(
         modifier = modifier
@@ -368,6 +375,7 @@ fun TaskDetailView(
         DetailRow("Created", formatDate(task.createdAt))
         DetailRow("Updated", formatDate(task.updatedAt))
         DetailRow("Effective Methodology", task.effectiveMethodology(projectMethodology).name)
+        DetailRow("Methodology Source", if (task.methodologyOverride != null) "Task Override" else "Project Default")
         DetailRow("Methodology Override", task.methodologyOverride?.name ?: "Project Default")
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -420,6 +428,10 @@ fun TaskDetailView(
             }
         }
         if (task.effectiveMethodology(projectMethodology) == Methodology.BMAD) {
+            DetailRow(
+                "BMAD Tools Source",
+                if (task.bmadToolOverrideIds != null) "Task Override" else "Project Default"
+            )
             Text(
                 text = "BMAD Tools",
                 style = MaterialTheme.typography.titleMedium,
@@ -449,6 +461,46 @@ fun TaskDetailView(
                         Text("Use Project Defaults")
                     }
                 }
+            }
+            Text(
+                text = "BMAD Injection",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            DetailRow(
+                "Injection Source",
+                if (task.bmadInjectionEnabledOverride != null) "Task Override" else "Project Default"
+            )
+            Text(
+                text = "Control whether BMAD files are injected for this task even when the project default is BMAD.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilterChip(
+                    selected = selectedInjectionOverride == null,
+                    onClick = { selectedInjectionOverride = null },
+                    label = { Text("Project Default") }
+                )
+                FilterChip(
+                    selected = selectedInjectionOverride == true,
+                    onClick = { selectedInjectionOverride = true },
+                    label = { Text("Force On") }
+                )
+                FilterChip(
+                    selected = selectedInjectionOverride == false,
+                    onClick = { selectedInjectionOverride = false },
+                    label = { Text("Force Off") }
+                )
+            }
+            Button(
+                onClick = { onSaveBmadInjectionOverride(task.id, selectedInjectionOverride) },
+                enabled = selectedInjectionOverride != task.bmadInjectionEnabledOverride
+            ) {
+                Text("Save Injection Override")
             }
         }
 

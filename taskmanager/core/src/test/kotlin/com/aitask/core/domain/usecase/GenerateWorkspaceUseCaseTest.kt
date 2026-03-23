@@ -5,6 +5,7 @@ import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
+import com.aitask.core.domain.service.BmadConfigurationResolver
 import com.aitask.core.domain.service.BmadInjectionResult
 import com.aitask.core.domain.service.BmadWorkspaceInjectionService
 import com.aitask.core.domain.service.WorkspaceService
@@ -21,6 +22,7 @@ class GenerateWorkspaceUseCaseTest {
     private lateinit var projectRepository: ProjectRepository
     private lateinit var repositoryRepository: RepositoryRepository
     private lateinit var workspaceService: WorkspaceService
+    private lateinit var bmadConfigurationResolver: BmadConfigurationResolver
     private lateinit var bmadWorkspaceInjectionService: BmadWorkspaceInjectionService
     private lateinit var applyRulesToWorkspaceUseCase: ApplyRulesToWorkspaceUseCase
     private lateinit var activityRepository: ActivityRepository
@@ -32,6 +34,7 @@ class GenerateWorkspaceUseCaseTest {
         projectRepository = mockk()
         repositoryRepository = mockk()
         workspaceService = mockk()
+        bmadConfigurationResolver = BmadConfigurationResolver()
         bmadWorkspaceInjectionService = mockk()
         applyRulesToWorkspaceUseCase = mockk()
         activityRepository = mockk()
@@ -52,6 +55,7 @@ class GenerateWorkspaceUseCaseTest {
             projectRepository,
             repositoryRepository,
             workspaceService,
+            bmadConfigurationResolver,
             bmadWorkspaceInjectionService,
             applyRulesToWorkspaceUseCase,
             activityRepository
@@ -410,5 +414,42 @@ class GenerateWorkspaceUseCaseTest {
         coVerify {
             activityRepository.create(match { it.type == ActivityType.BMAD_INJECTION_FAILED && it.status == ActivityStatus.FAILED })
         }
+    }
+
+    @Test
+    fun `should skip bmad injection when task override disables it`() = runTest {
+        val taskId = UUID.randomUUID()
+        val projectId = UUID.randomUUID()
+        val task = createTask(id = taskId, projectId = projectId).copy(
+            methodologyOverride = Methodology.BMAD,
+            bmadInjectionEnabledOverride = false
+        )
+        val project = createProject(id = projectId).copy(methodology = Methodology.BMAD)
+        val repository = createRepository(projectId = projectId)
+        val workspace = createWorkspace(taskId, projectId)
+        val request = CreateWorkspaceRequest(taskId = taskId, projectId = projectId)
+
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { projectRepository.findById(projectId) } returns project
+        coEvery { repositoryRepository.findPrimaryByProject(projectId) } returns repository
+        coEvery { workspaceService.createWorkspace(task, project, listOf(repository)) } returns Result.success(workspace)
+        coEvery { workspaceService.prepareWorkspace(workspace, listOf(repository), any()) } returns Result.success(workspace)
+        coEvery { applyRulesToWorkspaceUseCase(any()) } returns Result.success(
+            AppliedRules(
+                workspacePath = workspace.path,
+                projectId = projectId,
+                ideType = null,
+                appliedRuleIds = emptyList(),
+                skippedRules = emptyList(),
+                appliedAt = Instant.now(),
+                success = true
+            )
+        )
+        coEvery { taskRepository.update(any()) } returns mockk()
+
+        val result = useCase(request)
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 0) { bmadWorkspaceInjectionService.injectIntoWorkspace(any()) }
     }
 }

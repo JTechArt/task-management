@@ -6,6 +6,7 @@ import com.aitask.core.domain.repository.PreRunScriptRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
+import com.aitask.core.domain.service.BmadConfigurationResolver
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.PreRunScriptService
 import io.mockk.*
@@ -24,6 +25,7 @@ class LaunchIDEUseCaseTest {
     private lateinit var repositoryRepository: RepositoryRepository
     private lateinit var preRunScriptRepository: PreRunScriptRepository
     private lateinit var preRunScriptService: PreRunScriptService
+    private lateinit var bmadConfigurationResolver: BmadConfigurationResolver
     private lateinit var ideService: IDEService
     private lateinit var activityRepository: ActivityRepository
     private lateinit var useCase: LaunchIDEUseCase
@@ -35,6 +37,7 @@ class LaunchIDEUseCaseTest {
         repositoryRepository = mockk()
         preRunScriptRepository = mockk()
         preRunScriptService = mockk()
+        bmadConfigurationResolver = BmadConfigurationResolver()
         ideService = mockk()
         activityRepository = mockk()
         useCase = LaunchIDEUseCase(
@@ -43,6 +46,7 @@ class LaunchIDEUseCaseTest {
             repositoryRepository,
             preRunScriptRepository,
             preRunScriptService,
+            bmadConfigurationResolver,
             ideService,
             activityRepository
         )

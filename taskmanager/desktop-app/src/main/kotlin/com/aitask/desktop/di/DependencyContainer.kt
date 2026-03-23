@@ -11,6 +11,7 @@ import com.aitask.core.domain.service.OAuthService
 import com.aitask.core.domain.service.SlackNotificationService
 import com.aitask.core.domain.service.SlackService
 import com.aitask.core.domain.service.BmadWorkspaceInjectionService
+import com.aitask.core.domain.service.BmadConfigurationResolver
 import com.aitask.core.domain.service.WorkspaceService
 import com.aitask.core.domain.usecase.*
 import com.aitask.core.domain.validation.ProjectValidator
@@ -125,6 +126,10 @@ object DependencyContainer {
         FileSystemBmadWorkspaceInjectionService()
     }
 
+    val bmadConfigurationResolver: BmadConfigurationResolver by lazy {
+        BmadConfigurationResolver()
+    }
+
     val ruleApplicationService: RuleApplicationService by lazy {
         FileSystemRuleApplicationService()
     }
@@ -226,6 +231,7 @@ object DependencyContainer {
             projectRepository,
             repositoryRepository,
             workspaceService,
+            bmadConfigurationResolver,
             bmadWorkspaceInjectionService,
             applyRulesToWorkspaceUseCase,
             activityRepository
@@ -249,6 +255,7 @@ object DependencyContainer {
             repositoryRepository,
             preRunScriptRepository,
             preRunScriptService,
+            bmadConfigurationResolver,
             ideService,
             activityRepository
         )

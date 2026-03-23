@@ -200,6 +200,29 @@ class TasksViewModel(
             )
         }
     }
+
+    fun updateTaskBmadInjectionOverride(taskId: UUID, enabled: Boolean?) {
+        scope.launch {
+            val result = updateTaskUseCase(
+                taskId,
+                UpdateTaskRequest(
+                    bmadInjectionEnabledOverride = enabled,
+                    clearBmadInjectionEnabledOverride = enabled == null
+                )
+            )
+            result.fold(
+                onSuccess = { updatedTask ->
+                    uiState = uiState.copy(selectedTask = updatedTask)
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to update BMAD injection override"
+                    )
+                }
+            )
+        }
+    }
     
     fun deleteTask(taskId: UUID) {
         scope.launch {

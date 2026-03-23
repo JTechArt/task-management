@@ -57,6 +57,7 @@ class TaskRepositoryImpl : TaskRepository {
             it[projectId] = task.projectId
             it[methodologyOverride] = task.methodologyOverride?.name
             it[bmadToolOverrideIds] = task.bmadToolOverrideIds
+            it[bmadInjectionEnabledOverride] = task.bmadInjectionEnabledOverride
             it[workspacePath] = task.workspacePath
             it[branchName] = task.branchName
             it[workspaceCleanedAt] = task.workspaceCleanedAt
@@ -75,6 +76,7 @@ class TaskRepositoryImpl : TaskRepository {
             it[status] = task.status.name
             it[methodologyOverride] = task.methodologyOverride?.name
             it[bmadToolOverrideIds] = task.bmadToolOverrideIds
+            it[bmadInjectionEnabledOverride] = task.bmadInjectionEnabledOverride
             it[workspacePath] = task.workspacePath
             it[branchName] = task.branchName
             it[workspaceCleanedAt] = task.workspaceCleanedAt
@@ -110,6 +112,7 @@ class TaskRepositoryImpl : TaskRepository {
         projectId = this[Tasks.projectId].value,
         methodologyOverride = this[Tasks.methodologyOverride]?.let(Methodology::valueOf),
         bmadToolOverrideIds = this[Tasks.bmadToolOverrideIds],
+        bmadInjectionEnabledOverride = this[Tasks.bmadInjectionEnabledOverride],
         workspacePath = this[Tasks.workspacePath],
         branchName = this[Tasks.branchName],
         workspaceCleanedAt = this[Tasks.workspaceCleanedAt],

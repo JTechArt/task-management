@@ -34,6 +34,11 @@ class UpdateTaskUseCase(
                         com.aitask.core.domain.model.BmadToolCatalog.defaultToolIds
                     else -> existing.bmadToolOverrideIds
                 },
+                bmadInjectionEnabledOverride = when {
+                    request.clearBmadInjectionEnabledOverride -> null
+                    request.bmadInjectionEnabledOverride != null -> request.bmadInjectionEnabledOverride
+                    else -> existing.bmadInjectionEnabledOverride
+                },
                 workspacePath = request.workspacePath,
                 branchName = request.branchName
             )

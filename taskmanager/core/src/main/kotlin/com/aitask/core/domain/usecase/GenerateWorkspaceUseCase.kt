@@ -5,6 +5,7 @@ import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
+import com.aitask.core.domain.service.BmadConfigurationResolver
 import com.aitask.core.domain.service.BmadWorkspaceInjectionService
 import com.aitask.core.domain.service.WorkspaceService
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -18,6 +19,7 @@ class GenerateWorkspaceUseCase(
     private val projectRepository: ProjectRepository,
     private val repositoryRepository: RepositoryRepository,
     private val workspaceService: WorkspaceService,
+    private val bmadConfigurationResolver: BmadConfigurationResolver,
     private val bmadWorkspaceInjectionService: BmadWorkspaceInjectionService,
     private val applyRulesToWorkspaceUseCase: ApplyRulesToWorkspaceUseCase,
     private val activityRepository: ActivityRepository
@@ -36,6 +38,7 @@ class GenerateWorkspaceUseCase(
             // Validate project exists
             val project = projectRepository.findById(request.projectId)
                 ?: return Result.failure(ProjectNotFoundException("Project with id ${request.projectId} not found"))
+            val bmadConfiguration = bmadConfigurationResolver.resolve(project, task)
             
             // Check if project is archived
             if (project.isArchived) {
@@ -122,7 +125,7 @@ class GenerateWorkspaceUseCase(
             )
 
             var workspaceWithBmad = preparedWorkspace
-            if (preparedWorkspace.isCompleted && task.effectiveMethodology(project.methodology) == Methodology.BMAD) {
+            if (preparedWorkspace.isCompleted && bmadConfiguration.methodology == Methodology.BMAD && bmadConfiguration.injectionEnabled) {
                 onProgress?.invoke("Injecting BMAD setup files...")
                 val injectionResult = bmadWorkspaceInjectionService.injectIntoWorkspace(preparedWorkspace.path)
                 if (injectionResult.isFailure) {
