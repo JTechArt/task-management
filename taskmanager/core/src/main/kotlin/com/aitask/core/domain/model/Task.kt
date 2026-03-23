@@ -27,6 +27,7 @@ data class Task(
     val status: TaskStatus,
     val projectId: UUID,
     val methodologyOverride: Methodology? = null,
+    val bmadToolOverrideIds: List<String>? = null,
     val workspacePath: String?,
     val workspaceCleanedAt: Instant? = null,
     val branchName: String?,
@@ -45,6 +46,9 @@ data class Task(
 
     fun effectiveMethodology(projectMethodology: Methodology): Methodology =
         methodologyOverride ?: projectMethodology
+
+    fun effectiveBmadToolIds(projectBmadToolIds: List<String>): List<String> =
+        bmadToolOverrideIds ?: projectBmadToolIds
     
     fun updateStatus(newStatus: TaskStatus): Task {
         val now = Instant.now()
@@ -61,6 +65,7 @@ data class Task(
         taskType: TaskType? = null,
         status: TaskStatus? = null,
         methodologyOverride: Methodology? = this.methodologyOverride,
+        bmadToolOverrideIds: List<String>? = this.bmadToolOverrideIds,
         workspacePath: String? = null,
         branchName: String? = null
     ): Task {
@@ -72,6 +77,7 @@ data class Task(
             taskType = taskType ?: this.taskType,
             status = newStatus,
             methodologyOverride = methodologyOverride,
+            bmadToolOverrideIds = bmadToolOverrideIds,
             workspacePath = workspacePath ?: this.workspacePath,
             branchName = branchName ?: this.branchName,
             updatedAt = now,
@@ -90,6 +96,7 @@ data class CreateTaskRequest(
     val taskType: TaskType,
     val projectId: UUID,
     val methodologyOverride: Methodology? = null,
+    val bmadToolOverrideIds: List<String>? = null,
     val workspacePath: String? = null,
     val branchName: String? = null
 )
@@ -101,6 +108,8 @@ data class UpdateTaskRequest(
     val status: TaskStatus? = null,
     val methodologyOverride: Methodology? = null,
     val clearMethodologyOverride: Boolean = false,
+    val bmadToolOverrideIds: List<String>? = null,
+    val clearBmadToolOverrideIds: Boolean = false,
     val workspacePath: String? = null,
     val branchName: String? = null
 )

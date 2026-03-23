@@ -27,6 +27,13 @@ class UpdateTaskUseCase(
                 taskType = request.taskType,
                 status = request.status,
                 methodologyOverride = if (request.clearMethodologyOverride) null else request.methodologyOverride ?: existing.methodologyOverride,
+                bmadToolOverrideIds = when {
+                    request.clearBmadToolOverrideIds -> null
+                    request.bmadToolOverrideIds != null -> request.bmadToolOverrideIds
+                    request.methodologyOverride == com.aitask.core.domain.model.Methodology.BMAD && existing.bmadToolOverrideIds == null ->
+                        com.aitask.core.domain.model.BmadToolCatalog.defaultToolIds
+                    else -> existing.bmadToolOverrideIds
+                },
                 workspacePath = request.workspacePath,
                 branchName = request.branchName
             )

@@ -449,6 +449,35 @@ class LaunchIDEUseCaseTest {
         )
     }
 
+    @Test
+    fun `should include active bmad tools in task context when project uses bmad`() = runTest {
+        val taskId = UUID.randomUUID()
+        val projectId = UUID.randomUUID()
+        val workspaceDir = Files.createTempDirectory("launch-ide-bmad-context").toFile()
+        workspaceDir.resolve("workspace-metadata.json").writeText("""{ "repositories": [] }""")
+        val task = createTask(taskId, projectId, workspaceDir.absolutePath).copy(
+            bmadToolOverrideIds = listOf("agent:dev", "task:execute-checklist")
+        )
+        val project = createProject(projectId).copy(
+            methodology = Methodology.BMAD,
+            bmadToolIds = BmadToolCatalog.defaultToolIds
+        )
+        val taskContextSlot = slot<TaskContext>()
+
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { projectRepository.findById(projectId) } returns project
+        coEvery { repositoryRepository.findByProject(projectId) } returns emptyList()
+        coEvery { preRunScriptRepository.findByProject(projectId) } returns emptyList()
+        coEvery { ideService.launchIDE(any(), any(), capture(taskContextSlot)) } returns Result.success(Unit)
+        coEvery { taskRepository.update(any()) } answers { firstArg() }
+        coEvery { activityRepository.create(any()) } answers { firstArg() }
+
+        val result = useCase(LaunchIDERequest(taskId, IDEType.CURSOR))
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf("Full Stack Developer", "Execute Checklist"), taskContextSlot.captured.activeBmadTools)
+    }
+
     private fun createTask(taskId: UUID, projectId: UUID, workspacePath: String) = Task(
         id = taskId,
         title = "Test Task",

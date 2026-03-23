@@ -45,6 +45,7 @@ class ProjectRepositoryImpl : ProjectRepository {
             it[workspacePath] = project.workspacePath
             it[branchTemplate] = project.branchTemplate
             it[methodology] = project.methodology.name
+            it[bmadToolIds] = project.bmadToolIds
             it[retentionPolicy] = project.retentionPolicy.name
             it[tags] = project.tags
             it[team] = project.team
@@ -62,6 +63,7 @@ class ProjectRepositoryImpl : ProjectRepository {
             it[workspacePath] = project.workspacePath
             it[branchTemplate] = project.branchTemplate
             it[methodology] = project.methodology.name
+            it[bmadToolIds] = project.bmadToolIds
             it[retentionPolicy] = project.retentionPolicy.name
             it[tags] = project.tags
             it[team] = project.team
@@ -98,6 +100,7 @@ class ProjectRepositoryImpl : ProjectRepository {
         workspacePath = this[Projects.workspacePath],
         branchTemplate = this[Projects.branchTemplate],
         methodology = Methodology.valueOf(this[Projects.methodology]),
+        bmadToolIds = this[Projects.bmadToolIds] ?: emptyList(),
         retentionPolicy = RetentionPolicy.valueOf(this[Projects.retentionPolicy]),
         tags = this[Projects.tags] ?: emptyList(),
         team = this[Projects.team],

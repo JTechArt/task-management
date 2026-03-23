@@ -74,7 +74,8 @@ class CreateTaskUseCaseTest {
         assertEquals(TaskStatus.PENDING, task.status)
         assertEquals(projectId, task.projectId)
         assertEquals(Methodology.BMAD, task.methodologyOverride)
-        
+        assertEquals(BmadToolCatalog.defaultToolIds, task.bmadToolOverrideIds)
+
         coVerify { taskRepository.create(any()) }
     }
     

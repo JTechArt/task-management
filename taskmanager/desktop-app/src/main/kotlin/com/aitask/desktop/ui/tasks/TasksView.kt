@@ -242,15 +242,23 @@ fun TasksView(
                             .weight(1.5f)
                             .fillMaxHeight()
                     ) {
+                        val selectedProject = uiState.projects.find { it.id == uiState.selectedTask.projectId }
                         TaskDetailView(
                             task = uiState.selectedTask,
-                            projectMethodology = uiState.projects.find { it.id == uiState.selectedTask.projectId }?.methodology ?: Methodology.NONE,
+                            projectMethodology = selectedProject?.methodology ?: Methodology.NONE,
+                            projectBmadToolIds = selectedProject?.bmadToolIds ?: emptyList(),
                             onDelete = { viewModel.deleteTask(it) },
                             onStatusChange = { taskId, status ->
                                 viewModel.updateTaskStatus(taskId, status)
                             },
                             onSaveMethodologyOverride = { taskId, methodologyOverride ->
                                 viewModel.updateTaskMethodology(taskId, methodologyOverride)
+                            },
+                            onSaveBmadToolOverride = { taskId, toolIds ->
+                                viewModel.updateTaskBmadTools(taskId, toolIds)
+                            },
+                            onResetBmadToolOverride = { taskId ->
+                                viewModel.clearTaskBmadToolOverride(taskId)
                             },
                             onGenerateWorkspace = { taskId ->
                                 viewModel.showRepositorySelectionDialog(taskId)

@@ -47,6 +47,14 @@ class CreateTaskUseCase(
                 status = TaskStatus.PENDING,
                 projectId = request.projectId,
                 methodologyOverride = request.methodologyOverride,
+                bmadToolOverrideIds = if (
+                    request.methodologyOverride == com.aitask.core.domain.model.Methodology.BMAD &&
+                    request.bmadToolOverrideIds == null
+                ) {
+                    com.aitask.core.domain.model.BmadToolCatalog.defaultToolIds
+                } else {
+                    request.bmadToolOverrideIds
+                },
                 workspacePath = request.workspacePath,
                 branchName = request.branchName,
                 createdAt = now,

@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.*
+import com.aitask.desktop.ui.projects.BmadToolSelectionSection
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -291,9 +292,12 @@ fun TaskListItem(
 fun TaskDetailView(
     task: Task,
     projectMethodology: Methodology,
+    projectBmadToolIds: List<String>,
     onDelete: (UUID) -> Unit,
     onStatusChange: (UUID, TaskStatus) -> Unit,
     onSaveMethodologyOverride: (UUID, Methodology?) -> Unit = { _, _ -> },
+    onSaveBmadToolOverride: (UUID, List<String>) -> Unit = { _, _ -> },
+    onResetBmadToolOverride: (UUID) -> Unit = {},
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
     onCleanupWorkspace: ((Task) -> Unit)? = null,
@@ -307,8 +311,16 @@ fun TaskDetailView(
 ) {
     var methodologyExpanded by remember { mutableStateOf(false) }
     var selectedMethodologyOverride by remember(task.methodologyOverride) { mutableStateOf(task.methodologyOverride) }
+    var selectedBmadToolIds by remember(task.bmadToolOverrideIds, projectBmadToolIds) {
+        mutableStateOf(
+            task.effectiveBmadToolIds(projectBmadToolIds)
+        )
+    }
     LaunchedEffect(task.methodologyOverride) {
         selectedMethodologyOverride = task.methodologyOverride
+    }
+    LaunchedEffect(task.bmadToolOverrideIds, projectBmadToolIds) {
+        selectedBmadToolIds = task.effectiveBmadToolIds(projectBmadToolIds)
     }
     Column(
         modifier = modifier
@@ -405,6 +417,38 @@ fun TaskDetailView(
                 enabled = selectedMethodologyOverride != task.methodologyOverride
             ) {
                 Text("Save")
+            }
+        }
+        if (task.effectiveMethodology(projectMethodology) == Methodology.BMAD) {
+            Text(
+                text = "BMAD Tools",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Task-specific override for the active BMAD tool set.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            BmadToolSelectionSection(
+                selectedToolIds = selectedBmadToolIds,
+                onSelectionChange = { selectedBmadToolIds = it }
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = { onSaveBmadToolOverride(task.id, selectedBmadToolIds) },
+                    enabled = selectedBmadToolIds != task.bmadToolOverrideIds
+                ) {
+                    Text("Save BMAD Tools")
+                }
+                if (task.bmadToolOverrideIds != null) {
+                    OutlinedButton(onClick = { onResetBmadToolOverride(task.id) }) {
+                        Text("Use Project Defaults")
+                    }
+                }
             }
         }
 

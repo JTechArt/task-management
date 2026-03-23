@@ -166,4 +166,21 @@ class UpdateTaskUseCaseTest {
         assertTrue(result.isSuccess)
         assertNull(result.getOrThrow().methodologyOverride)
     }
+
+    @Test
+    fun `should update bmad tool override ids`() = runTest {
+        val taskId = UUID.randomUUID()
+        val existingTask = createTask(id = taskId)
+        val request = UpdateTaskRequest(
+            bmadToolOverrideIds = listOf("agent:dev", "task:execute-checklist")
+        )
+
+        coEvery { taskRepository.findById(taskId) } returns existingTask
+        coEvery { taskRepository.update(any()) } answers { firstArg() }
+
+        val result = useCase(taskId, request)
+
+        assertTrue(result.isSuccess)
+        assertEquals(listOf("agent:dev", "task:execute-checklist"), result.getOrThrow().bmadToolOverrideIds)
+    }
 }

@@ -17,6 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.EnvironmentCheckTemplateId
 import com.aitask.core.domain.model.EnvironmentCheckTemplateRegistry
+import com.aitask.core.domain.model.BmadTool
+import com.aitask.core.domain.model.BmadToolCatalog
+import com.aitask.core.domain.model.BmadToolType
 import com.aitask.core.domain.model.Methodology
 import com.aitask.core.domain.model.PreRunScript
 import com.aitask.core.domain.model.PreRunScriptType
@@ -256,6 +259,7 @@ fun ProjectDetailView(
     onArchive: (UUID) -> Unit,
     onUnarchive: ((UUID) -> Unit)? = null,
     onSaveMethodology: (UUID, Methodology) -> Unit = { _, _ -> },
+    onSaveBmadTools: (UUID, List<String>) -> Unit = { _, _ -> },
     hasAttachedRules: Boolean = false,
     onAddRepository: () -> Unit = {},
     onEditRepository: (Repository) -> Unit = {},
@@ -276,10 +280,16 @@ fun ProjectDetailView(
 ) {
     var selectedTab by remember(selectedDetailTab) { mutableStateOf(selectedDetailTab) }
     var selectedMethodology by remember(project.methodology) { mutableStateOf(project.methodology) }
+    var selectedBmadToolIds by remember(project.bmadToolIds) {
+        mutableStateOf(project.bmadToolIds.ifEmpty { BmadToolCatalog.defaultToolIds })
+    }
     var methodologyExpanded by remember { mutableStateOf(false) }
     var showMethodologyConfirmation by remember { mutableStateOf(false) }
     LaunchedEffect(selectedDetailTab) { selectedTab = selectedDetailTab }
     LaunchedEffect(project.methodology) { selectedMethodology = project.methodology }
+    LaunchedEffect(project.bmadToolIds) {
+        selectedBmadToolIds = project.bmadToolIds.ifEmpty { BmadToolCatalog.defaultToolIds }
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -372,6 +382,29 @@ fun ProjectDetailView(
         }
         if (project.tags.isNotEmpty()) {
             DetailRow("Tags", project.tags.joinToString(", "))
+        }
+        if (project.methodology == Methodology.BMAD) {
+            Divider()
+            Text(
+                text = "BMAD Tools",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "These tools are surfaced in BMAD task context and can be customized per task.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            BmadToolSelectionSection(
+                selectedToolIds = selectedBmadToolIds,
+                onSelectionChange = { selectedBmadToolIds = it }
+            )
+            Button(
+                onClick = { onSaveBmadTools(project.id, selectedBmadToolIds) },
+                enabled = selectedBmadToolIds != project.bmadToolIds
+            ) {
+                Text("Save BMAD Tools")
+            }
         }
         project.team?.let { team ->
             DetailRow("Team", team)
@@ -539,6 +572,73 @@ fun ProjectDetailView(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun BmadToolSelectionSection(
+    selectedToolIds: List<String>,
+    onSelectionChange: (List<String>) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        BmadToolType.values().forEach { type ->
+            val tools = BmadToolCatalog.tools.filter { it.type == type }
+            if (tools.isNotEmpty()) {
+                Text(
+                    text = type.name.lowercase().replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                tools.forEach { tool ->
+                    BmadToolCheckboxRow(
+                        tool = tool,
+                        selected = selectedToolIds.contains(tool.id),
+                        onSelectedChange = { checked ->
+                            onSelectionChange(
+                                if (checked) {
+                                    (selectedToolIds + tool.id).distinct()
+                                } else {
+                                    selectedToolIds - tool.id
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BmadToolCheckboxRow(
+    tool: BmadTool,
+    selected: Boolean,
+    onSelectedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Checkbox(
+            checked = selected,
+            onCheckedChange = onSelectedChange
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(tool.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(
+                text = tool.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
     }
 }
 

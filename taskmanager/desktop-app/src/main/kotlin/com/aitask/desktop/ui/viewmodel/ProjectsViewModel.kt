@@ -250,6 +250,28 @@ class ProjectsViewModel(
         }
     }
 
+    fun updateProjectBmadTools(projectId: java.util.UUID, toolIds: List<String>) {
+        uiState = uiState.copy(isSaving = true, error = null)
+        scope.launch {
+            val result = updateProjectUseCase(projectId, UpdateProjectRequest(bmadToolIds = toolIds))
+            result.fold(
+                onSuccess = { updatedProject ->
+                    uiState = uiState.copy(
+                        isSaving = false,
+                        selectedProject = updatedProject
+                    )
+                    loadProjects()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isSaving = false,
+                        error = error.message ?: "Failed to update BMAD tools"
+                    )
+                }
+            )
+        }
+    }
+
     fun setSearchQuery(query: String) {
         uiState = uiState.copy(searchQuery = query)
     }

@@ -196,6 +196,9 @@ fun ProjectsView(
                                     onSaveMethodology = { projectId, methodology ->
                                         viewModel.updateProjectMethodology(projectId, methodology)
                                     },
+                                    onSaveBmadTools = { projectId, toolIds ->
+                                        viewModel.updateProjectBmadTools(projectId, toolIds)
+                                    },
                                     hasAttachedRules = uiState.selectedProjectHasAttachedRules,
                                     onAddRepository = { viewModel.showAddRepositoryDialog() },
                                     onEditRepository = { viewModel.showEditRepositoryDialog(it) },

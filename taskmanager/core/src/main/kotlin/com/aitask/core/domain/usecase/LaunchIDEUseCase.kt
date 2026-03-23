@@ -153,7 +153,12 @@ class LaunchIDEUseCase(
                 title = task.title,
                 description = task.description,
                 projectName = project.name,
-                branchName = task.branchName
+                branchName = task.branchName,
+                activeBmadTools = if (task.effectiveMethodology(project.methodology) == Methodology.BMAD) {
+                    BmadToolCatalog.labelsFor(task.effectiveBmadToolIds(project.bmadToolIds))
+                } else {
+                    emptyList()
+                }
             )
             
             // 7. Launch IDE

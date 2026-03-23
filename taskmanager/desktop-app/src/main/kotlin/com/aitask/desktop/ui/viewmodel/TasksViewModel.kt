@@ -166,6 +166,40 @@ class TasksViewModel(
             )
         }
     }
+
+    fun updateTaskBmadTools(taskId: UUID, toolIds: List<String>) {
+        scope.launch {
+            val result = updateTaskUseCase(taskId, UpdateTaskRequest(bmadToolOverrideIds = toolIds))
+            result.fold(
+                onSuccess = { updatedTask ->
+                    uiState = uiState.copy(selectedTask = updatedTask)
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to update BMAD tools"
+                    )
+                }
+            )
+        }
+    }
+
+    fun clearTaskBmadToolOverride(taskId: UUID) {
+        scope.launch {
+            val result = updateTaskUseCase(taskId, UpdateTaskRequest(clearBmadToolOverrideIds = true))
+            result.fold(
+                onSuccess = { updatedTask ->
+                    uiState = uiState.copy(selectedTask = updatedTask)
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to reset BMAD tools"
+                    )
+                }
+            )
+        }
+    }
     
     fun deleteTask(taskId: UUID) {
         scope.launch {

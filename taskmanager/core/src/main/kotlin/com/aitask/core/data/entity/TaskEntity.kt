@@ -12,6 +12,7 @@ object Tasks : UUIDTable("tasks") {
     val status = varchar("status", 50).default("PENDING")
     val projectId = reference("project_id", Projects, onDelete = ReferenceOption.CASCADE)
     val methodologyOverride = varchar("methodology_override", 50).nullable()
+    val bmadToolOverrideIds = array<String>("bmad_tool_override_ids").nullable()
     val workspacePath = varchar("workspace_path", 1000).nullable()
     val branchName = varchar("branch_name", 200).nullable()
     val workspaceCleanedAt = timestamp("workspace_cleaned_at").nullable()

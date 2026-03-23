@@ -19,7 +19,8 @@ data class TaskContext(
     val title: String,
     val description: String?,
     val projectName: String,
-    val branchName: String?
+    val branchName: String?,
+    val activeBmadTools: List<String> = emptyList()
 )
 
 /**
@@ -33,4 +34,3 @@ class IDENotFoundException(ideType: IDEType) :
  */
 class IDELaunchException(message: String, cause: Throwable? = null) : 
     Exception(message, cause)
-

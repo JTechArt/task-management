@@ -152,6 +152,13 @@ class DesktopIDEService : IDEService {
                     appendLine(taskContext.branchName)
                     appendLine()
                 }
+                if (taskContext.activeBmadTools.isNotEmpty()) {
+                    appendLine("## Active BMAD Tools")
+                    taskContext.activeBmadTools.forEach { tool ->
+                        appendLine("- $tool")
+                    }
+                    appendLine()
+                }
             }
             contextFile.writeText(content)
             logger.info { "Generated task context file: ${contextFile.absolutePath}" }
@@ -271,4 +278,3 @@ class DesktopIDEService : IDEService {
         )
     }
 }
-

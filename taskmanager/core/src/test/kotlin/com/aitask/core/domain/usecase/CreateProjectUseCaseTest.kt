@@ -67,6 +67,7 @@ class CreateProjectUseCaseTest {
         val (project, repository) = result.getOrThrow()
         assertEquals("Test Project", project.name)
         assertEquals(Methodology.BMAD, project.methodology)
+        assertEquals(BmadToolCatalog.defaultToolIds, project.bmadToolIds)
         assertEquals("test-repo", repository.name)
         assertTrue(repository.isPrimary)
         

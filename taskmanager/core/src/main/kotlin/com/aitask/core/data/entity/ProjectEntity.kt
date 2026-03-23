@@ -10,6 +10,7 @@ object Projects : UUIDTable("projects") {
     val workspacePath = varchar("workspace_path", 1000)
     val branchTemplate = varchar("branch_template", 200).default("task-{taskId}")
     val methodology = varchar("methodology", 50).default("NONE")
+    val bmadToolIds = array<String>("bmad_tool_ids").nullable()
     val retentionPolicy = varchar("retention_policy", 50).default("KEEP_ALL")
     val tags = array<String>("tags").nullable()
     val team = varchar("team", 200).nullable()
