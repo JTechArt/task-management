@@ -10,6 +10,7 @@ import com.aitask.desktop.di.DependencyContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ViewModel for managing projects UI state and operations
@@ -50,6 +51,7 @@ class ProjectsViewModel(
                         projects = projects,
                         isLoading = false
                     )
+                    uiState.selectedProject?.let { loadProjectRepositories(it.id) }
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
@@ -122,9 +124,10 @@ class ProjectsViewModel(
             loadSlackChannels(project.id)
         } else {
             uiState = uiState.copy(
+                selectedProjectRepositories = emptyList(),
                 selectedProjectHasAttachedRules = false,
-                selectedProjectSlackChannels = emptyList(),
-                selectedProjectPreRunScripts = emptyList()
+                selectedProjectPreRunScripts = emptyList(),
+                selectedProjectSlackChannels = emptyList()
             )
         }
     }
@@ -132,10 +135,16 @@ class ProjectsViewModel(
     private fun loadProjectRepositories(projectId: java.util.UUID) {
         scope.launch {
             try {
-                val repositories = repositoryRepository.findByProject(projectId)
-                uiState = uiState.copy(selectedProjectRepositories = repositories)
+                val repositories = withContext(Dispatchers.IO) {
+                    repositoryRepository.findByProject(projectId)
+                }
+                if (uiState.selectedProject?.id == projectId) {
+                    uiState = uiState.copy(selectedProjectRepositories = repositories)
+                }
             } catch (e: Exception) {
-                // Silently fail - repositories will be empty
+                if (uiState.selectedProject?.id == projectId) {
+                    uiState = uiState.copy(selectedProjectRepositories = emptyList())
+                }
             }
         }
     }
@@ -235,9 +244,9 @@ class ProjectsViewModel(
                 onSuccess = { updatedProject ->
                     uiState = uiState.copy(
                         isSaving = false,
-                        selectedProject = updatedProject
+                        selectedProject = updatedProject,
+                        projects = uiState.projects.map { if (it.id == updatedProject.id) updatedProject else it }
                     )
-                    loadProjects()
                     loadProjectRules(projectId)
                 },
                 onFailure = { error ->

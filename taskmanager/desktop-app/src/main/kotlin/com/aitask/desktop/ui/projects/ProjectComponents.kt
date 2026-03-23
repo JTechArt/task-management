@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -290,17 +289,19 @@ fun ProjectDetailView(
     LaunchedEffect(project.bmadToolIds) {
         selectedBmadToolIds = project.bmadToolIds.ifEmpty { BmadToolCatalog.defaultToolIds }
     }
-    Column(
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
             Text(
                 text = project.name,
                 style = MaterialTheme.typography.headlineSmall,
@@ -548,6 +549,8 @@ fun ProjectDetailView(
                 )
             }
         }
+            }
+        }
     }
     if (showMethodologyConfirmation) {
         AlertDialog(
@@ -668,11 +671,11 @@ private fun PreRunScriptGroup(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
         } else {
-            LazyColumn(
+            Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.heightIn(max = 220.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                items(scripts) { script ->
+                scripts.forEach { script ->
                     PreRunScriptCard(
                         script = script,
                         repositories = repositories,

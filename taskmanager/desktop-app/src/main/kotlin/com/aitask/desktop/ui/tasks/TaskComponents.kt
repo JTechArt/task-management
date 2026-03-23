@@ -1,9 +1,12 @@
 package com.aitask.desktop.ui.tasks
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -320,6 +323,7 @@ fun TaskDetailView(
     var selectedInjectionOverride by remember(task.bmadInjectionEnabledOverride) {
         mutableStateOf(task.bmadInjectionEnabledOverride)
     }
+    val scrollState = rememberScrollState()
     LaunchedEffect(task.methodologyOverride) {
         selectedMethodologyOverride = task.methodologyOverride
     }
@@ -332,6 +336,8 @@ fun TaskDetailView(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .animateContentSize()
+            .verticalScroll(scrollState)
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
