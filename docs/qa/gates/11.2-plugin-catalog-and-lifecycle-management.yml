@@ -1,0 +1,48 @@
+schema: 1
+story: "11.2"
+story_title: "Plugin Catalog, Install, Attach, and Remove"
+gate: PASS
+status_reason: "Catalog service, activity history, desktop plugin UI, and navigation meet acceptance criteria; tests cover service lifecycle and key view model flows."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-24T15:00:00Z"
+waiver: { active: false }
+top_issues:
+  - id: TEST-001
+    severity: low
+    finding: "PluginManagementViewModelTest only exercises loadCatalog and install success; other actions and error feedback paths are covered indirectly via InMemoryPluginManagementServiceTest."
+    suggested_action: "Add targeted view model tests for attach/enable/disable/detach/remove and failure feedback if regression risk grows."
+  - id: MNT-001
+    severity: low
+    finding: "recordFailure uses runBlocking to call suspend recordActivity from a non-suspend path."
+    suggested_action: "Refactor to suspend-safe recording or a single dispatcher to avoid blocking."
+evidence:
+  tests_reviewed: 5
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Plugin actions use seeded catalog; failure metadata may include exception messages suitable for local diagnostics only."
+  performance:
+    status: PASS
+    notes: "In-memory host and repository; no scalability concerns for MVP."
+  reliability:
+    status: PASS
+    notes: "Result types and FAILED activity rows for unsupported plugins and lifecycle errors."
+  maintainability:
+    status: PASS
+    notes: "Clear layering; VM tests are narrow but service tests exercise full lifecycle. See top_issues for follow-ups."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 2 }
+  highest:
+    id: TEST-001
+    score: 2
+    title: "Limited view model test breadth"
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Expand VM tests when plugin management gains real persistence or network install"
+quality_score: 88
+expires: "2026-04-07T00:00:00Z"

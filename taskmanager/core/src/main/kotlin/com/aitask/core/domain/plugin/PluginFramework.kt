@@ -46,6 +46,7 @@ data class PluginManifest(
     val id: String,
     val name: String,
     val version: String,
+    val description: String? = null,
     val requiredHostContractVersion: PluginContractVersion,
     val optional: Boolean = true,
     val extensionPoints: List<PluginExtensionPointDeclaration> = emptyList()

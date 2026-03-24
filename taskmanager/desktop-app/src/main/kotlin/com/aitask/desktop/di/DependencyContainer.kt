@@ -8,6 +8,7 @@ import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.RuleApplicationService
 import com.aitask.core.domain.service.EncryptionService
 import com.aitask.core.domain.service.OAuthService
+import com.aitask.core.domain.service.PluginManagementService
 import com.aitask.core.domain.service.SlackNotificationService
 import com.aitask.core.domain.service.SlackService
 import com.aitask.core.domain.service.BmadWorkspaceInjectionService
@@ -21,6 +22,7 @@ import com.aitask.core.domain.validation.TaskValidator
 import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
+import com.aitask.core.infrastructure.plugin.InMemoryPluginManagementService
 import com.aitask.core.infrastructure.rules.FileSystemRuleApplicationService
 import com.aitask.core.config.OAuthConfig
 import com.aitask.core.infrastructure.oauth.OAuthServiceImpl
@@ -149,6 +151,10 @@ object DependencyContainer {
 
     val preRunScriptService by lazy {
         LocalPreRunScriptService()
+    }
+
+    val pluginManagementService: PluginManagementService by lazy {
+        InMemoryPluginManagementService(activityRepository = activityRepository)
     }
 
     // Project Use Cases

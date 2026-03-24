@@ -22,6 +22,7 @@ enum class NavigationItem {
     ACTIVITY,
     RULES,
     INTEGRATIONS,
+    PLUGINS,
     SETTINGS
 }
 
@@ -134,4 +135,3 @@ private fun NavItem(
         )
     }
 }
-
