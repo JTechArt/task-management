@@ -3,11 +3,13 @@ package com.aitask.desktop.ui.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.aitask.core.domain.model.Activity
 import com.aitask.core.domain.plugin.PluginCatalogFixtures
 import com.aitask.core.domain.plugin.PluginCatalogItem
 import com.aitask.core.domain.plugin.PluginConfigurationScope
 import com.aitask.core.domain.plugin.PluginConfigurationSnapshot
 import com.aitask.core.domain.plugin.PluginConfigurationValidationResult
+import com.aitask.core.domain.plugin.PluginHealthReport
 import com.aitask.core.domain.service.PluginManagementService
 import com.aitask.desktop.di.DependencyContainer
 import kotlinx.coroutines.CoroutineScope
@@ -22,8 +24,12 @@ data class PluginManagementFeedback(
 data class PluginManagementUiState(
     val coreFeatures: List<String> = PluginCatalogFixtures.coreFeatureHighlights,
     val plugins: List<PluginCatalogItem> = emptyList(),
+    val validationByPluginId: Map<String, PluginConfigurationValidationResult> = emptyMap(),
+    val healthByPluginId: Map<String, PluginHealthReport> = emptyMap(),
+    val recentActivityByPluginId: Map<String, List<Activity>> = emptyMap(),
     val isLoading: Boolean = false,
     val actionInProgress: String? = null,
+    val operationalRefreshInProgress: String? = null,
     val configurationInProgress: Boolean = false,
     val feedback: PluginManagementFeedback? = null,
     val configurationEditor: PluginConfigurationEditorState? = null
@@ -49,8 +55,13 @@ class PluginManagementViewModel(
         scope.launch {
             uiState = uiState.copy(isLoading = true, feedback = null)
             try {
+                val plugins = pluginManagementService.catalog()
+                val operationalState = loadOperationalState(plugins)
                 uiState = uiState.copy(
-                    plugins = pluginManagementService.catalog(),
+                    plugins = plugins,
+                    validationByPluginId = operationalState.validationByPluginId,
+                    healthByPluginId = operationalState.healthByPluginId,
+                    recentActivityByPluginId = operationalState.recentActivityByPluginId,
                     isLoading = false
                 )
             } catch (e: Exception) {
@@ -76,6 +87,49 @@ class PluginManagementViewModel(
     fun detach(pluginId: String) = performAction(pluginId, "detach") { pluginManagementService.detach(pluginId) }
 
     fun remove(pluginId: String) = performAction(pluginId, "remove") { pluginManagementService.remove(pluginId) }
+
+    fun refreshOperationalData(pluginId: String) {
+        scope.launch {
+            uiState = uiState.copy(operationalRefreshInProgress = pluginId, feedback = null)
+            val plugin = uiState.plugins.firstOrNull { it.id == pluginId }
+                ?: run {
+                    uiState = uiState.copy(
+                        operationalRefreshInProgress = null,
+                        feedback = PluginManagementFeedback(
+                            message = "Plugin '$pluginId' is not loaded",
+                            isError = true
+                        )
+                    )
+                    return@launch
+                }
+            val validationResult = pluginManagementService.validateConfiguration(
+                pluginId = plugin.id,
+                scope = plugin.configurationScope,
+                scopeKey = pluginManagementService.getConfiguration(plugin.id, plugin.configurationScope, null)?.scopeKey
+            ).getOrNull()
+            val healthResult = pluginManagementService.health(plugin.id).getOrNull()
+            val recentActivity = pluginManagementService.recentActivity(plugin.id)
+            val updatedValidation = validationResult ?: uiState.validationByPluginId[plugin.id]
+            val updatedHealth = healthResult ?: uiState.healthByPluginId[plugin.id]
+            uiState = uiState.copy(
+                validationByPluginId = if (updatedValidation != null) {
+                    uiState.validationByPluginId + (plugin.id to updatedValidation)
+                } else {
+                    uiState.validationByPluginId
+                },
+                healthByPluginId = if (updatedHealth != null) {
+                    uiState.healthByPluginId + (plugin.id to updatedHealth)
+                } else {
+                    uiState.healthByPluginId
+                },
+                recentActivityByPluginId = uiState.recentActivityByPluginId + (plugin.id to recentActivity),
+                operationalRefreshInProgress = null,
+                feedback = PluginManagementFeedback(
+                    message = "${plugin.name} operational data refreshed"
+                )
+            )
+        }
+    }
 
     fun openConfigurationEditor(pluginId: String) {
         scope.launch {
@@ -148,8 +202,11 @@ class PluginManagementViewModel(
             val validationResult = pluginManagementService.validateConfiguration(
                 editor.toSnapshot()
             ).getOrNull()
+            val recentActivity = pluginManagementService.recentActivity(editor.plugin.id)
             uiState = uiState.copy(
                 configurationEditor = editor.copy(validationResult = validationResult),
+                validationByPluginId = validationResult?.let { uiState.validationByPluginId + (editor.plugin.id to it) } ?: uiState.validationByPluginId,
+                recentActivityByPluginId = uiState.recentActivityByPluginId + (editor.plugin.id to recentActivity),
                 configurationInProgress = false,
                 feedback = PluginManagementFeedback(
                     message = validationResult?.message ?: "Configuration validated"
@@ -169,6 +226,7 @@ class PluginManagementViewModel(
                     val validationResult = pluginManagementService.validateConfiguration(
                         saved
                     ).getOrNull()
+                    val recentActivity = pluginManagementService.recentActivity(saved.pluginId)
                     uiState = uiState.copy(
                         plugins = pluginManagementService.catalog(),
                         configurationEditor = editor.copy(
@@ -178,6 +236,8 @@ class PluginManagementViewModel(
                             schedule = saved.schedule.orEmpty(),
                             validationResult = validationResult
                         ),
+                        validationByPluginId = validationResult?.let { uiState.validationByPluginId + (saved.pluginId to it) } ?: uiState.validationByPluginId,
+                        recentActivityByPluginId = uiState.recentActivityByPluginId + (saved.pluginId to recentActivity),
                         configurationInProgress = false,
                         feedback = PluginManagementFeedback(
                             message = "${editor.plugin.name} configuration saved"
@@ -186,8 +246,11 @@ class PluginManagementViewModel(
                 },
                 onFailure = { error ->
                     val validationResult = (error as? com.aitask.core.domain.plugin.PluginConfigurationValidationException)?.validationResult
+                    val recentActivity = pluginManagementService.recentActivity(editor.plugin.id)
                     uiState = uiState.copy(
                         configurationEditor = editor.copy(validationResult = validationResult),
+                        validationByPluginId = validationResult?.let { uiState.validationByPluginId + (editor.plugin.id to it) } ?: uiState.validationByPluginId,
+                        recentActivityByPluginId = uiState.recentActivityByPluginId + (editor.plugin.id to recentActivity),
                         configurationInProgress = false,
                         feedback = PluginManagementFeedback(
                             message = error.message ?: "Failed to save configuration",
@@ -203,6 +266,36 @@ class PluginManagementViewModel(
         val editor = uiState.configurationEditor ?: return
         uiState = uiState.copy(configurationEditor = transform(editor))
     }
+
+    private suspend fun loadOperationalState(
+        plugins: List<PluginCatalogItem>
+    ): OperationalState {
+        val validationByPluginId = mutableMapOf<String, PluginConfigurationValidationResult>()
+        val healthByPluginId = mutableMapOf<String, PluginHealthReport>()
+        val recentActivityByPluginId = mutableMapOf<String, List<Activity>>()
+
+        plugins.forEach { plugin ->
+            pluginManagementService.validateConfiguration(
+                pluginId = plugin.id,
+                scope = plugin.configurationScope,
+                scopeKey = pluginManagementService.getConfiguration(plugin.id, plugin.configurationScope, null)?.scopeKey
+            ).getOrNull()?.let { validationByPluginId[plugin.id] = it }
+            pluginManagementService.health(plugin.id).getOrNull()?.let { healthByPluginId[plugin.id] = it }
+            recentActivityByPluginId[plugin.id] = pluginManagementService.recentActivity(plugin.id)
+        }
+
+        return OperationalState(
+            validationByPluginId = validationByPluginId,
+            healthByPluginId = healthByPluginId,
+            recentActivityByPluginId = recentActivityByPluginId
+        )
+    }
+
+    private data class OperationalState(
+        val validationByPluginId: Map<String, PluginConfigurationValidationResult>,
+        val healthByPluginId: Map<String, PluginHealthReport>,
+        val recentActivityByPluginId: Map<String, List<Activity>>
+    )
 
     private fun PluginConfigurationEditorState.toSnapshot(): PluginConfigurationSnapshot =
         PluginConfigurationSnapshot(
@@ -224,8 +317,13 @@ class PluginManagementViewModel(
             try {
                 action().fold(
                     onSuccess = { item ->
+                        val plugins = pluginManagementService.catalog()
+                        val operationalState = loadOperationalState(plugins)
                         uiState = uiState.copy(
-                            plugins = pluginManagementService.catalog(),
+                            plugins = plugins,
+                            validationByPluginId = operationalState.validationByPluginId,
+                            healthByPluginId = operationalState.healthByPluginId,
+                            recentActivityByPluginId = operationalState.recentActivityByPluginId,
                             actionInProgress = null,
                             feedback = PluginManagementFeedback(
                                 message = "${item.name} ${actionPastTense(actionLabel)} successfully"
@@ -233,8 +331,13 @@ class PluginManagementViewModel(
                         )
                     },
                     onFailure = { error ->
+                        val plugins = pluginManagementService.catalog()
+                        val operationalState = loadOperationalState(plugins)
                         uiState = uiState.copy(
-                            plugins = pluginManagementService.catalog(),
+                            plugins = plugins,
+                            validationByPluginId = operationalState.validationByPluginId,
+                            healthByPluginId = operationalState.healthByPluginId,
+                            recentActivityByPluginId = operationalState.recentActivityByPluginId,
                             actionInProgress = null,
                             feedback = PluginManagementFeedback(
                                 message = error.message ?: "Plugin $actionLabel failed",
@@ -244,8 +347,13 @@ class PluginManagementViewModel(
                     }
                 )
             } catch (e: Exception) {
+                val plugins = pluginManagementService.catalog()
+                val operationalState = loadOperationalState(plugins)
                 uiState = uiState.copy(
-                    plugins = pluginManagementService.catalog(),
+                    plugins = plugins,
+                    validationByPluginId = operationalState.validationByPluginId,
+                    healthByPluginId = operationalState.healthByPluginId,
+                    recentActivityByPluginId = operationalState.recentActivityByPluginId,
                     actionInProgress = null,
                     feedback = PluginManagementFeedback(
                         message = e.message ?: "Plugin $actionLabel failed",

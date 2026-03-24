@@ -42,12 +42,15 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.aitask.core.domain.model.Activity
 import com.aitask.core.domain.plugin.PluginCatalogItem
 import com.aitask.core.domain.plugin.PluginCatalogFixtures
 import com.aitask.core.domain.plugin.PluginConfigurationFieldType
 import com.aitask.core.domain.plugin.PluginConfigurationScope
 import com.aitask.core.domain.plugin.PluginConfigurationValidationResult
+import com.aitask.core.domain.plugin.PluginHealthReport
 import com.aitask.core.domain.plugin.PluginPrerequisiteResult
+import com.aitask.core.domain.model.HealthState
 import com.aitask.core.domain.plugin.PluginLifecycleState
 import com.aitask.desktop.ui.viewmodel.PluginConfigurationEditorState
 import com.aitask.desktop.ui.viewmodel.PluginManagementViewModel
@@ -90,13 +93,18 @@ fun PluginManagementView(
         OptionalPluginsCard(
             plugins = uiState.plugins,
             actionInProgress = uiState.actionInProgress,
+            validationByPluginId = uiState.validationByPluginId,
+            healthByPluginId = uiState.healthByPluginId,
+            recentActivityByPluginId = uiState.recentActivityByPluginId,
+            operationalRefreshInProgress = uiState.operationalRefreshInProgress,
             onInstall = viewModel::install,
             onAttach = viewModel::attach,
             onEnable = viewModel::enable,
             onDisable = viewModel::disable,
             onDetach = viewModel::detach,
             onRemove = viewModel::remove,
-            onConfigure = viewModel::openConfigurationEditor
+            onConfigure = viewModel::openConfigurationEditor,
+            onRefreshOperationalData = viewModel::refreshOperationalData
         )
         uiState.configurationEditor?.let { editor ->
             PluginConfigurationDialog(
@@ -193,13 +201,18 @@ private fun CoreFeaturesCard(features: List<String>) {
 private fun OptionalPluginsCard(
     plugins: List<PluginCatalogItem>,
     actionInProgress: String?,
+    validationByPluginId: Map<String, PluginConfigurationValidationResult>,
+    healthByPluginId: Map<String, PluginHealthReport>,
+    recentActivityByPluginId: Map<String, List<Activity>>,
+    operationalRefreshInProgress: String?,
     onInstall: (String) -> Unit,
     onAttach: (String) -> Unit,
     onEnable: (String) -> Unit,
     onDisable: (String) -> Unit,
     onDetach: (String) -> Unit,
     onRemove: (String) -> Unit,
-    onConfigure: (String) -> Unit
+    onConfigure: (String) -> Unit,
+    onRefreshOperationalData: (String) -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -226,13 +239,18 @@ private fun OptionalPluginsCard(
                         PluginCard(
                             plugin = plugin,
                             actionInProgress = actionInProgress == plugin.id,
+                            validationResult = validationByPluginId[plugin.id],
+                            healthReport = healthByPluginId[plugin.id],
+                            recentActivity = recentActivityByPluginId[plugin.id].orEmpty(),
+                            operationalRefreshInProgress = operationalRefreshInProgress == plugin.id,
                             onInstall = onInstall,
                             onAttach = onAttach,
                             onEnable = onEnable,
                             onDisable = onDisable,
                             onDetach = onDetach,
                             onRemove = onRemove,
-                            onConfigure = onConfigure
+                            onConfigure = onConfigure,
+                            onRefreshOperationalData = onRefreshOperationalData
                         )
                     }
                 }
@@ -245,13 +263,18 @@ private fun OptionalPluginsCard(
 private fun PluginCard(
     plugin: PluginCatalogItem,
     actionInProgress: Boolean,
+    validationResult: PluginConfigurationValidationResult?,
+    healthReport: PluginHealthReport?,
+    recentActivity: List<Activity>,
+    operationalRefreshInProgress: Boolean,
     onInstall: (String) -> Unit,
     onAttach: (String) -> Unit,
     onEnable: (String) -> Unit,
     onDisable: (String) -> Unit,
     onDetach: (String) -> Unit,
     onRemove: (String) -> Unit,
-    onConfigure: (String) -> Unit
+    onConfigure: (String) -> Unit,
+    onRefreshOperationalData: (String) -> Unit
 ) {
     val statusColor = when (plugin.lifecycleState) {
         PluginLifecycleState.ENABLED -> HEALTHY_COLOR
@@ -335,6 +358,15 @@ private fun PluginCard(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
+            OperationalSummaryCard(
+                plugin = plugin,
+                validationResult = validationResult,
+                healthReport = healthReport,
+                recentActivity = recentActivity,
+                operationalRefreshInProgress = operationalRefreshInProgress,
+                onRefreshOperationalData = onRefreshOperationalData,
+                modifier = Modifier.fillMaxWidth()
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 if (!plugin.installed) {
                     Button(onClick = { onInstall(plugin.id) }, enabled = !actionInProgress) {
@@ -356,26 +388,32 @@ private fun PluginCard(
                             Text("Disable")
                         }
                     }
-                if (plugin.attached) {
-                    OutlinedButton(onClick = { onDetach(plugin.id) }, enabled = !actionInProgress) {
-                        Text("Detach")
+                    if (plugin.attached) {
+                        OutlinedButton(onClick = { onDetach(plugin.id) }, enabled = !actionInProgress) {
+                            Text("Detach")
+                        }
+                    }
+                    if (plugin.installed && (plugin.configurationSchema.fields.isNotEmpty() || plugin.configurationSchema.prerequisites.isNotEmpty())) {
+                        OutlinedButton(onClick = { onConfigure(plugin.id) }, enabled = !actionInProgress) {
+                            Text("Configure")
+                        }
                     }
                 }
-                if (plugin.installed && (plugin.configurationSchema.fields.isNotEmpty() || plugin.configurationSchema.prerequisites.isNotEmpty())) {
-                    OutlinedButton(onClick = { onConfigure(plugin.id) }, enabled = !actionInProgress) {
-                        Text("Configure")
-                    }
+                OutlinedButton(
+                    onClick = { onRefreshOperationalData(plugin.id) },
+                    enabled = !actionInProgress && !operationalRefreshInProgress
+                ) {
+                    Text(if (operationalRefreshInProgress) "Refreshing..." else "Re-check")
                 }
                 Button(
                     onClick = { onRemove(plugin.id) },
                     enabled = !actionInProgress,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Text("Remove")
-                    }
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Remove")
                 }
             }
         }
@@ -395,6 +433,120 @@ private fun PluginStatePill(label: String, active: Boolean, accent: Color) {
             color = if (active) accent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
         )
     }
+}
+
+@Composable
+private fun OperationalSummaryCard(
+    plugin: PluginCatalogItem,
+    validationResult: PluginConfigurationValidationResult?,
+    healthReport: PluginHealthReport?,
+    recentActivity: List<Activity>,
+    operationalRefreshInProgress: Boolean,
+    onRefreshOperationalData: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val summaryStatus = operationalStatusLabel(plugin, validationResult, healthReport)
+    val summaryColor = operationalStatusColor(plugin, validationResult, healthReport)
+
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(color = summaryColor.copy(alpha = 0.14f), shape = RoundedCornerShape(999.dp)) {
+                    Text(
+                        text = summaryStatus,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = summaryColor
+                    )
+                }
+            }
+            Text(
+                text = operationalStatusMessage(validationResult, healthReport, plugin),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+            )
+            if (validationResult?.fieldErrors?.isNotEmpty() == true) {
+                Text(
+                    text = "Configuration issues: ${validationResult.fieldErrors.values.joinToString()}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            if (healthReport?.detail != null || !healthReport?.diagnostics.isNullOrEmpty()) {
+                Text(
+                    text = healthReport?.detail ?: healthReport?.diagnostics?.firstOrNull()?.message ?: "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                )
+            }
+            if (recentActivity.isNotEmpty()) {
+                Divider()
+                Text(
+                    text = "Recent plugin events",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                recentActivity.take(3).forEach { activity ->
+                    Text(
+                        text = "• ${activity.description} (${activity.status.name.lowercase()})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (activity.status == com.aitask.core.domain.model.ActivityStatus.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun operationalStatusLabel(
+    plugin: PluginCatalogItem,
+    validationResult: PluginConfigurationValidationResult?,
+    healthReport: PluginHealthReport?
+): String = when {
+    !plugin.installed -> "Unavailable"
+    validationResult?.valid == false -> "Misconfigured"
+    healthReport?.state == HealthState.FAILED -> "Degraded"
+    healthReport?.state == HealthState.DEGRADED -> "Degraded"
+    plugin.enabled && healthReport?.state == HealthState.HEALTHY -> "Healthy"
+    plugin.enabled -> "Enabled"
+    plugin.attached -> "Disabled"
+    else -> "Disabled"
+}
+
+private fun operationalStatusColor(
+    plugin: PluginCatalogItem,
+    validationResult: PluginConfigurationValidationResult?,
+    healthReport: PluginHealthReport?
+): Color = when (operationalStatusLabel(plugin, validationResult, healthReport)) {
+    "Healthy" -> HEALTHY_COLOR
+    "Enabled" -> ACTIVE_COLOR
+    "Disabled" -> DISABLED_COLOR
+    "Misconfigured" -> ERROR_COLOR
+    "Degraded" -> WARNING_COLOR
+    "Unavailable" -> ERROR_COLOR
+    else -> ACTIVE_COLOR
+}
+
+private fun operationalStatusMessage(
+    validationResult: PluginConfigurationValidationResult?,
+    healthReport: PluginHealthReport?,
+    plugin: PluginCatalogItem
+): String = when {
+    validationResult?.valid == false -> validationResult.message ?: "${plugin.name} needs configuration fixes"
+    healthReport?.state == HealthState.FAILED -> healthReport.message
+    healthReport?.state == HealthState.DEGRADED -> healthReport.message
+    healthReport?.message != null -> healthReport.message
+    plugin.enabled -> "${plugin.name} is enabled and ready"
+    plugin.attached -> "${plugin.name} is attached and waiting to be enabled"
+    else -> "${plugin.name} is installed but disabled"
 }
 
 @Composable

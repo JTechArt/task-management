@@ -1,5 +1,6 @@
 package com.aitask.core.domain.service
 
+import com.aitask.core.domain.model.Activity
 import com.aitask.core.domain.plugin.*
 
 interface PluginManagementService {
@@ -14,4 +15,6 @@ interface PluginManagementService {
     suspend fun saveConfiguration(snapshot: PluginConfigurationSnapshot): Result<PluginConfigurationSnapshot>
     suspend fun validateConfiguration(snapshot: PluginConfigurationSnapshot): Result<PluginConfigurationValidationResult>
     suspend fun validateConfiguration(pluginId: String, scope: PluginConfigurationScope, scopeKey: String? = null): Result<PluginConfigurationValidationResult>
+    suspend fun health(pluginId: String): Result<PluginHealthReport>
+    suspend fun recentActivity(pluginId: String, limit: Int = 5): List<Activity>
 }

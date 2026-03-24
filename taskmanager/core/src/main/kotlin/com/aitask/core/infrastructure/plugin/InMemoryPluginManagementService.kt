@@ -125,7 +125,21 @@ class InMemoryPluginManagementService(
         val runtime = plugins[snapshot.pluginId] ?: return Result.failure(
             IllegalArgumentException("Plugin '${snapshot.pluginId}' is not supported")
         )
-        return Result.success(evaluateConfiguration(runtime.definition, snapshot))
+        val validation = evaluateConfiguration(runtime.definition, snapshot)
+        recordActivity(
+            type = ActivityType.PLUGIN_VALIDATED,
+            plugin = runtime.definition,
+            description = "Validated configuration for ${runtime.definition.manifest.name}",
+            status = if (validation.valid) ActivityStatus.SUCCESS else ActivityStatus.FAILED,
+            metadata = mapOf(
+                "pluginId" to snapshot.pluginId,
+                "scope" to snapshot.scope.name,
+                "scopeKey" to (snapshot.scopeKey ?: ""),
+                "valid" to validation.valid.toString(),
+                "message" to (validation.message ?: "Configuration validation completed")
+            )
+        )
+        return Result.success(validation)
     }
 
     override suspend fun validateConfiguration(
@@ -141,9 +155,45 @@ class InMemoryPluginManagementService(
         return validateConfiguration(snapshot).mapCatching { validation ->
             validation.copy(
                 lastKnownGoodSnapshot = validation.lastKnownGoodSnapshot
-                    ?: latestKnownGoodSnapshot(runtime.definition.manifest.id, scope, scopeKey)
+                ?: latestKnownGoodSnapshot(runtime.definition.manifest.id, scope, scopeKey)
             )
         }
+    }
+
+    override suspend fun health(pluginId: String): Result<PluginHealthReport> {
+        val runtime = plugins[pluginId] ?: return recordCheckFailure(
+            activityType = ActivityType.PLUGIN_HEALTH_CHECKED,
+            pluginId = pluginId,
+            message = "Plugin '$pluginId' is not supported"
+        )
+        return try {
+            val report = host.health(pluginId)
+            recordActivity(
+                type = ActivityType.PLUGIN_HEALTH_CHECKED,
+                plugin = runtime.definition,
+                description = "Checked health for ${runtime.definition.manifest.name}",
+                status = if (report.state == HealthState.HEALTHY) ActivityStatus.SUCCESS else ActivityStatus.FAILED,
+                metadata = mapOf(
+                    "pluginId" to pluginId,
+                    "healthState" to report.state.name,
+                    "message" to report.message
+                )
+            )
+            Result.success(report)
+        } catch (e: Exception) {
+            recordCheckFailure(
+                activityType = ActivityType.PLUGIN_HEALTH_CHECKED,
+                pluginId = pluginId,
+                message = e.message ?: "Plugin health check failed",
+                throwable = e
+            )
+        }
+    }
+
+    override suspend fun recentActivity(pluginId: String, limit: Int): List<Activity> {
+        val runtime = plugins[pluginId] ?: return emptyList()
+        return activityRepository.findByEntity(PLUGIN_ENTITY_TYPE, entityId(runtime.definition.manifest.id))
+            .take(limit)
     }
 
     override suspend fun disable(pluginId: String): Result<PluginCatalogItem> =
@@ -208,6 +258,31 @@ class InMemoryPluginManagementService(
         if (!validation.valid) {
             throw PluginConfigurationValidationException(validation)
         }
+    }
+
+    private fun recordCheckFailure(
+        activityType: ActivityType,
+        pluginId: String,
+        message: String,
+        throwable: Throwable? = null
+    ): Result<Nothing> {
+        val runtime = plugins[pluginId]
+        val definition = runtime?.definition ?: UnsupportedPluginDefinition(pluginId)
+        if (runtime != null) {
+            runtime.lastActionMessage = message
+        }
+        runBlockingRecordActivity(
+            type = activityType,
+            plugin = definition,
+            description = buildDescription(activityType, definition.manifest.name),
+            status = ActivityStatus.FAILED,
+            metadata = mapOf(
+                "pluginId" to pluginId,
+                "error" to message,
+                "detail" to (throwable?.message ?: message)
+            )
+        )
+        return Result.failure(IllegalStateException(message, throwable))
     }
 
     private suspend fun evaluateConfiguration(
@@ -404,6 +479,8 @@ class InMemoryPluginManagementService(
         ActivityType.PLUGIN_ENABLED -> "Enabled plugin: $pluginName"
         ActivityType.PLUGIN_DISABLED -> "Disabled plugin: $pluginName"
         ActivityType.PLUGIN_REMOVED -> "Removed plugin: $pluginName"
+        ActivityType.PLUGIN_VALIDATED -> "Validated plugin: $pluginName"
+        ActivityType.PLUGIN_HEALTH_CHECKED -> "Checked plugin health: $pluginName"
         else -> pluginName
     }
 

@@ -64,6 +64,7 @@ class InMemoryPluginManagementServiceTest {
                 ActivityType.PLUGIN_DETACHED,
                 ActivityType.PLUGIN_DISABLED,
                 ActivityType.PLUGIN_ENABLED,
+                ActivityType.PLUGIN_VALIDATED,
                 ActivityType.PLUGIN_ATTACHED,
                 ActivityType.PLUGIN_INSTALLED
             ),

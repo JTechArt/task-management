@@ -1,0 +1,44 @@
+schema: 1
+story: "11.4"
+story_title: "Plugin Status, Health, and Operational Visibility"
+gate: PASS
+status_reason: "Operational status model, health and validation refresh, activity types, and UI wiring satisfy acceptance criteria; add targeted tests for health and refresh to harden regressions."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-24T18:00:00Z"
+waiver: { active: false }
+top_issues:
+  - id: TEST-001
+    severity: low
+    finding: "No dedicated unit tests for PluginManagementService.health, recentActivity, or PluginManagementViewModel.refreshOperationalData; coverage relies on integration through loadCatalog and existing lifecycle tests."
+    suggested_action: "Add service tests asserting PLUGIN_HEALTH_CHECKED activities and VM test for refreshOperationalData populating validation/health/recent maps."
+evidence:
+  tests_reviewed: 6
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Health metadata in activities is operational; no new secret logging observed."
+  performance:
+    status: PASS
+    notes: "Per-plugin refresh loads bounded recent activity list."
+  reliability:
+    status: PASS
+    notes: "Health and validation use Result; failures recorded as FAILED activities."
+  maintainability:
+    status: PASS
+    notes: "Operational helpers in view are pure functions; service methods are focused."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
+  highest:
+    id: TEST-001
+    score: 2
+    title: "Thin automated coverage for new service methods"
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Expand tests if plugin operational surface grows"
+quality_score: 90
+expires: "2026-04-07T00:00:00Z"
