@@ -55,6 +55,14 @@ class CreateProjectUseCase(
                 description = projectRequest.description,
                 workspacePath = projectRequest.workspacePath,
                 branchTemplate = projectRequest.branchTemplate,
+                methodology = projectRequest.methodology,
+                bmadToolIds = if (projectRequest.methodology == com.aitask.core.domain.model.Methodology.BMAD &&
+                    projectRequest.bmadToolIds.isEmpty()
+                ) {
+                    com.aitask.core.domain.model.BmadToolCatalog.defaultToolIds
+                } else {
+                    projectRequest.bmadToolIds
+                },
                 retentionPolicy = projectRequest.retentionPolicy,
                 tags = projectRequest.tags,
                 team = projectRequest.team,
@@ -89,4 +97,3 @@ class CreateProjectUseCase(
 
 class ValidationException(message: String) : Exception(message)
 class DuplicateProjectException(message: String) : Exception(message)
-

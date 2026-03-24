@@ -32,6 +32,15 @@ class UpdateProjectUseCase(
                 description = request.description,
                 workspacePath = request.workspacePath,
                 branchTemplate = request.branchTemplate,
+                methodology = request.methodology,
+                bmadToolIds = request.bmadToolIds ?: if (
+                    request.methodology == com.aitask.core.domain.model.Methodology.BMAD &&
+                    existing.bmadToolIds.isEmpty()
+                ) {
+                    com.aitask.core.domain.model.BmadToolCatalog.defaultToolIds
+                } else {
+                    null
+                },
                 retentionPolicy = request.retentionPolicy,
                 tags = request.tags,
                 team = request.team
@@ -47,4 +56,3 @@ class UpdateProjectUseCase(
 
 class ProjectNotFoundException(message: String) : Exception(message)
 class ArchivedProjectException(message: String) : Exception(message)
-

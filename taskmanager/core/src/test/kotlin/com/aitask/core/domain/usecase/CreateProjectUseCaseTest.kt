@@ -41,7 +41,8 @@ class CreateProjectUseCaseTest {
         val projectRequest = CreateProjectRequest(
             name = "Test Project",
             workspacePath = "/workspace",
-            branchTemplate = "task-{taskId}"
+            branchTemplate = "task-{taskId}",
+            methodology = Methodology.BMAD
         )
         val repositoryRequest = CreateRepositoryRequest(
             projectId = UUID.randomUUID(),
@@ -65,6 +66,8 @@ class CreateProjectUseCaseTest {
         assertTrue(result.isSuccess)
         val (project, repository) = result.getOrThrow()
         assertEquals("Test Project", project.name)
+        assertEquals(Methodology.BMAD, project.methodology)
+        assertEquals(BmadToolCatalog.defaultToolIds, project.bmadToolIds)
         assertEquals("test-repo", repository.name)
         assertTrue(repository.isPrimary)
         
@@ -156,6 +159,7 @@ class CreateProjectUseCaseTest {
             description = null,
             workspacePath = "/workspace",
             branchTemplate = "task-{taskId}",
+            methodology = Methodology.NONE,
             createdAt = Instant.now(),
             updatedAt = Instant.now()
         )
@@ -172,4 +176,3 @@ class CreateProjectUseCaseTest {
         assertTrue(result.exceptionOrNull() is DuplicateProjectException)
     }
 }
-

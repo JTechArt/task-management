@@ -10,6 +10,8 @@ import com.aitask.core.domain.service.EncryptionService
 import com.aitask.core.domain.service.OAuthService
 import com.aitask.core.domain.service.SlackNotificationService
 import com.aitask.core.domain.service.SlackService
+import com.aitask.core.domain.service.BmadWorkspaceInjectionService
+import com.aitask.core.domain.service.BmadConfigurationResolver
 import com.aitask.core.domain.service.WorkspaceService
 import com.aitask.core.domain.usecase.*
 import com.aitask.core.domain.validation.ProjectValidator
@@ -25,6 +27,7 @@ import com.aitask.core.infrastructure.oauth.OAuthServiceImpl
 import com.aitask.core.infrastructure.prerun.LocalPreRunScriptService
 import com.aitask.core.infrastructure.security.AesGcmEncryptionService
 import com.aitask.core.infrastructure.slack.SlackWebhookClient
+import com.aitask.core.infrastructure.workspace.FileSystemBmadWorkspaceInjectionService
 import com.aitask.core.infrastructure.workspace.FileSystemWorkspaceService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -117,6 +120,14 @@ object DependencyContainer {
 
     val workspaceService: WorkspaceService by lazy {
         FileSystemWorkspaceService(gitService)
+    }
+
+    val bmadWorkspaceInjectionService: BmadWorkspaceInjectionService by lazy {
+        FileSystemBmadWorkspaceInjectionService()
+    }
+
+    val bmadConfigurationResolver: BmadConfigurationResolver by lazy {
+        BmadConfigurationResolver()
     }
 
     val ruleApplicationService: RuleApplicationService by lazy {
@@ -220,6 +231,8 @@ object DependencyContainer {
             projectRepository,
             repositoryRepository,
             workspaceService,
+            bmadConfigurationResolver,
+            bmadWorkspaceInjectionService,
             applyRulesToWorkspaceUseCase,
             activityRepository
         )
@@ -242,6 +255,7 @@ object DependencyContainer {
             repositoryRepository,
             preRunScriptRepository,
             preRunScriptService,
+            bmadConfigurationResolver,
             ideService,
             activityRepository
         )

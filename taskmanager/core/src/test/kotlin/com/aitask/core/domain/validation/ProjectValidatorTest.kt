@@ -1,6 +1,7 @@
 package com.aitask.core.domain.validation
 
 import com.aitask.core.domain.model.CreateProjectRequest
+import com.aitask.core.domain.model.Methodology
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -14,6 +15,7 @@ class ProjectValidatorTest {
             description = "A test project",
             workspacePath = "/home/user/workspace",
             branchTemplate = "task-{taskId}",
+            methodology = Methodology.BMAD,
             tags = listOf("backend", "kotlin"),
             team = "Engineering"
         )
@@ -123,4 +125,3 @@ class ProjectValidatorTest {
         assertTrue(result.errors.size >= 3)
     }
 }
-

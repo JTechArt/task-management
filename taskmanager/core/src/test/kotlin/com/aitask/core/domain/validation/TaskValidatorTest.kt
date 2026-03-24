@@ -1,6 +1,7 @@
 package com.aitask.core.domain.validation
 
 import com.aitask.core.domain.model.CreateTaskRequest
+import com.aitask.core.domain.model.Methodology
 import com.aitask.core.domain.model.TaskType
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -16,6 +17,7 @@ class TaskValidatorTest {
             description = "Add new feature to the system",
             taskType = TaskType.FEATURE,
             projectId = UUID.randomUUID(),
+            methodologyOverride = Methodology.BMAD,
             workspacePath = "/workspace/project",
             branchName = "feature/task-123"
         )
@@ -135,4 +137,3 @@ class TaskValidatorTest {
         assertTrue(result.isValid)
     }
 }
-

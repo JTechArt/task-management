@@ -1,0 +1,35 @@
+schema: 1
+story: "6.4"
+story_title: "BMAD Configuration Override at Task Level"
+gate: PASS
+status_reason: "All ACs met. BmadConfigurationResolver centralizes methodology, tools, and injection resolution. Task has bmadInjectionEnabledOverride; workspace gen and IDE launch use resolved config. UI shows source indicators (Task Override vs Project Default)."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-23T12:00:00Z"
+top_issues: []
+waiver: { active: false }
+
+evidence:
+  tests_reviewed: 3
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Override values from task model; no injection risk."
+  performance:
+    status: PASS
+    notes: "Resolver is pure; no extra I/O."
+  reliability:
+    status: PASS
+    notes: "Nullable overrides with clear fallback; migration V13 additive."
+  maintainability:
+    status: PASS
+    notes: "Single resolver; BmadConfiguration with override flags."
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider LaunchIDEUseCaseTest for bmadInjectionEnabledOverride=false excluding tools from TaskContext"
+      refs: ["taskmanager/core/src/test/kotlin/com/aitask/core/domain/usecase/LaunchIDEUseCaseTest.kt"]

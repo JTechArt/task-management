@@ -26,6 +26,19 @@ class UpdateTaskUseCase(
                 description = request.description,
                 taskType = request.taskType,
                 status = request.status,
+                methodologyOverride = if (request.clearMethodologyOverride) null else request.methodologyOverride ?: existing.methodologyOverride,
+                bmadToolOverrideIds = when {
+                    request.clearBmadToolOverrideIds -> null
+                    request.bmadToolOverrideIds != null -> request.bmadToolOverrideIds
+                    request.methodologyOverride == com.aitask.core.domain.model.Methodology.BMAD && existing.bmadToolOverrideIds == null ->
+                        com.aitask.core.domain.model.BmadToolCatalog.defaultToolIds
+                    else -> existing.bmadToolOverrideIds
+                },
+                bmadInjectionEnabledOverride = when {
+                    request.clearBmadInjectionEnabledOverride -> null
+                    request.bmadInjectionEnabledOverride != null -> request.bmadInjectionEnabledOverride
+                    else -> existing.bmadInjectionEnabledOverride
+                },
                 workspacePath = request.workspacePath,
                 branchName = request.branchName
             )
@@ -58,4 +71,3 @@ class UpdateTaskUseCase(
 
 class TaskNotFoundException(message: String) : Exception(message)
 class ArchivedTaskException(message: String) : Exception(message)
-

@@ -81,6 +81,11 @@ class FileSystemWorkspaceService(
                 onProgress?.invoke("Cloning ${repository.name}...")
                 
                 val repoPath = File(workspace.path, workspaceRepo.localPath).absolutePath
+                val repoPathObj = Paths.get(repoPath)
+                if (Files.exists(repoPathObj)) {
+                    onProgress?.invoke("${repository.name}: Removing existing clone for fresh generation...")
+                    repoPathObj.deleteRecursively()
+                }
                 
                 // Clone repository
                 val authConfig = GitAuthConfig(

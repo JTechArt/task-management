@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,6 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.EnvironmentCheckTemplateId
 import com.aitask.core.domain.model.EnvironmentCheckTemplateRegistry
+import com.aitask.core.domain.model.BmadTool
+import com.aitask.core.domain.model.BmadToolCatalog
+import com.aitask.core.domain.model.BmadToolType
+import com.aitask.core.domain.model.Methodology
 import com.aitask.core.domain.model.PreRunScript
 import com.aitask.core.domain.model.PreRunScriptType
 import com.aitask.core.domain.model.Project
@@ -254,6 +257,9 @@ fun ProjectDetailView(
     repositories: List<Repository>,
     onArchive: (UUID) -> Unit,
     onUnarchive: ((UUID) -> Unit)? = null,
+    onSaveMethodology: (UUID, Methodology) -> Unit = { _, _ -> },
+    onSaveBmadTools: (UUID, List<String>) -> Unit = { _, _ -> },
+    hasAttachedRules: Boolean = false,
     onAddRepository: () -> Unit = {},
     onEditRepository: (Repository) -> Unit = {},
     onDeleteRepository: (UUID) -> Unit = {},
@@ -272,18 +278,30 @@ fun ProjectDetailView(
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember(selectedDetailTab) { mutableStateOf(selectedDetailTab) }
+    var selectedMethodology by remember(project.methodology) { mutableStateOf(project.methodology) }
+    var selectedBmadToolIds by remember(project.bmadToolIds) {
+        mutableStateOf(project.bmadToolIds.ifEmpty { BmadToolCatalog.defaultToolIds })
+    }
+    var methodologyExpanded by remember { mutableStateOf(false) }
+    var showMethodologyConfirmation by remember { mutableStateOf(false) }
     LaunchedEffect(selectedDetailTab) { selectedTab = selectedDetailTab }
-    Column(
+    LaunchedEffect(project.methodology) { selectedMethodology = project.methodology }
+    LaunchedEffect(project.bmadToolIds) {
+        selectedBmadToolIds = project.bmadToolIds.ifEmpty { BmadToolCatalog.defaultToolIds }
+    }
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
             Text(
                 text = project.name,
                 style = MaterialTheme.typography.headlineSmall,
@@ -313,8 +331,81 @@ fun ProjectDetailView(
         }
         DetailRow("Workspace Path", project.workspacePath)
         DetailRow("Branch Template", project.branchTemplate)
+        DetailRow("Methodology", project.methodology.name)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = methodologyExpanded,
+                onExpandedChange = { methodologyExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = selectedMethodology.name,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Project Methodology") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = methodologyExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    supportingText = { Text("Tasks inherit this unless they override it") }
+                )
+                ExposedDropdownMenu(
+                    expanded = methodologyExpanded,
+                    onDismissRequest = { methodologyExpanded = false }
+                ) {
+                    Methodology.values().forEach { methodology ->
+                        DropdownMenuItem(
+                            text = { Text(methodology.name) },
+                            onClick = {
+                                selectedMethodology = methodology
+                                methodologyExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            Button(
+                onClick = {
+                    if (hasAttachedRules && selectedMethodology != project.methodology) {
+                        showMethodologyConfirmation = true
+                    } else {
+                        onSaveMethodology(project.id, selectedMethodology)
+                    }
+                },
+                enabled = selectedMethodology != project.methodology
+            ) {
+                Text("Save")
+            }
+        }
         if (project.tags.isNotEmpty()) {
             DetailRow("Tags", project.tags.joinToString(", "))
+        }
+        if (project.methodology == Methodology.BMAD) {
+            Divider()
+            Text(
+                text = "BMAD Tools",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "These tools are surfaced in BMAD task context and can be customized per task.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            BmadToolSelectionSection(
+                selectedToolIds = selectedBmadToolIds,
+                onSelectionChange = { selectedBmadToolIds = it }
+            )
+            Button(
+                onClick = { onSaveBmadTools(project.id, selectedBmadToolIds) },
+                enabled = selectedBmadToolIds != project.bmadToolIds
+            ) {
+                Text("Save BMAD Tools")
+            }
         }
         project.team?.let { team ->
             DetailRow("Team", team)
@@ -458,6 +549,99 @@ fun ProjectDetailView(
                 )
             }
         }
+            }
+        }
+    }
+    if (showMethodologyConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showMethodologyConfirmation = false },
+            title = { Text("Change methodology?") },
+            text = {
+                Text("This project already has attached rule sets. Changing methodology will not delete them, but BMAD-specific behavior may change.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showMethodologyConfirmation = false
+                        onSaveMethodology(project.id, selectedMethodology)
+                    }
+                ) {
+                    Text("Change Methodology")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMethodologyConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun BmadToolSelectionSection(
+    selectedToolIds: List<String>,
+    onSelectionChange: (List<String>) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        BmadToolType.values().forEach { type ->
+            val tools = BmadToolCatalog.tools.filter { it.type == type }
+            if (tools.isNotEmpty()) {
+                Text(
+                    text = type.name.lowercase().replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                tools.forEach { tool ->
+                    BmadToolCheckboxRow(
+                        tool = tool,
+                        selected = selectedToolIds.contains(tool.id),
+                        onSelectedChange = { checked ->
+                            onSelectionChange(
+                                if (checked) {
+                                    (selectedToolIds + tool.id).distinct()
+                                } else {
+                                    selectedToolIds - tool.id
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BmadToolCheckboxRow(
+    tool: BmadTool,
+    selected: Boolean,
+    onSelectedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Checkbox(
+            checked = selected,
+            onCheckedChange = onSelectedChange
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(tool.label, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(
+                text = tool.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
     }
 }
 
@@ -487,11 +671,11 @@ private fun PreRunScriptGroup(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
         } else {
-            LazyColumn(
+            Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.heightIn(max = 220.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                items(scripts) { script ->
+                scripts.forEach { script ->
                     PreRunScriptCard(
                         script = script,
                         repositories = repositories,

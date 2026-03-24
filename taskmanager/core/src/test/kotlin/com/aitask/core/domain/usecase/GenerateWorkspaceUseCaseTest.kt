@@ -5,6 +5,9 @@ import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
+import com.aitask.core.domain.service.BmadConfigurationResolver
+import com.aitask.core.domain.service.BmadInjectionResult
+import com.aitask.core.domain.service.BmadWorkspaceInjectionService
 import com.aitask.core.domain.service.WorkspaceService
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
@@ -19,6 +22,8 @@ class GenerateWorkspaceUseCaseTest {
     private lateinit var projectRepository: ProjectRepository
     private lateinit var repositoryRepository: RepositoryRepository
     private lateinit var workspaceService: WorkspaceService
+    private lateinit var bmadConfigurationResolver: BmadConfigurationResolver
+    private lateinit var bmadWorkspaceInjectionService: BmadWorkspaceInjectionService
     private lateinit var applyRulesToWorkspaceUseCase: ApplyRulesToWorkspaceUseCase
     private lateinit var activityRepository: ActivityRepository
     private lateinit var useCase: GenerateWorkspaceUseCase
@@ -29,14 +34,29 @@ class GenerateWorkspaceUseCaseTest {
         projectRepository = mockk()
         repositoryRepository = mockk()
         workspaceService = mockk()
+        bmadConfigurationResolver = BmadConfigurationResolver()
+        bmadWorkspaceInjectionService = mockk()
         applyRulesToWorkspaceUseCase = mockk()
         activityRepository = mockk()
         coEvery { activityRepository.create(any()) } answers { firstArg() }
+        coEvery {
+            bmadWorkspaceInjectionService.injectIntoWorkspace(any())
+        } returns Result.success(
+            BmadInjectionResult(
+                applied = true,
+                sourcePath = "/bundle",
+                copiedPaths = listOf(".bmad-core", "AGENTS.md"),
+                skippedPaths = emptyList(),
+                overwriteExisting = false
+            )
+        )
         useCase = GenerateWorkspaceUseCase(
             taskRepository,
             projectRepository,
             repositoryRepository,
             workspaceService,
+            bmadConfigurationResolver,
+            bmadWorkspaceInjectionService,
             applyRulesToWorkspaceUseCase,
             activityRepository
         )
@@ -54,6 +74,7 @@ class GenerateWorkspaceUseCaseTest {
         taskType = TaskType.FEATURE,
         status = if (archived) TaskStatus.ARCHIVED else status,
         projectId = projectId,
+        methodologyOverride = null,
         workspacePath = null,
         branchName = null,
         createdAt = Instant.now(),
@@ -70,6 +91,7 @@ class GenerateWorkspaceUseCaseTest {
         description = null,
         workspacePath = "/workspace",
         branchTemplate = "task-{taskId}",
+        methodology = Methodology.NONE,
         createdAt = Instant.now(),
         updatedAt = Instant.now(),
         archivedAt = if (archived) Instant.now() else null
@@ -323,5 +345,111 @@ class GenerateWorkspaceUseCaseTest {
         assertTrue(result.isSuccess)
         coVerify { repositoryRepository.findByProject(projectId) }
     }
-}
 
+    @Test
+    fun `should inject bmad bundle before applying rules when methodology is bmad`() = runTest {
+        val taskId = UUID.randomUUID()
+        val projectId = UUID.randomUUID()
+        val task = createTask(id = taskId, projectId = projectId)
+        val project = createProject(id = projectId).copy(methodology = Methodology.BMAD)
+        val repository = createRepository(projectId = projectId)
+        val workspace = createWorkspace(taskId, projectId)
+        val request = CreateWorkspaceRequest(taskId = taskId, projectId = projectId)
+
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { projectRepository.findById(projectId) } returns project
+        coEvery { repositoryRepository.findPrimaryByProject(projectId) } returns repository
+        coEvery { workspaceService.createWorkspace(task, project, listOf(repository)) } returns Result.success(workspace)
+        coEvery { workspaceService.prepareWorkspace(workspace, listOf(repository), any()) } returns Result.success(workspace)
+        coEvery { applyRulesToWorkspaceUseCase(any()) } returns Result.success(
+            AppliedRules(
+                workspacePath = workspace.path,
+                projectId = projectId,
+                ideType = null,
+                appliedRuleIds = emptyList(),
+                skippedRules = emptyList(),
+                appliedAt = Instant.now(),
+                success = true
+            )
+        )
+        coEvery { taskRepository.update(any()) } returns mockk()
+
+        val result = useCase(request)
+
+        assertTrue(result.isSuccess)
+        coVerifyOrder {
+            workspaceService.prepareWorkspace(workspace, listOf(repository), any())
+            bmadWorkspaceInjectionService.injectIntoWorkspace(workspace.path)
+            applyRulesToWorkspaceUseCase(any())
+        }
+        coVerify {
+            activityRepository.create(match { it.type == ActivityType.BMAD_INJECTION_APPLIED && it.status == ActivityStatus.SUCCESS })
+        }
+    }
+
+    @Test
+    fun `should fail workspace generation when bmad injection fails`() = runTest {
+        val taskId = UUID.randomUUID()
+        val projectId = UUID.randomUUID()
+        val task = createTask(id = taskId, projectId = projectId)
+        val project = createProject(id = projectId).copy(methodology = Methodology.BMAD)
+        val repository = createRepository(projectId = projectId)
+        val workspace = createWorkspace(taskId, projectId)
+        val request = CreateWorkspaceRequest(taskId = taskId, projectId = projectId)
+        val injectionError = Exception("Bundle missing")
+
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { projectRepository.findById(projectId) } returns project
+        coEvery { repositoryRepository.findPrimaryByProject(projectId) } returns repository
+        coEvery { workspaceService.createWorkspace(task, project, listOf(repository)) } returns Result.success(workspace)
+        coEvery { workspaceService.prepareWorkspace(workspace, listOf(repository), any()) } returns Result.success(workspace)
+        coEvery { bmadWorkspaceInjectionService.injectIntoWorkspace(workspace.path) } returns Result.failure(injectionError)
+
+        val result = useCase(request)
+
+        assertTrue(result.isFailure)
+        assertEquals(injectionError, result.exceptionOrNull())
+        coVerify(exactly = 0) { applyRulesToWorkspaceUseCase(any()) }
+        coVerify(exactly = 0) { taskRepository.update(any()) }
+        coVerify {
+            activityRepository.create(match { it.type == ActivityType.BMAD_INJECTION_FAILED && it.status == ActivityStatus.FAILED })
+        }
+    }
+
+    @Test
+    fun `should skip bmad injection when task override disables it`() = runTest {
+        val taskId = UUID.randomUUID()
+        val projectId = UUID.randomUUID()
+        val task = createTask(id = taskId, projectId = projectId).copy(
+            methodologyOverride = Methodology.BMAD,
+            bmadInjectionEnabledOverride = false
+        )
+        val project = createProject(id = projectId).copy(methodology = Methodology.BMAD)
+        val repository = createRepository(projectId = projectId)
+        val workspace = createWorkspace(taskId, projectId)
+        val request = CreateWorkspaceRequest(taskId = taskId, projectId = projectId)
+
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { projectRepository.findById(projectId) } returns project
+        coEvery { repositoryRepository.findPrimaryByProject(projectId) } returns repository
+        coEvery { workspaceService.createWorkspace(task, project, listOf(repository)) } returns Result.success(workspace)
+        coEvery { workspaceService.prepareWorkspace(workspace, listOf(repository), any()) } returns Result.success(workspace)
+        coEvery { applyRulesToWorkspaceUseCase(any()) } returns Result.success(
+            AppliedRules(
+                workspacePath = workspace.path,
+                projectId = projectId,
+                ideType = null,
+                appliedRuleIds = emptyList(),
+                skippedRules = emptyList(),
+                appliedAt = Instant.now(),
+                success = true
+            )
+        )
+        coEvery { taskRepository.update(any()) } returns mockk()
+
+        val result = useCase(request)
+
+        assertTrue(result.isSuccess)
+        coVerify(exactly = 0) { bmadWorkspaceInjectionService.injectIntoWorkspace(any()) }
+    }
+}

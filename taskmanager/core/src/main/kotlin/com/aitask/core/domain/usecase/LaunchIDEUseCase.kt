@@ -6,6 +6,7 @@ import com.aitask.core.domain.repository.PreRunScriptRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
+import com.aitask.core.domain.service.BmadConfigurationResolver
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.PreRunScriptService
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -53,6 +54,7 @@ class LaunchIDEUseCase(
     private val repositoryRepository: RepositoryRepository,
     private val preRunScriptRepository: PreRunScriptRepository,
     private val preRunScriptService: PreRunScriptService,
+    private val bmadConfigurationResolver: BmadConfigurationResolver,
     private val ideService: IDEService,
     private val activityRepository: ActivityRepository
 ) {
@@ -74,6 +76,7 @@ class LaunchIDEUseCase(
             // 3. Get project
             val project = projectRepository.findById(task.projectId)
                 ?: return Result.failure(ProjectNotFoundException("Project not found: ${task.projectId}"))
+            val bmadConfiguration = bmadConfigurationResolver.resolve(project, task)
             
             // 4. Validate IDE type is configured for the project's repositories
             val repositories = repositoryRepository.findByProject(project.id)
@@ -153,7 +156,12 @@ class LaunchIDEUseCase(
                 title = task.title,
                 description = task.description,
                 projectName = project.name,
-                branchName = task.branchName
+                branchName = task.branchName,
+                activeBmadTools = if (bmadConfiguration.methodology == Methodology.BMAD) {
+                    BmadToolCatalog.labelsFor(bmadConfiguration.toolIds)
+                } else {
+                    emptyList()
+                }
             )
             
             // 7. Launch IDE

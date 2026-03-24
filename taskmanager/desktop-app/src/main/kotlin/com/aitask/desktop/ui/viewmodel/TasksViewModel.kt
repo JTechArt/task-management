@@ -80,7 +80,8 @@ class TasksViewModel(
         title: String,
         description: String?,
         taskType: TaskType,
-        projectId: UUID
+        projectId: UUID,
+        methodologyOverride: Methodology?
     ) {
         uiState = uiState.copy(isSaving = true, error = null)
         scope.launch {
@@ -88,7 +89,8 @@ class TasksViewModel(
                 title = title,
                 description = description,
                 taskType = taskType,
-                projectId = projectId
+                projectId = projectId,
+                methodologyOverride = methodologyOverride
             )
 
             val result = createTaskUseCase(request)
@@ -136,6 +138,86 @@ class TasksViewModel(
                 onFailure = { error ->
                     uiState = uiState.copy(
                         error = error.message ?: "Failed to update task"
+                    )
+                }
+            )
+        }
+    }
+
+    fun updateTaskMethodology(taskId: UUID, methodologyOverride: Methodology?) {
+        scope.launch {
+            val result = updateTaskUseCase(
+                taskId,
+                UpdateTaskRequest(
+                    methodologyOverride = methodologyOverride,
+                    clearMethodologyOverride = methodologyOverride == null
+                )
+            )
+            result.fold(
+                onSuccess = { updatedTask ->
+                    uiState = uiState.copy(selectedTask = updatedTask)
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to update task methodology"
+                    )
+                }
+            )
+        }
+    }
+
+    fun updateTaskBmadTools(taskId: UUID, toolIds: List<String>) {
+        scope.launch {
+            val result = updateTaskUseCase(taskId, UpdateTaskRequest(bmadToolOverrideIds = toolIds))
+            result.fold(
+                onSuccess = { updatedTask ->
+                    uiState = uiState.copy(selectedTask = updatedTask)
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to update BMAD tools"
+                    )
+                }
+            )
+        }
+    }
+
+    fun clearTaskBmadToolOverride(taskId: UUID) {
+        scope.launch {
+            val result = updateTaskUseCase(taskId, UpdateTaskRequest(clearBmadToolOverrideIds = true))
+            result.fold(
+                onSuccess = { updatedTask ->
+                    uiState = uiState.copy(selectedTask = updatedTask)
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to reset BMAD tools"
+                    )
+                }
+            )
+        }
+    }
+
+    fun updateTaskBmadInjectionOverride(taskId: UUID, enabled: Boolean?) {
+        scope.launch {
+            val result = updateTaskUseCase(
+                taskId,
+                UpdateTaskRequest(
+                    bmadInjectionEnabledOverride = enabled,
+                    clearBmadInjectionEnabledOverride = enabled == null
+                )
+            )
+            result.fold(
+                onSuccess = { updatedTask ->
+                    uiState = uiState.copy(selectedTask = updatedTask)
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to update BMAD injection override"
                     )
                 }
             )

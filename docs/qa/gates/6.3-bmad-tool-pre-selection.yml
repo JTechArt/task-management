@@ -1,0 +1,37 @@
+schema: 1
+story: "6.3"
+story_title: "BMAD Recommended Tools Pre-Selection"
+gate: PASS
+status_reason: "All ACs met. BmadToolCatalog with agents/tasks/checklists. Pre-selection when methodology=BMAD. Project and task-level config with checkboxes; TASK_CONTEXT.md at IDE launch; persistence via V12."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-23T12:00:00Z"
+top_issues: []
+waiver: { active: false }
+
+evidence:
+  tests_reviewed: 4
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Tool IDs from BmadToolCatalog; no user input injected into execution path."
+  performance:
+    status: PASS
+    notes: "Catalog is static; list operations at config time."
+  reliability:
+    status: PASS
+    notes: "Nullable task override; effectiveBmadToolIds falls back to project."
+  maintainability:
+    status: PASS
+    notes: "BmadToolCatalog central; tests for create/update/launch flows."
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider UpdateProjectUseCase test for methodology change to BMAD applying defaults"
+      refs: ["taskmanager/core/src/test/kotlin/com/aitask/core/domain/usecase/UpdateProjectUseCaseTest.kt"]
+    - action: "Add UI test or screenshot doc for BMAD tools checkbox section"
+      refs: ["taskmanager/desktop-app/"]

@@ -1,9 +1,12 @@
 package com.aitask.desktop.ui.tasks
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.*
+import com.aitask.desktop.ui.projects.BmadToolSelectionSection
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -290,8 +294,14 @@ fun TaskListItem(
 @Composable
 fun TaskDetailView(
     task: Task,
+    projectMethodology: Methodology,
+    projectBmadToolIds: List<String>,
     onDelete: (UUID) -> Unit,
     onStatusChange: (UUID, TaskStatus) -> Unit,
+    onSaveMethodologyOverride: (UUID, Methodology?) -> Unit = { _, _ -> },
+    onSaveBmadToolOverride: (UUID, List<String>) -> Unit = { _, _ -> },
+    onResetBmadToolOverride: (UUID) -> Unit = {},
+    onSaveBmadInjectionOverride: (UUID, Boolean?) -> Unit = { _, _ -> },
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
     onCleanupWorkspace: ((Task) -> Unit)? = null,
@@ -303,9 +313,31 @@ fun TaskDetailView(
     isCleaningUpWorkspace: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    var methodologyExpanded by remember { mutableStateOf(false) }
+    var selectedMethodologyOverride by remember(task.methodologyOverride) { mutableStateOf(task.methodologyOverride) }
+    var selectedBmadToolIds by remember(task.bmadToolOverrideIds, projectBmadToolIds) {
+        mutableStateOf(
+            task.effectiveBmadToolIds(projectBmadToolIds)
+        )
+    }
+    var selectedInjectionOverride by remember(task.bmadInjectionEnabledOverride) {
+        mutableStateOf(task.bmadInjectionEnabledOverride)
+    }
+    val scrollState = rememberScrollState()
+    LaunchedEffect(task.methodologyOverride) {
+        selectedMethodologyOverride = task.methodologyOverride
+    }
+    LaunchedEffect(task.bmadToolOverrideIds, projectBmadToolIds) {
+        selectedBmadToolIds = task.effectiveBmadToolIds(projectBmadToolIds)
+    }
+    LaunchedEffect(task.bmadInjectionEnabledOverride) {
+        selectedInjectionOverride = task.bmadInjectionEnabledOverride
+    }
     Column(
         modifier = modifier
             .fillMaxSize()
+            .animateContentSize()
+            .verticalScroll(scrollState)
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -348,6 +380,135 @@ fun TaskDetailView(
         // Task details
         DetailRow("Created", formatDate(task.createdAt))
         DetailRow("Updated", formatDate(task.updatedAt))
+        DetailRow("Effective Methodology", task.effectiveMethodology(projectMethodology).name)
+        DetailRow("Methodology Source", if (task.methodologyOverride != null) "Task Override" else "Project Default")
+        DetailRow("Methodology Override", task.methodologyOverride?.name ?: "Project Default")
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = methodologyExpanded,
+                onExpandedChange = { methodologyExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = selectedMethodologyOverride?.name ?: "Project Default",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Task Methodology") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = methodologyExpanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    supportingText = { Text("Effective: ${(selectedMethodologyOverride ?: projectMethodology).name}") }
+                )
+                ExposedDropdownMenu(
+                    expanded = methodologyExpanded,
+                    onDismissRequest = { methodologyExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Project Default") },
+                        onClick = {
+                            selectedMethodologyOverride = null
+                            methodologyExpanded = false
+                        }
+                    )
+                    Methodology.values().forEach { methodology ->
+                        DropdownMenuItem(
+                            text = { Text(methodology.name) },
+                            onClick = {
+                                selectedMethodologyOverride = methodology
+                                methodologyExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            Button(
+                onClick = { onSaveMethodologyOverride(task.id, selectedMethodologyOverride) },
+                enabled = selectedMethodologyOverride != task.methodologyOverride
+            ) {
+                Text("Save")
+            }
+        }
+        if (task.effectiveMethodology(projectMethodology) == Methodology.BMAD) {
+            DetailRow(
+                "BMAD Tools Source",
+                if (task.bmadToolOverrideIds != null) "Task Override" else "Project Default"
+            )
+            Text(
+                text = "BMAD Tools",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Task-specific override for the active BMAD tool set.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            BmadToolSelectionSection(
+                selectedToolIds = selectedBmadToolIds,
+                onSelectionChange = { selectedBmadToolIds = it }
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = { onSaveBmadToolOverride(task.id, selectedBmadToolIds) },
+                    enabled = selectedBmadToolIds != task.bmadToolOverrideIds
+                ) {
+                    Text("Save BMAD Tools")
+                }
+                if (task.bmadToolOverrideIds != null) {
+                    OutlinedButton(onClick = { onResetBmadToolOverride(task.id) }) {
+                        Text("Use Project Defaults")
+                    }
+                }
+            }
+            Text(
+                text = "BMAD Injection",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            DetailRow(
+                "Injection Source",
+                if (task.bmadInjectionEnabledOverride != null) "Task Override" else "Project Default"
+            )
+            Text(
+                text = "Control whether BMAD files are injected for this task even when the project default is BMAD.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilterChip(
+                    selected = selectedInjectionOverride == null,
+                    onClick = { selectedInjectionOverride = null },
+                    label = { Text("Project Default") }
+                )
+                FilterChip(
+                    selected = selectedInjectionOverride == true,
+                    onClick = { selectedInjectionOverride = true },
+                    label = { Text("Force On") }
+                )
+                FilterChip(
+                    selected = selectedInjectionOverride == false,
+                    onClick = { selectedInjectionOverride = false },
+                    label = { Text("Force Off") }
+                )
+            }
+            Button(
+                onClick = { onSaveBmadInjectionOverride(task.id, selectedInjectionOverride) },
+                enabled = selectedInjectionOverride != task.bmadInjectionEnabledOverride
+            ) {
+                Text("Save Injection Override")
+            }
+        }
 
         task.completedAt?.let { completed ->
             DetailRow("Completed", formatDate(completed))
@@ -665,4 +826,3 @@ private fun formatDate(instant: java.time.Instant): String {
     val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")
     return formatter.format(instant.atZone(java.time.ZoneId.systemDefault()))
 }
-

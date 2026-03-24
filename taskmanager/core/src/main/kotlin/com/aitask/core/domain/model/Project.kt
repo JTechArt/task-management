@@ -10,6 +10,8 @@ data class Project(
     val description: String?,
     val workspacePath: String,
     val branchTemplate: String = "task-{taskId}",
+    val methodology: Methodology = Methodology.NONE,
+    val bmadToolIds: List<String> = emptyList(),
     val retentionPolicy: RetentionPolicy = RetentionPolicy.KEEP_ALL,
     val tags: List<String> = emptyList(),
     val team: String? = null,
@@ -27,6 +29,8 @@ data class Project(
         description: String? = null,
         workspacePath: String? = null,
         branchTemplate: String? = null,
+        methodology: Methodology? = null,
+        bmadToolIds: List<String>? = null,
         retentionPolicy: RetentionPolicy? = null,
         tags: List<String>? = null,
         team: String? = null
@@ -35,6 +39,8 @@ data class Project(
         description = description ?: this.description,
         workspacePath = workspacePath ?: this.workspacePath,
         branchTemplate = branchTemplate ?: this.branchTemplate,
+        methodology = methodology ?: this.methodology,
+        bmadToolIds = bmadToolIds ?: this.bmadToolIds,
         retentionPolicy = retentionPolicy ?: this.retentionPolicy,
         tags = tags ?: this.tags,
         team = team ?: this.team,
@@ -47,6 +53,8 @@ data class CreateProjectRequest(
     val description: String? = null,
     val workspacePath: String,
     val branchTemplate: String = "task-{taskId}",
+    val methodology: Methodology = Methodology.NONE,
+    val bmadToolIds: List<String> = emptyList(),
     val retentionPolicy: RetentionPolicy = RetentionPolicy.KEEP_ALL,
     val tags: List<String> = emptyList(),
     val team: String? = null
@@ -57,8 +65,9 @@ data class UpdateProjectRequest(
     val description: String? = null,
     val workspacePath: String? = null,
     val branchTemplate: String? = null,
+    val methodology: Methodology? = null,
+    val bmadToolIds: List<String>? = null,
     val retentionPolicy: RetentionPolicy? = null,
     val tags: List<String>? = null,
     val team: String? = null
 )
-

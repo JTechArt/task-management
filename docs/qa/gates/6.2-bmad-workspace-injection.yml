@@ -1,0 +1,37 @@
+schema: 1
+story: "6.2"
+story_title: "BMAD Setup Injection into Workspace"
+gate: PASS
+status_reason: "All ACs met. BMAD bundle (.bmad-core, AGENTS.md) injected into workspace when methodology is BMAD. Runs after clone, before rules. Skip-existing by default; overwrite configurable. Failures recorded and reported; activity types BMAD_INJECTION_APPLIED / BMAD_INJECTION_FAILED."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-23T12:00:00Z"
+top_issues: []
+waiver: { active: false }
+
+evidence:
+  tests_reviewed: 5
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Bundle path from system property or upward search; workspace path from app. Copy targets fixed (.bmad-core, AGENTS.md). No path traversal risk."
+  performance:
+    status: PASS
+    notes: "IO-bound copy; runs once per workspace generation."
+  reliability:
+    status: PASS
+    notes: "Result-based; failures fail workspace generation; activity logging for audit."
+  maintainability:
+    status: PASS
+    notes: "BmadWorkspaceInjectionService interface; FileSystemBmadWorkspaceInjectionService impl; unit tests for injector and use case."
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Consider unit test for overwriteExisting=true overwriting existing content"
+      refs: ["taskmanager/core/src/test/kotlin/com/aitask/core/infrastructure/workspace/FileSystemBmadWorkspaceInjectionServiceTest.kt"]
+    - action: "Document bundle path discovery in user docs (user.dir vs -Daitask.bmad.bundlePath)"
+      refs: ["docs/"]

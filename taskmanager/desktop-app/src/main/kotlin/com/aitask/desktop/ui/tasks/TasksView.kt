@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aitask.core.domain.model.Methodology
 import com.aitask.core.domain.model.Task
 import com.aitask.core.domain.model.TaskStatus
 import com.aitask.desktop.ui.viewmodel.TasksViewModel
@@ -241,11 +242,26 @@ fun TasksView(
                             .weight(1.5f)
                             .fillMaxHeight()
                     ) {
+                        val selectedProject = uiState.projects.find { it.id == uiState.selectedTask.projectId }
                         TaskDetailView(
                             task = uiState.selectedTask,
+                            projectMethodology = selectedProject?.methodology ?: Methodology.NONE,
+                            projectBmadToolIds = selectedProject?.bmadToolIds ?: emptyList(),
                             onDelete = { viewModel.deleteTask(it) },
                             onStatusChange = { taskId, status ->
                                 viewModel.updateTaskStatus(taskId, status)
+                            },
+                            onSaveMethodologyOverride = { taskId, methodologyOverride ->
+                                viewModel.updateTaskMethodology(taskId, methodologyOverride)
+                            },
+                            onSaveBmadToolOverride = { taskId, toolIds ->
+                                viewModel.updateTaskBmadTools(taskId, toolIds)
+                            },
+                            onResetBmadToolOverride = { taskId ->
+                                viewModel.clearTaskBmadToolOverride(taskId)
+                            },
+                            onSaveBmadInjectionOverride = { taskId, enabled ->
+                                viewModel.updateTaskBmadInjectionOverride(taskId, enabled)
                             },
                             onGenerateWorkspace = { taskId ->
                                 viewModel.showRepositorySelectionDialog(taskId)
@@ -272,8 +288,8 @@ fun TasksView(
         CreateTaskDialog(
             projects = uiState.projects,
             onDismiss = { viewModel.hideCreateDialog() },
-            onConfirm = { title, description, taskType, projectId ->
-                viewModel.createTask(title, description, taskType, projectId)
+            onConfirm = { title, description, taskType, projectId, methodologyOverride ->
+                viewModel.createTask(title, description, taskType, projectId, methodologyOverride)
             },
             isSaving = uiState.isSaving
         )
@@ -308,4 +324,3 @@ fun TasksView(
         )
     }
 }
-
