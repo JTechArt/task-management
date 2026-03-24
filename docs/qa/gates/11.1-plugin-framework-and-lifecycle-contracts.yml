@@ -1,0 +1,48 @@
+schema: 1
+story: "11.1"
+story_title: "Plugin Framework and Lifecycle Contracts"
+gate: PASS
+status_reason: "Versioned contracts, lifecycle host, diagnostics, extension registration, and failure isolation are implemented with focused unit tests mapping to all acceptance criteria."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-24T13:30:00Z"
+waiver: { active: false }
+top_issues:
+  - id: MNT-001
+    severity: low
+    finding: "PluginManifest.optional is not read by InMemoryPluginHost; failure isolation is uniform for all plugins."
+    suggested_action: "In a follow-up, use optional/required semantics if required plugins must block host readiness."
+  - id: TEST-001
+    severity: low
+    finding: "No test registers an INTEGRATION_HOOK extension point (enum is covered indirectly)."
+    suggested_action: "Add one declaration using INTEGRATION_HOOK for symmetry with AC2 wording."
+evidence:
+  tests_reviewed: 5
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Domain-only module; diagnostics use exception messages, not secrets. No dynamic execution."
+  performance:
+    status: PASS
+    notes: "In-memory structures; no hot-path concerns for baseline host."
+  reliability:
+    status: PASS
+    notes: "Lifecycle and health failures caught; BLOCKED for incompatible contracts before plugin code runs."
+  maintainability:
+    status: PASS
+    notes: "Single-file contract and host; tests are readable and follow Arrange-Act-Assert."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 2 }
+  highest:
+    id: MNT-001
+    score: 2
+    title: "Optional flag unused in host policy"
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Evolve optional vs required plugin policy when integrating with application bootstrap"
+quality_score: 90
+expires: "2026-04-07T00:00:00Z"
