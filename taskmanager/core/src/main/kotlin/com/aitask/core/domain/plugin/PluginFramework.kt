@@ -48,6 +48,8 @@ data class PluginManifest(
     val version: String,
     val description: String? = null,
     val requiredHostContractVersion: PluginContractVersion,
+    val configurationScope: PluginConfigurationScope = PluginConfigurationScope.APP,
+    val configurationSchema: PluginConfigurationSchema = PluginConfigurationSchema(),
     val optional: Boolean = true,
     val extensionPoints: List<PluginExtensionPointDeclaration> = emptyList()
 ) {

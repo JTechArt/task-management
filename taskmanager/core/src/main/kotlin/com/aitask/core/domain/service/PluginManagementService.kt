@@ -1,6 +1,6 @@
 package com.aitask.core.domain.service
 
-import com.aitask.core.domain.plugin.PluginCatalogItem
+import com.aitask.core.domain.plugin.*
 
 interface PluginManagementService {
     suspend fun catalog(): List<PluginCatalogItem>
@@ -10,4 +10,8 @@ interface PluginManagementService {
     suspend fun disable(pluginId: String): Result<PluginCatalogItem>
     suspend fun detach(pluginId: String): Result<PluginCatalogItem>
     suspend fun remove(pluginId: String): Result<PluginCatalogItem>
+    suspend fun getConfiguration(pluginId: String, scope: PluginConfigurationScope, scopeKey: String? = null): PluginConfigurationSnapshot?
+    suspend fun saveConfiguration(snapshot: PluginConfigurationSnapshot): Result<PluginConfigurationSnapshot>
+    suspend fun validateConfiguration(snapshot: PluginConfigurationSnapshot): Result<PluginConfigurationValidationResult>
+    suspend fun validateConfiguration(pluginId: String, scope: PluginConfigurationScope, scopeKey: String? = null): Result<PluginConfigurationValidationResult>
 }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -52,5 +53,30 @@ class PluginManagementViewModelTest {
         assertTrue(installedPlugin.installed)
         assertTrue(viewModel.uiState.feedback?.message?.contains("installed successfully") == true)
         assertFalse(viewModel.uiState.feedback?.isError == true)
+    }
+
+    @Test
+    fun `configuration editor validates and saves plugin settings`() = runTest(testDispatcher) {
+        viewModel.loadCatalog()
+        advanceUntilIdle()
+
+        viewModel.openConfigurationEditor("plugin.code-review-assistant")
+        advanceUntilIdle()
+
+        assertNotNull(viewModel.uiState.configurationEditor)
+        viewModel.updateConfigurationField("review_summary_prefix", "Review")
+        viewModel.updateConfigurationSecret("review_token", "secret-token")
+        viewModel.validateConfiguration()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.configurationEditor?.validationResult?.valid == true)
+
+        viewModel.saveConfiguration()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.feedback?.message?.contains("configuration saved") == true)
+        assertTrue(
+            viewModel.uiState.configurationEditor?.validationResult?.valid == true
+        )
     }
 }

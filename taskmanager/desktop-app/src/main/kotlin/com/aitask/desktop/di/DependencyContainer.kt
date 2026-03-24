@@ -22,6 +22,7 @@ import com.aitask.core.domain.validation.TaskValidator
 import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
+import com.aitask.core.infrastructure.plugin.DefaultPluginPrerequisiteProbe
 import com.aitask.core.infrastructure.plugin.InMemoryPluginManagementService
 import com.aitask.core.infrastructure.rules.FileSystemRuleApplicationService
 import com.aitask.core.config.OAuthConfig
@@ -154,7 +155,11 @@ object DependencyContainer {
     }
 
     val pluginManagementService: PluginManagementService by lazy {
-        InMemoryPluginManagementService(activityRepository = activityRepository)
+        InMemoryPluginManagementService(
+            activityRepository = activityRepository,
+            configurationRepository = PluginConfigurationRepositoryImpl(),
+            prerequisiteProbe = DefaultPluginPrerequisiteProbe(ideService = ideService)
+        )
     }
 
     // Project Use Cases

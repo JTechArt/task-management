@@ -1,12 +1,15 @@
 package com.aitask.core.infrastructure.plugin
 
+import com.aitask.core.data.repository.InMemoryPluginConfigurationRepository
 import com.aitask.core.domain.model.Activity
 import com.aitask.core.domain.model.ActivityStatus
 import com.aitask.core.domain.model.ActivityType
 import com.aitask.core.domain.model.HealthState
 import com.aitask.core.domain.plugin.*
 import com.aitask.core.domain.repository.ActivityRepository
+import com.aitask.core.domain.repository.PluginConfigurationRepository
 import com.aitask.core.domain.service.PluginManagementService
+import com.aitask.core.domain.service.PluginPrerequisiteProbe
 import java.time.Instant
 import java.util.UUID
 
@@ -14,6 +17,8 @@ private const val PLUGIN_ENTITY_TYPE = "plugin"
 
 class InMemoryPluginManagementService(
     private val activityRepository: ActivityRepository,
+    private val configurationRepository: PluginConfigurationRepository = InMemoryPluginConfigurationRepository(),
+    private val prerequisiteProbe: PluginPrerequisiteProbe = NoOpPluginPrerequisiteProbe(),
     private val host: PluginHost = InMemoryPluginHost(PluginContractVersion(1, 0)),
     seeds: List<PluginSeed> = PluginCatalogFixtures.defaultSeeds()
 ) : PluginManagementService {
@@ -74,6 +79,7 @@ class InMemoryPluginManagementService(
         performAction(pluginId, ActivityType.PLUGIN_ENABLED) { runtime ->
             ensureInstalled(runtime, "enable")
             ensureAttached(runtime, "enable")
+            ensureConfigurationReady(runtime.definition)
             if (runtime.enabled) {
                 runtime.lastActionMessage = "Plugin already enabled"
                 runtime.toCatalogItem()
@@ -85,6 +91,60 @@ class InMemoryPluginManagementService(
                 runtime.toCatalogItem(report)
             }
         }
+
+    override suspend fun getConfiguration(
+        pluginId: String,
+        scope: PluginConfigurationScope,
+        scopeKey: String?
+    ): PluginConfigurationSnapshot? {
+        val runtime = plugins[pluginId] ?: return null
+        return configurationRepository.find(pluginId, scope, scopeKey) ?: defaultConfigurationSnapshot(runtime.definition, scope, scopeKey)
+    }
+
+    override suspend fun saveConfiguration(snapshot: PluginConfigurationSnapshot): Result<PluginConfigurationSnapshot> {
+        val runtime = plugins[snapshot.pluginId] ?: return Result.failure(
+            IllegalArgumentException("Plugin '${snapshot.pluginId}' is not supported")
+        )
+        val validation = validateConfiguration(snapshot).fold(
+            onSuccess = { it },
+            onFailure = { return Result.failure(it) }
+        )
+        if (!validation.valid) {
+            return Result.failure(PluginConfigurationValidationException(validation))
+        }
+        val normalized = snapshot.copy(
+            validationStatus = PluginConfigurationValidationStatus.VALID,
+            validationMessage = validation.message ?: "Configuration is valid",
+            lastValidatedAtEpochMillis = Instant.now().toEpochMilli()
+        )
+        configurationRepository.save(normalized)
+        return Result.success(normalized)
+    }
+
+    override suspend fun validateConfiguration(snapshot: PluginConfigurationSnapshot): Result<PluginConfigurationValidationResult> {
+        val runtime = plugins[snapshot.pluginId] ?: return Result.failure(
+            IllegalArgumentException("Plugin '${snapshot.pluginId}' is not supported")
+        )
+        return Result.success(evaluateConfiguration(runtime.definition, snapshot))
+    }
+
+    override suspend fun validateConfiguration(
+        pluginId: String,
+        scope: PluginConfigurationScope,
+        scopeKey: String?
+    ): Result<PluginConfigurationValidationResult> {
+        val runtime = plugins[pluginId] ?: return Result.failure(
+            IllegalArgumentException("Plugin '$pluginId' is not supported")
+        )
+        val snapshot = getConfiguration(pluginId, scope, scopeKey)
+            ?: defaultConfigurationSnapshot(runtime.definition, scope, scopeKey)
+        return validateConfiguration(snapshot).mapCatching { validation ->
+            validation.copy(
+                lastKnownGoodSnapshot = validation.lastKnownGoodSnapshot
+                    ?: latestKnownGoodSnapshot(runtime.definition.manifest.id, scope, scopeKey)
+            )
+        }
+    }
 
     override suspend fun disable(pluginId: String): Result<PluginCatalogItem> =
         performAction(pluginId, ActivityType.PLUGIN_DISABLED) { runtime ->
@@ -131,6 +191,155 @@ class InMemoryPluginManagementService(
             runtime.lastActionMessage = "Plugin removed"
             runtime.toCatalogItem(report)
         }
+
+    private suspend fun ensureConfigurationReady(definition: PluginDefinition) {
+        val validation = evaluateConfiguration(
+            definition = definition,
+            snapshot = getConfiguration(
+                pluginId = definition.manifest.id,
+                scope = definition.manifest.configurationScope,
+                scopeKey = null
+            ) ?: defaultConfigurationSnapshot(
+                definition = definition,
+                scope = definition.manifest.configurationScope,
+                scopeKey = null
+            )
+        )
+        if (!validation.valid) {
+            throw PluginConfigurationValidationException(validation)
+        }
+    }
+
+    private suspend fun evaluateConfiguration(
+        definition: PluginDefinition,
+        snapshot: PluginConfigurationSnapshot
+    ): PluginConfigurationValidationResult {
+        val manifest = definition.manifest
+        if (snapshot.scope != manifest.configurationScope) {
+            return PluginConfigurationValidationResult(
+                valid = false,
+                message = "Configuration scope '${snapshot.scope}' does not match plugin scope '${manifest.configurationScope}'",
+                lastKnownGoodSnapshot = latestKnownGoodSnapshot(manifest.id, snapshot.scope, snapshot.scopeKey)
+            )
+        }
+        if (manifest.configurationScope == PluginConfigurationScope.PROJECT && snapshot.scopeKey.isNullOrBlank()) {
+            return PluginConfigurationValidationResult(
+                valid = false,
+                message = "Project-scoped plugin '${manifest.name}' requires a project scope key",
+                lastKnownGoodSnapshot = latestKnownGoodSnapshot(manifest.id, snapshot.scope, snapshot.scopeKey)
+            )
+        }
+
+        val fieldValues = mutableMapOf<String, String>().apply {
+            putAll(snapshot.fields)
+            putAll(snapshot.secrets)
+            snapshot.schedule?.let { put("schedule", it) }
+        }
+        val fieldErrors = linkedMapOf<String, String>()
+        val prerequisiteResults = mutableListOf<PluginPrerequisiteResult>()
+        val ruleMessages = mutableListOf<String>()
+
+        manifest.configurationSchema.fields.forEach { field ->
+            val value = when (field.type) {
+                PluginConfigurationFieldType.SECRET -> snapshot.secrets[field.id]
+                PluginConfigurationFieldType.SCHEDULE -> snapshot.fields[field.id] ?: snapshot.schedule
+                else -> snapshot.fields[field.id]
+            }
+            if (field.required && value.isNullOrBlank()) {
+                fieldErrors[field.id] = "${field.label} is required"
+            }
+        }
+
+        manifest.configurationSchema.validationRules.forEach { rule ->
+            rule.requiredFields.forEach { fieldId ->
+                val value = fieldValues[fieldId]
+                if (value.isNullOrBlank()) {
+                    fieldErrors.putIfAbsent(fieldId, "Required by validation rule '${rule.description}'")
+                }
+            }
+            rule.requiredPrerequisites.forEach { prerequisite ->
+                prerequisiteResults += prerequisiteProbe.evaluate(prerequisite, fieldValues)
+            }
+            if (rule.requiredFields.isNotEmpty() || rule.requiredPrerequisites.isNotEmpty()) {
+                val missingFields = rule.requiredFields.filter { fieldValues[it].isNullOrBlank() }
+                val missingPrerequisites = rule.requiredPrerequisites
+                    .zip(prerequisiteResults.takeLast(rule.requiredPrerequisites.size))
+                    .filterNot { it.second.satisfied }
+                    .map { it.first.name }
+                if (missingFields.isNotEmpty() || missingPrerequisites.isNotEmpty()) {
+                    ruleMessages += buildString {
+                        append(rule.description)
+                        if (missingFields.isNotEmpty()) {
+                            append(": missing fields ${missingFields.joinToString()}")
+                        }
+                        if (missingPrerequisites.isNotEmpty()) {
+                            if (missingFields.isNotEmpty()) append("; ")
+                            append("missing prerequisites ${missingPrerequisites.joinToString()}")
+                        }
+                    }
+                }
+            }
+        }
+
+        val schemaPrerequisites = manifest.configurationSchema.prerequisites.map { prerequisite ->
+            prerequisiteProbe.evaluate(prerequisite, fieldValues)
+        }
+        prerequisiteResults += schemaPrerequisites
+
+        val failedPrerequisites = prerequisiteResults.filterNot { it.satisfied }
+        val missingFieldMessage = if (fieldErrors.isNotEmpty()) {
+            "Missing required plugin fields: ${fieldErrors.values.joinToString()}"
+        } else {
+            null
+        }
+        val prerequisiteMessage = if (failedPrerequisites.isNotEmpty()) {
+            "Unsatisfied prerequisites: ${failedPrerequisites.joinToString { it.prerequisite.name }}"
+        } else {
+            null
+        }
+
+        val valid = fieldErrors.isEmpty() && failedPrerequisites.isEmpty()
+        val message = when {
+            valid -> "Configuration is valid"
+            missingFieldMessage != null && prerequisiteMessage != null -> "$missingFieldMessage; $prerequisiteMessage"
+            missingFieldMessage != null -> missingFieldMessage
+            prerequisiteMessage != null -> prerequisiteMessage
+            else -> "Plugin configuration is invalid"
+        }
+
+        return PluginConfigurationValidationResult(
+            valid = valid,
+            message = message,
+            fieldErrors = fieldErrors,
+            prerequisiteResults = prerequisiteResults.distinctBy {
+                "${it.prerequisite.type}:${it.prerequisite.name}:${it.prerequisite.value}"
+            },
+            ruleMessages = ruleMessages,
+            lastKnownGoodSnapshot = latestKnownGoodSnapshot(manifest.id, snapshot.scope, snapshot.scopeKey)
+        )
+    }
+
+    private suspend fun latestKnownGoodSnapshot(
+        pluginId: String,
+        scope: PluginConfigurationScope,
+        scopeKey: String?
+    ): PluginConfigurationSnapshot? =
+        configurationRepository.find(pluginId, scope, scopeKey)?.takeIf {
+            it.validationStatus == PluginConfigurationValidationStatus.VALID
+        }
+
+    private fun defaultConfigurationSnapshot(
+        definition: PluginDefinition,
+        scope: PluginConfigurationScope,
+        scopeKey: String?
+    ): PluginConfigurationSnapshot = PluginConfigurationSnapshot(
+        pluginId = definition.manifest.id,
+        scope = scope,
+        scopeKey = scopeKey,
+        fields = emptyMap(),
+        secrets = emptyMap(),
+        schedule = null
+    )
 
     private suspend fun performAction(
         pluginId: String,
@@ -256,6 +465,8 @@ class InMemoryPluginManagementService(
             ?: definition.manifest.extensionPoints.firstOrNull()?.description
             ?: "Optional add-on capability",
         version = definition.manifest.version,
+        configurationScope = definition.manifest.configurationScope,
+        configurationSchema = definition.manifest.configurationSchema,
         optional = definition.manifest.optional,
         installed = installed,
         attached = attached,
@@ -296,5 +507,16 @@ class InMemoryPluginManagementService(
                 state = HealthState.FAILED,
                 message = "Unsupported plugin"
             )
+    }
+
+    private class NoOpPluginPrerequisiteProbe : PluginPrerequisiteProbe {
+        override suspend fun evaluate(
+            prerequisite: PluginPrerequisite,
+            pluginConfiguration: Map<String, String>
+        ): PluginPrerequisiteResult = PluginPrerequisiteResult(
+            prerequisite = prerequisite,
+            satisfied = true,
+            message = "${prerequisite.name} assumed available for in-memory defaults"
+        )
     }
 }

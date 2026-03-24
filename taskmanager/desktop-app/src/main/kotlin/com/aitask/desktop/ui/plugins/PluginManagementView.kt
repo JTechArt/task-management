@@ -14,14 +14,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,10 +38,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.aitask.core.domain.plugin.PluginCatalogItem
 import com.aitask.core.domain.plugin.PluginCatalogFixtures
+import com.aitask.core.domain.plugin.PluginConfigurationFieldType
+import com.aitask.core.domain.plugin.PluginConfigurationScope
+import com.aitask.core.domain.plugin.PluginConfigurationValidationResult
+import com.aitask.core.domain.plugin.PluginPrerequisiteResult
 import com.aitask.core.domain.plugin.PluginLifecycleState
+import com.aitask.desktop.ui.viewmodel.PluginConfigurationEditorState
 import com.aitask.desktop.ui.viewmodel.PluginManagementViewModel
 
 private val HEALTHY_COLOR = Color(0xFF2E7D32)
@@ -80,8 +95,22 @@ fun PluginManagementView(
             onEnable = viewModel::enable,
             onDisable = viewModel::disable,
             onDetach = viewModel::detach,
-            onRemove = viewModel::remove
+            onRemove = viewModel::remove,
+            onConfigure = viewModel::openConfigurationEditor
         )
+        uiState.configurationEditor?.let { editor ->
+            PluginConfigurationDialog(
+                editor = editor,
+                inProgress = uiState.configurationInProgress,
+                onDismiss = viewModel::closeConfigurationEditor,
+                onValidate = viewModel::validateConfiguration,
+                onSave = viewModel::saveConfiguration,
+                onScopeKeyChange = viewModel::updateConfigurationScopeKey,
+                onFieldChange = viewModel::updateConfigurationField,
+                onSecretChange = viewModel::updateConfigurationSecret,
+                onScheduleChange = viewModel::updateConfigurationSchedule
+            )
+        }
     }
 }
 
@@ -169,7 +198,8 @@ private fun OptionalPluginsCard(
     onEnable: (String) -> Unit,
     onDisable: (String) -> Unit,
     onDetach: (String) -> Unit,
-    onRemove: (String) -> Unit
+    onRemove: (String) -> Unit,
+    onConfigure: (String) -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -201,7 +231,8 @@ private fun OptionalPluginsCard(
                             onEnable = onEnable,
                             onDisable = onDisable,
                             onDetach = onDetach,
-                            onRemove = onRemove
+                            onRemove = onRemove,
+                            onConfigure = onConfigure
                         )
                     }
                 }
@@ -219,7 +250,8 @@ private fun PluginCard(
     onEnable: (String) -> Unit,
     onDisable: (String) -> Unit,
     onDetach: (String) -> Unit,
-    onRemove: (String) -> Unit
+    onRemove: (String) -> Unit,
+    onConfigure: (String) -> Unit
 ) {
     val statusColor = when (plugin.lifecycleState) {
         PluginLifecycleState.ENABLED -> HEALTHY_COLOR
@@ -324,16 +356,21 @@ private fun PluginCard(
                             Text("Disable")
                         }
                     }
-                    if (plugin.attached) {
-                        OutlinedButton(onClick = { onDetach(plugin.id) }, enabled = !actionInProgress) {
-                            Text("Detach")
-                        }
+                if (plugin.attached) {
+                    OutlinedButton(onClick = { onDetach(plugin.id) }, enabled = !actionInProgress) {
+                        Text("Detach")
                     }
-                    Button(
-                        onClick = { onRemove(plugin.id) },
-                        enabled = !actionInProgress,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
+                }
+                if (plugin.installed && (plugin.configurationSchema.fields.isNotEmpty() || plugin.configurationSchema.prerequisites.isNotEmpty())) {
+                    OutlinedButton(onClick = { onConfigure(plugin.id) }, enabled = !actionInProgress) {
+                        Text("Configure")
+                    }
+                }
+                Button(
+                    onClick = { onRemove(plugin.id) },
+                    enabled = !actionInProgress,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
                             contentColor = MaterialTheme.colorScheme.onError
                         )
                     ) {
@@ -357,5 +394,284 @@ private fun PluginStatePill(label: String, active: Boolean, accent: Color) {
             style = MaterialTheme.typography.labelSmall,
             color = if (active) accent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
         )
+    }
+}
+
+@Composable
+private fun PluginConfigurationDialog(
+    editor: PluginConfigurationEditorState,
+    inProgress: Boolean,
+    onDismiss: () -> Unit,
+    onValidate: () -> Unit,
+    onSave: () -> Unit,
+    onScopeKeyChange: (String) -> Unit,
+    onFieldChange: (String, String) -> Unit,
+    onSecretChange: (String, String) -> Unit,
+    onScheduleChange: (String) -> Unit
+) {
+    val scrollState = rememberScrollState()
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            shape = RoundedCornerShape(20.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Configure ${editor.plugin.name}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Scope: ${editor.plugin.configurationScope.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                if (editor.plugin.configurationScope == PluginConfigurationScope.PROJECT) {
+                    OutlinedTextField(
+                        value = editor.scopeKey,
+                        onValueChange = onScopeKeyChange,
+                        label = { Text("Project scope key") },
+                        placeholder = { Text("Project identifier") },
+                        supportingText = { Text("Use a stable project key so configuration stays isolated.") },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !inProgress
+                    )
+                }
+                if (editor.plugin.configurationSchema.fields.isEmpty() && editor.plugin.configurationSchema.prerequisites.isEmpty()) {
+                    Text(
+                        text = "This plugin does not require configuration.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else {
+                    editor.plugin.configurationSchema.fields.forEach { field ->
+                        ConfigurationFieldEditor(
+                            field = field,
+                            value = when (field.type) {
+                                PluginConfigurationFieldType.SECRET -> editor.secrets[field.id].orEmpty()
+                                PluginConfigurationFieldType.SCHEDULE -> editor.schedule
+                                else -> editor.fields[field.id].orEmpty()
+                            },
+                            error = editor.validationResult?.fieldErrors?.get(field.id),
+                            enabled = !inProgress,
+                            onValueChange = { value ->
+                                when (field.type) {
+                                    PluginConfigurationFieldType.SECRET -> onSecretChange(field.id, value)
+                                    PluginConfigurationFieldType.SCHEDULE -> onScheduleChange(value)
+                                    else -> onFieldChange(field.id, value)
+                                }
+                            }
+                        )
+                    }
+                    if (editor.plugin.configurationSchema.prerequisites.isNotEmpty()) {
+                        Divider()
+                        Text(
+                            text = "Prerequisites",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        editor.plugin.configurationSchema.prerequisites.forEach { prerequisite ->
+                            Text(
+                                text = "• ${prerequisite.name}: ${prerequisite.remediation}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                            )
+                        }
+                    }
+                }
+                editor.validationResult?.let {
+                    ConfigurationValidationSummary(result = it)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(onClick = onDismiss, enabled = !inProgress) {
+                        Text("Close")
+                    }
+                    OutlinedButton(onClick = onValidate, enabled = !inProgress) {
+                        Text("Validate")
+                    }
+                    Button(onClick = onSave, enabled = !inProgress) {
+                        Text("Save configuration")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConfigurationFieldEditor(
+    field: com.aitask.core.domain.plugin.PluginConfigurationField,
+    value: String,
+    error: String?,
+    enabled: Boolean,
+    onValueChange: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        when (field.type) {
+            PluginConfigurationFieldType.BOOLEAN -> {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Checkbox(
+                            checked = value.equals("true", ignoreCase = true),
+                            onCheckedChange = { onValueChange(it.toString()) },
+                            enabled = enabled
+                        )
+                        Column {
+                            Text(field.label)
+                            field.description?.let { description ->
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                                )
+                            }
+                        }
+                    }
+                    if (error != null) {
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+            else -> {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    label = { Text(field.label + if (field.required) " *" else "") },
+                    placeholder = field.placeholder?.let { { Text(it) } },
+                    supportingText = {
+                        Column {
+                            field.description?.let { description ->
+                                Text(
+                                    text = description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                                )
+                            }
+                            if (field.type == PluginConfigurationFieldType.SELECT && field.options.isNotEmpty()) {
+                                Text(
+                                    text = "Options: ${field.options.joinToString()}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                                )
+                            }
+                            if (error != null) {
+                                Text(
+                                    text = error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    },
+                    visualTransformation = if (field.type == PluginConfigurationFieldType.SECRET) PasswordVisualTransformation() else VisualTransformation.None,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = enabled
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConfigurationValidationSummary(result: PluginConfigurationValidationResult) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Divider()
+        Text(
+            text = if (result.valid) "Configuration valid" else "Configuration needs attention",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = if (result.valid) HEALTHY_COLOR else ERROR_COLOR
+        )
+        result.message?.let { message ->
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+            )
+        }
+        if (result.fieldErrors.isNotEmpty()) {
+            Text(
+                text = "Field issues",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            result.fieldErrors.forEach { (fieldId, message) ->
+                Text(
+                    text = "$fieldId: $message",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+        if (result.prerequisiteResults.isNotEmpty()) {
+            Text(
+                text = "Prerequisite checks",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            result.prerequisiteResults.forEach { prerequisite ->
+                PrerequisiteRow(prerequisite)
+            }
+        }
+        if (result.ruleMessages.isNotEmpty()) {
+            Text(
+                text = "Validation rules",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            result.ruleMessages.forEach { ruleMessage ->
+                Text(
+                    text = "• $ruleMessage",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+        result.lastKnownGoodSnapshot?.let { snapshot ->
+            Text(
+                text = "Last known good config updated at ${snapshot.updatedAtEpochMillis}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrerequisiteRow(result: PluginPrerequisiteResult) {
+    val accent = if (result.satisfied) HEALTHY_COLOR else ERROR_COLOR
+    Surface(
+        color = accent.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = result.prerequisite.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = accent
+            )
+            Text(
+                text = result.message,
+                style = MaterialTheme.typography.bodySmall
+            )
+            result.remediation?.let { remediation ->
+                Text(
+                    text = remediation,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                )
+            }
+        }
     }
 }
