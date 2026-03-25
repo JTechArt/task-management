@@ -3,13 +3,21 @@ package com.aitask.desktop.ui.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.aitask.core.domain.model.AgentDefinition
+import com.aitask.core.domain.model.AgentDefinitionRequest
+import com.aitask.core.domain.model.AgentScope
+import com.aitask.core.domain.model.AgentTrigger
 import com.aitask.core.domain.model.LlmConfiguration
 import com.aitask.core.domain.model.LlmConfigurationRequest
+import com.aitask.core.domain.repository.AgentDefinitionRepository
 import com.aitask.core.domain.repository.LlmConfigurationRepository
+import com.aitask.core.domain.usecase.DeleteAgentDefinitionUseCase
 import com.aitask.core.domain.service.LlmConnectionValidator
 import com.aitask.core.domain.usecase.CreateBackupUseCase
 import com.aitask.core.domain.usecase.ExportDataUseCase
 import com.aitask.core.domain.usecase.ImportDataUseCase
+import com.aitask.core.domain.usecase.GetProjectsUseCase
+import com.aitask.core.domain.usecase.SaveAgentDefinitionUseCase
 import com.aitask.core.domain.usecase.RestoreFromBackupUseCase
 import com.aitask.desktop.di.DependencyContainer
 import kotlinx.coroutines.CoroutineScope
@@ -26,7 +34,11 @@ class SettingsViewModel(
     private val importDataUseCase: ImportDataUseCase = DependencyContainer.importDataUseCase,
     private val createBackupUseCase: CreateBackupUseCase = DependencyContainer.createBackupUseCase,
     private val restoreFromBackupUseCase: RestoreFromBackupUseCase = DependencyContainer.restoreFromBackupUseCase,
+    private val getProjectsUseCase: GetProjectsUseCase = DependencyContainer.getProjectsUseCase,
     private val llmConfigurationRepository: LlmConfigurationRepository = DependencyContainer.llmConfigurationRepository,
+    private val agentDefinitionRepository: AgentDefinitionRepository = DependencyContainer.agentDefinitionRepository,
+    private val saveAgentDefinitionUseCase: SaveAgentDefinitionUseCase = DependencyContainer.saveAgentDefinitionUseCase,
+    private val deleteAgentDefinitionUseCase: DeleteAgentDefinitionUseCase = DependencyContainer.deleteAgentDefinitionUseCase,
     private val llmConnectionValidator: LlmConnectionValidator = DependencyContainer.llmConnectionValidator,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
@@ -34,7 +46,27 @@ class SettingsViewModel(
         private set
 
     init {
+        loadProjects()
         loadLlmConfigurations()
+        loadAgentDefinitions()
+    }
+
+    fun loadProjects() {
+        scope.launch {
+            try {
+                val result = getProjectsUseCase(includeArchived = false)
+                result.fold(
+                    onSuccess = { projects ->
+                        uiState = uiState.copy(projects = projects)
+                    },
+                    onFailure = {
+                        uiState = uiState.copy(projects = emptyList())
+                    }
+                )
+            } catch (_: Exception) {
+                uiState = uiState.copy(projects = emptyList())
+            }
+        }
     }
 
     fun loadLlmConfigurations() {
@@ -55,11 +87,37 @@ class SettingsViewModel(
         }
     }
 
+    fun loadAgentDefinitions() {
+        scope.launch {
+            uiState = uiState.copy(isAgentLoading = true, agentError = null)
+            try {
+                val definitions = agentDefinitionRepository.findAll()
+                uiState = uiState.copy(
+                    isAgentLoading = false,
+                    agentDefinitions = definitions
+                )
+            } catch (error: Exception) {
+                uiState = uiState.copy(
+                    isAgentLoading = false,
+                    agentError = error.message ?: "Failed to load agent definitions"
+                )
+            }
+        }
+    }
+
     fun startNewLlmConfiguration() {
         uiState = uiState.copy(
             llmEditor = LlmConfigurationEditorState(),
             llmError = null,
             llmFeedback = null
+        )
+    }
+
+    fun startNewAgentDefinition() {
+        uiState = uiState.copy(
+            agentEditor = AgentDefinitionEditorState(),
+            agentError = null,
+            agentFeedback = null
         )
     }
 
@@ -78,6 +136,24 @@ class SettingsViewModel(
         )
     }
 
+    fun editAgentDefinition(definition: AgentDefinition) {
+        uiState = uiState.copy(
+            agentEditor = AgentDefinitionEditorState(
+                id = definition.id,
+                name = definition.name,
+                description = definition.description.orEmpty(),
+                promptTemplate = definition.promptTemplate,
+                llmConfigurationId = definition.llmConfigurationId,
+                scope = definition.scope,
+                projectId = definition.projectId,
+                trigger = definition.trigger,
+                isEnabled = definition.isEnabled
+            ),
+            agentError = null,
+            agentFeedback = null
+        )
+    }
+
     fun updateLlmEditorName(name: String) = updateLlmEditor { it.copy(name = name) }
 
     fun updateLlmEditorEndpoint(endpointUrl: String) = updateLlmEditor { it.copy(endpointUrl = endpointUrl) }
@@ -87,6 +163,22 @@ class SettingsViewModel(
     fun updateLlmEditorApiKey(apiKey: String) = updateLlmEditor { it.copy(apiKey = apiKey) }
 
     fun updateLlmEditorDefault(isDefault: Boolean) = updateLlmEditor { it.copy(isDefault = isDefault) }
+
+    fun updateAgentEditorName(name: String) = updateAgentEditor { it.copy(name = name) }
+
+    fun updateAgentEditorDescription(description: String) = updateAgentEditor { it.copy(description = description) }
+
+    fun updateAgentEditorPromptTemplate(promptTemplate: String) = updateAgentEditor { it.copy(promptTemplate = promptTemplate) }
+
+    fun updateAgentEditorLlmConfiguration(id: UUID?) = updateAgentEditor { it.copy(llmConfigurationId = id) }
+
+    fun updateAgentEditorScope(scope: AgentScope) = updateAgentEditor { it.copy(scope = scope, projectId = if (scope == AgentScope.GLOBAL) null else it.projectId) }
+
+    fun updateAgentEditorProjectId(projectId: UUID?) = updateAgentEditor { it.copy(projectId = projectId) }
+
+    fun updateAgentEditorTrigger(trigger: AgentTrigger) = updateAgentEditor { it.copy(trigger = trigger) }
+
+    fun updateAgentEditorEnabled(isEnabled: Boolean) = updateAgentEditor { it.copy(isEnabled = isEnabled) }
 
     fun testLlmConfigurationConnection() {
         val editor = uiState.llmEditor
@@ -155,6 +247,63 @@ class SettingsViewModel(
         }
     }
 
+    fun saveAgentDefinition() {
+        val editor = uiState.agentEditor
+        val validationError = validateAgentEditorLocally(editor)
+        if (validationError != null) {
+            uiState = uiState.copy(agentError = validationError)
+            return
+        }
+        scope.launch {
+            uiState = uiState.copy(isAgentSaving = true, agentError = null, agentFeedback = null)
+            val result = saveAgentDefinitionUseCase(
+                AgentDefinitionRequest(
+                    id = editor.id,
+                    name = editor.name,
+                    description = editor.description.takeIf { it.isNotBlank() },
+                    promptTemplate = editor.promptTemplate,
+                    llmConfigurationId = editor.llmConfigurationId,
+                    scope = editor.scope,
+                    projectId = editor.projectId,
+                    trigger = editor.trigger,
+                    isEnabled = editor.isEnabled
+                )
+            )
+            result.fold(
+                onSuccess = {
+                    uiState = uiState.copy(
+                        isAgentSaving = false,
+                        agentFeedback = if (editor.id == null) "Agent saved" else "Agent updated",
+                        agentEditor = AgentDefinitionEditorState()
+                    )
+                    loadAgentDefinitions()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isAgentSaving = false,
+                        agentError = error.message ?: "Failed to save agent definition"
+                    )
+                }
+            )
+        }
+    }
+
+    fun deleteAgentDefinition(id: UUID) {
+        scope.launch {
+            uiState = uiState.copy(agentError = null, agentFeedback = null)
+            val result = deleteAgentDefinitionUseCase(id)
+            if (result.getOrDefault(false)) {
+                if (uiState.agentEditor.id == id) {
+                    startNewAgentDefinition()
+                }
+                loadAgentDefinitions()
+                uiState = uiState.copy(agentFeedback = "Agent deleted")
+            } else {
+                uiState = uiState.copy(agentError = "Agent not found")
+            }
+        }
+    }
+
     fun setDefaultLlmConfiguration(id: UUID) {
         scope.launch {
             uiState = uiState.copy(llmError = null, llmFeedback = null)
@@ -207,11 +356,26 @@ class SettingsViewModel(
         else -> null
     }
 
+    private fun validateAgentEditorLocally(editor: AgentDefinitionEditorState): String? = when {
+        editor.name.isBlank() -> "Enter an agent name"
+        editor.promptTemplate.isBlank() -> "Enter a prompt template"
+        editor.scope == AgentScope.PROJECT && editor.projectId == null -> "Choose a project for project-scoped agents"
+        else -> null
+    }
+
     private fun updateLlmEditor(transform: (LlmConfigurationEditorState) -> LlmConfigurationEditorState) {
         uiState = uiState.copy(
             llmEditor = transform(uiState.llmEditor),
             llmError = null,
             llmFeedback = null
+        )
+    }
+
+    private fun updateAgentEditor(transform: (AgentDefinitionEditorState) -> AgentDefinitionEditorState) {
+        uiState = uiState.copy(
+            agentEditor = transform(uiState.agentEditor),
+            agentError = null,
+            agentFeedback = null
         )
     }
 
@@ -435,6 +599,18 @@ data class LlmConfigurationEditorState(
     val isDefault: Boolean = false
 )
 
+data class AgentDefinitionEditorState(
+    val id: UUID? = null,
+    val name: String = "",
+    val description: String = "",
+    val promptTemplate: String = "",
+    val llmConfigurationId: UUID? = null,
+    val scope: AgentScope = AgentScope.GLOBAL,
+    val projectId: UUID? = null,
+    val trigger: AgentTrigger = AgentTrigger.MANUAL,
+    val isEnabled: Boolean = true
+)
+
 data class SettingsUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -450,5 +626,12 @@ data class SettingsUiState(
     val llmError: String? = null,
     val llmFeedback: String? = null,
     val llmConfigurations: List<LlmConfiguration> = emptyList(),
-    val llmEditor: LlmConfigurationEditorState = LlmConfigurationEditorState()
+    val llmEditor: LlmConfigurationEditorState = LlmConfigurationEditorState(),
+    val projects: List<com.aitask.core.domain.model.Project> = emptyList(),
+    val isAgentLoading: Boolean = false,
+    val isAgentSaving: Boolean = false,
+    val agentError: String? = null,
+    val agentFeedback: String? = null,
+    val agentDefinitions: List<AgentDefinition> = emptyList(),
+    val agentEditor: AgentDefinitionEditorState = AgentDefinitionEditorState()
 )

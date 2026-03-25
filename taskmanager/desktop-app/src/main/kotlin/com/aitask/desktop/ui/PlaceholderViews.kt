@@ -22,23 +22,33 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.aitask.core.domain.model.LlmConfiguration
+import com.aitask.core.domain.model.AgentDefinition
+import com.aitask.core.domain.model.AgentScope
+import com.aitask.core.domain.model.AgentTrigger
 import com.aitask.desktop.ui.viewmodel.SettingsViewModel
 
 @Composable
@@ -143,6 +153,22 @@ fun SettingsView(
             onSave = { viewModel.saveLlmConfiguration() },
             onSetDefault = { viewModel.setDefaultLlmConfiguration(it) },
             onDelete = { viewModel.deleteLlmConfiguration(it) }
+        )
+
+        AgentDefinitionCard(
+            uiState = uiState,
+            onNew = { viewModel.startNewAgentDefinition() },
+            onEdit = { viewModel.editAgentDefinition(it) },
+            onNameChange = { viewModel.updateAgentEditorName(it) },
+            onDescriptionChange = { viewModel.updateAgentEditorDescription(it) },
+            onPromptChange = { viewModel.updateAgentEditorPromptTemplate(it) },
+            onLlmConfigurationChange = { viewModel.updateAgentEditorLlmConfiguration(it) },
+            onScopeChange = { viewModel.updateAgentEditorScope(it) },
+            onProjectChange = { viewModel.updateAgentEditorProjectId(it) },
+            onTriggerChange = { viewModel.updateAgentEditorTrigger(it) },
+            onEnabledChange = { viewModel.updateAgentEditorEnabled(it) },
+            onSave = { viewModel.saveAgentDefinition() },
+            onDelete = { viewModel.deleteAgentDefinition(it) }
         )
 
         Card(
@@ -488,6 +514,270 @@ private fun LlmConfigurationCard(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AgentDefinitionCard(
+    uiState: com.aitask.desktop.ui.viewmodel.SettingsUiState,
+    onNew: () -> Unit,
+    onEdit: (AgentDefinition) -> Unit,
+    onNameChange: (String) -> Unit,
+    onDescriptionChange: (String) -> Unit,
+    onPromptChange: (String) -> Unit,
+    onLlmConfigurationChange: (java.util.UUID?) -> Unit,
+    onScopeChange: (AgentScope) -> Unit,
+    onProjectChange: (java.util.UUID?) -> Unit,
+    onTriggerChange: (AgentTrigger) -> Unit,
+    onEnabledChange: (Boolean) -> Unit,
+    onSave: () -> Unit,
+    onDelete: (java.util.UUID) -> Unit
+) {
+    val editor = uiState.agentEditor
+    var scopeExpanded by remember { mutableStateOf(false) }
+    var triggerExpanded by remember { mutableStateOf(false) }
+    var llmExpanded by remember { mutableStateOf(false) }
+    var projectExpanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Agent builder",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Create reusable LLM-powered agents with prompt templates and project scope.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                TextButton(onClick = onNew) {
+                    Text("New agent")
+                }
+            }
+
+            uiState.agentFeedback?.let { feedback ->
+                Snackbar(modifier = Modifier.fillMaxWidth()) { Text(feedback) }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = editor.name,
+                    onValueChange = onNameChange,
+                    label = { Text("Agent name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = editor.description,
+                    onValueChange = onDescriptionChange,
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = editor.promptTemplate,
+                    onValueChange = onPromptChange,
+                    label = { Text("Prompt template") },
+                    placeholder = { Text("Use {{taskTitle}}, {{projectName}}, {{branchName}}, {{repositoryNames}}") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 4
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    ExposedDropdownMenuBox(
+                        expanded = llmExpanded,
+                        onExpandedChange = { llmExpanded = it },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.llmConfigurations.find { it.id == editor.llmConfigurationId }?.name ?: "Default profile",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("LLM profile") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = llmExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(expanded = llmExpanded, onDismissRequest = { llmExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Default profile") },
+                                onClick = {
+                                    onLlmConfigurationChange(null)
+                                    llmExpanded = false
+                                }
+                            )
+                            uiState.llmConfigurations.forEach { configuration ->
+                                DropdownMenuItem(
+                                    text = { Text(configuration.name) },
+                                    onClick = {
+                                        onLlmConfigurationChange(configuration.id)
+                                        llmExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    ExposedDropdownMenuBox(
+                        expanded = scopeExpanded,
+                        onExpandedChange = { scopeExpanded = it },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = editor.scope.name,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Scope") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = scopeExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(expanded = scopeExpanded, onDismissRequest = { scopeExpanded = false }) {
+                            AgentScope.entries.forEach { scope ->
+                                DropdownMenuItem(
+                                    text = { Text(scope.name) },
+                                    onClick = {
+                                        onScopeChange(scope)
+                                        scopeExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                if (editor.scope == AgentScope.PROJECT) {
+                    ExposedDropdownMenuBox(
+                        expanded = projectExpanded,
+                        onExpandedChange = { projectExpanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.projects.find { it.id == editor.projectId }?.name ?: "Select project",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Project") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = projectExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(expanded = projectExpanded, onDismissRequest = { projectExpanded = false }) {
+                            uiState.projects.forEach { project ->
+                                DropdownMenuItem(
+                                    text = { Text(project.name) },
+                                    onClick = {
+                                        onProjectChange(project.id)
+                                        projectExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    ExposedDropdownMenuBox(
+                        expanded = triggerExpanded,
+                        onExpandedChange = { triggerExpanded = it },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = editor.trigger.name,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Trigger") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = triggerExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(expanded = triggerExpanded, onDismissRequest = { triggerExpanded = false }) {
+                            AgentTrigger.entries.forEach { trigger ->
+                                DropdownMenuItem(
+                                    text = { Text(trigger.name) },
+                                    onClick = {
+                                        onTriggerChange(trigger)
+                                        triggerExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Checkbox(checked = editor.isEnabled, onCheckedChange = onEnabledChange)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Enabled")
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = onSave,
+                        enabled = !uiState.isAgentSaving
+                    ) {
+                        Text(if (editor.id == null) "Save agent" else "Update agent")
+                    }
+                    if (uiState.isAgentLoading) {
+                        CircularProgressIndicator(modifier = Modifier.width(20.dp))
+                    }
+                }
+            }
+
+            if (uiState.agentDefinitions.isEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "No agents saved yet. Add one above to automate task-driven workflows.",
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    uiState.agentDefinitions.forEach { definition ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(definition.name, fontWeight = FontWeight.Bold)
+                                        Text(
+                                            text = "${definition.scope.name} • ${definition.trigger.name}",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Row {
+                                        TextButton(onClick = { onEdit(definition) }) { Text("Edit") }
+                                        TextButton(onClick = { onDelete(definition.id) }) { Text("Delete") }
+                                    }
+                                }
+                                definition.description?.takeIf { it.isNotBlank() }?.let {
+                                    Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            uiState.agentError?.let { error ->
+                Text(text = error, color = MaterialTheme.colorScheme.error)
             }
         }
     }

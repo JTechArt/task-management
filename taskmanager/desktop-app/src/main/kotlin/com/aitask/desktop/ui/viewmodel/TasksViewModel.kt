@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.aitask.core.domain.model.*
 import com.aitask.core.domain.repository.ActivityRepository
+import com.aitask.core.domain.repository.AgentDefinitionRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.SlackNotificationService
@@ -29,6 +30,8 @@ class TasksViewModel(
     private val launchIDEUseCase: LaunchIDEUseCase = DependencyContainer.launchIDEUseCase,
     private val generateTaskContentUseCase: GenerateTaskContentUseCase = DependencyContainer.generateTaskContentUseCase,
     private val generateGitAssistantSuggestionUseCase: GenerateGitAssistantSuggestionUseCase = DependencyContainer.generateGitAssistantSuggestionUseCase,
+    private val getAgentDefinitionsUseCase: GetAgentDefinitionsUseCase = DependencyContainer.getAgentDefinitionsUseCase,
+    private val runAgentUseCase: RunAgentUseCase = DependencyContainer.runAgentUseCase,
     private val ideService: IDEService = DependencyContainer.ideService,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
     private val projectRepository: com.aitask.core.domain.repository.ProjectRepository = DependencyContainer.projectRepository,
@@ -42,6 +45,7 @@ class TasksViewModel(
     init {
         loadProjects()
         loadTasks()
+        loadAvailableAgents()
     }
     
     private fun loadProjects() {
@@ -128,7 +132,7 @@ class TasksViewModel(
             val result = updateTaskUseCase(taskId, request)
             result.fold(
                 onSuccess = { updatedTask ->
-                    loadTasks()
+                    handleTaskUpdated(updatedTask)
                     when (newStatus) {
                         TaskStatus.IN_PROGRESS -> TaskEvent.TASK_STARTED
                         TaskStatus.COMPLETED -> TaskEvent.TASK_COMPLETED
@@ -160,7 +164,7 @@ class TasksViewModel(
             result.fold(
                 onSuccess = { updatedTask ->
                     uiState = uiState.copy(selectedTask = updatedTask)
-                    loadTasks()
+                    handleTaskUpdated(updatedTask)
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
@@ -177,7 +181,7 @@ class TasksViewModel(
             result.fold(
                 onSuccess = { updatedTask ->
                     uiState = uiState.copy(selectedTask = updatedTask)
-                    loadTasks()
+                    handleTaskUpdated(updatedTask)
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
@@ -194,7 +198,7 @@ class TasksViewModel(
             result.fold(
                 onSuccess = { updatedTask ->
                     uiState = uiState.copy(selectedTask = updatedTask)
-                    loadTasks()
+                    handleTaskUpdated(updatedTask)
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
@@ -217,7 +221,7 @@ class TasksViewModel(
             result.fold(
                 onSuccess = { updatedTask ->
                     uiState = uiState.copy(selectedTask = updatedTask)
-                    loadTasks()
+                    handleTaskUpdated(updatedTask)
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
@@ -254,11 +258,13 @@ class TasksViewModel(
         // Load repositories for the selected task's project
         if (task != null) {
             scope.launch {
-                val repositories = DependencyContainer.repositoryRepository.findByProject(task.projectId)
+                val repositories = repositoryRepository.findByProject(task.projectId)
                 uiState = uiState.copy(projectRepositories = repositories)
             }
+            loadAvailableAgents(task.projectId, task, AgentTrigger.TASK_OPENED)
         } else {
             uiState = uiState.copy(projectRepositories = emptyList())
+            loadAvailableAgents(null)
         }
     }
 
@@ -270,7 +276,7 @@ class TasksViewModel(
         }
 
         scope.launch {
-            val repositories = DependencyContainer.repositoryRepository.findByProject(task.projectId)
+            val repositories = repositoryRepository.findByProject(task.projectId)
 
             // Determine default selection
             val defaultSelection = if (repositories.isNotEmpty()) {
@@ -522,6 +528,61 @@ class TasksViewModel(
         )
     }
 
+    fun loadAvailableAgents(projectId: UUID? = null, taskForAutoRun: Task? = null, trigger: AgentTrigger? = null) {
+        scope.launch {
+            val result = getAgentDefinitionsUseCase(projectId)
+            result.fold(
+                onSuccess = { agents ->
+                    uiState = uiState.copy(
+                        availableAgents = agents,
+                        selectedAgentId = agents.firstOrNull()?.id
+                    )
+                    if (taskForAutoRun != null && trigger != null) {
+                        runTriggeredAgent(taskForAutoRun, agents, trigger)
+                    }
+                },
+                onFailure = {
+                    uiState = uiState.copy(availableAgents = emptyList(), selectedAgentId = null)
+                }
+            )
+        }
+    }
+
+    fun selectAgent(agentId: UUID?) {
+        uiState = uiState.copy(selectedAgentId = agentId)
+    }
+
+    fun runAgent(taskId: UUID, agentId: UUID) {
+        uiState = uiState.copy(isRunningAgent = true, agentRunError = null, agentRunResult = null, agentRunTargetTaskId = taskId)
+        scope.launch {
+            val result = runAgentUseCase(RunAgentRequest(taskId = taskId, agentId = agentId))
+            result.fold(
+                onSuccess = { execution ->
+                    uiState = uiState.copy(
+                        isRunningAgent = false,
+                        agentRunResult = execution.generatedText,
+                        selectedAgentId = agentId
+                    )
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isRunningAgent = false,
+                        agentRunError = error.message ?: "Failed to run agent"
+                    )
+                }
+            )
+        }
+    }
+
+    fun clearAgentRunResult() {
+        uiState = uiState.copy(
+            agentRunResult = null,
+            agentRunError = null,
+            agentRunTargetTaskId = null,
+            isRunningAgent = false
+        )
+    }
+
     fun markGitAssistantSuggestionUsed(
         taskId: UUID,
         mode: GitAssistantSuggestionMode,
@@ -592,6 +653,16 @@ class TasksViewModel(
                 // Silently fail
             }
         }
+    }
+
+    private fun handleTaskUpdated(updatedTask: Task) {
+        loadTasks()
+        loadAvailableAgents(updatedTask.projectId, updatedTask, AgentTrigger.TASK_UPDATED)
+    }
+
+    private fun runTriggeredAgent(task: Task, agents: List<AgentDefinition>, trigger: AgentTrigger) {
+        val candidate = agents.firstOrNull { it.isEnabled && it.trigger == trigger } ?: return
+        runAgent(task.id, candidate.id)
     }
 
     fun clearSuccessMessages() {
@@ -689,5 +760,11 @@ data class TasksUiState(
     val gitAssistantSuggestionError: String? = null,
     val gitAssistantSuggestion: String? = null,
     val gitAssistantSuggestionTargetTaskId: UUID? = null,
-    val gitAssistantSuggestionMode: GitAssistantSuggestionMode? = null
+    val gitAssistantSuggestionMode: GitAssistantSuggestionMode? = null,
+    val availableAgents: List<AgentDefinition> = emptyList(),
+    val selectedAgentId: UUID? = null,
+    val isRunningAgent: Boolean = false,
+    val agentRunError: String? = null,
+    val agentRunResult: String? = null,
+    val agentRunTargetTaskId: UUID? = null
 )

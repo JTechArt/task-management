@@ -313,8 +313,13 @@ fun TaskDetailView(
     onGenerateGitAssistantSuggestion: ((UUID, GitAssistantSuggestionMode) -> Unit)? = null,
     onClearGitAssistantSuggestion: (() -> Unit)? = null,
     onUseGitAssistantSuggestion: ((UUID, GitAssistantSuggestionMode, String) -> Unit)? = null,
+    onRunAgent: ((UUID, UUID) -> Unit)? = null,
+    onClearAgentRunResult: (() -> Unit)? = null,
+    onSelectAgent: ((UUID?) -> Unit)? = null,
     availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
     preferredIDEs: List<IDEType> = emptyList(),
+    availableAgents: List<AgentDefinition> = emptyList(),
+    selectedAgentId: UUID? = null,
     isGeneratingWorkspace: Boolean = false,
     workspaceGenerationProgress: String? = null,
     isLaunchingIDE: Boolean = false,
@@ -328,6 +333,10 @@ fun TaskDetailView(
     gitAssistantSuggestion: String? = null,
     gitAssistantSuggestionTargetTaskId: UUID? = null,
     gitAssistantSuggestionMode: GitAssistantSuggestionMode? = null,
+    isRunningAgent: Boolean = false,
+    agentRunError: String? = null,
+    agentRunResult: String? = null,
+    agentRunTargetTaskId: UUID? = null,
     modifier: Modifier = Modifier
 ) {
     var methodologyExpanded by remember { mutableStateOf(false) }
@@ -344,6 +353,7 @@ fun TaskDetailView(
     val scrollState = rememberScrollState()
     val taskContentSuggestionForCurrentTask = taskContentSuggestionTargetTaskId == task.id && taskContentSuggestion != null
     val gitAssistantSuggestionForCurrentTask = gitAssistantSuggestionTargetTaskId == task.id && gitAssistantSuggestion != null
+    val agentRunResultForCurrentTask = agentRunTargetTaskId == task.id && agentRunResult != null
     val clipboardManager = LocalClipboardManager.current
     LaunchedEffect(task.methodologyOverride) {
         selectedMethodologyOverride = task.methodologyOverride
@@ -594,6 +604,85 @@ fun TaskDetailView(
                 if (gitAssistantSuggestionError != null && gitAssistantSuggestionTargetTaskId == task.id) {
                     Text(
                         text = gitAssistantSuggestionError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            var agentExpanded by remember { mutableStateOf(false) }
+            val selectedAgent = availableAgents.firstOrNull { it.id == selectedAgentId } ?: availableAgents.firstOrNull()
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Agent runner",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Run a saved agent against this task and record the result in activity history.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                ExposedDropdownMenuBox(
+                    expanded = agentExpanded,
+                    onExpandedChange = { agentExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = selectedAgent?.name ?: "Select agent",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Agent") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = agentExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(expanded = agentExpanded, onDismissRequest = { agentExpanded = false }) {
+                        availableAgents.forEach { agent ->
+                            DropdownMenuItem(
+                                text = { Text(agent.name) },
+                                onClick = {
+                                    onSelectAgent?.invoke(agent.id)
+                                    agentExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            val chosen = selectedAgent ?: return@Button
+                            onRunAgent?.invoke(task.id, chosen.id)
+                        },
+                        enabled = !isRunningAgent && availableAgents.isNotEmpty() && onRunAgent != null
+                    ) {
+                        Text(if (isRunningAgent && agentRunTargetTaskId == task.id) "Running..." else "Run agent")
+                    }
+                    OutlinedButton(
+                        onClick = { onClearAgentRunResult?.invoke() },
+                        enabled = agentRunResultForCurrentTask || (agentRunError != null && agentRunTargetTaskId == task.id)
+                    ) {
+                        Text("Clear")
+                    }
+                }
+                if (agentRunResultForCurrentTask) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                        Text(
+                            text = agentRunResult!!,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+                if (agentRunError != null && agentRunTargetTaskId == task.id) {
+                    Text(
+                        text = agentRunError,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )

@@ -1,8 +1,15 @@
 package com.aitask.desktop.ui.viewmodel
 
 import com.aitask.core.data.repository.InMemoryLlmConfigurationRepository
+import com.aitask.core.domain.model.AgentScope
+import com.aitask.core.domain.repository.AgentDefinitionRepository
 import com.aitask.core.domain.model.LlmConnectionTestResult
 import com.aitask.core.domain.service.LlmConnectionValidator
+import com.aitask.core.domain.usecase.DeleteAgentDefinitionUseCase
+import com.aitask.core.domain.usecase.GetProjectsUseCase
+import com.aitask.core.domain.usecase.SaveAgentDefinitionUseCase
+import io.mockk.coEvery
+import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -20,13 +27,23 @@ import org.junit.jupiter.api.Test
 class SettingsViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var repository: InMemoryLlmConfigurationRepository
+    private lateinit var getProjectsUseCase: GetProjectsUseCase
+    private lateinit var agentDefinitionRepository: AgentDefinitionRepository
     private lateinit var viewModel: SettingsViewModel
 
     @BeforeEach
     fun setUp() {
         repository = InMemoryLlmConfigurationRepository()
+        getProjectsUseCase = mockk()
+        agentDefinitionRepository = mockk()
+        coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(emptyList())
+        coEvery { agentDefinitionRepository.findAll() } returns emptyList()
         viewModel = SettingsViewModel(
+            getProjectsUseCase = getProjectsUseCase,
             llmConfigurationRepository = repository,
+            agentDefinitionRepository = agentDefinitionRepository,
+            saveAgentDefinitionUseCase = mockk<SaveAgentDefinitionUseCase>(relaxed = true),
+            deleteAgentDefinitionUseCase = mockk<DeleteAgentDefinitionUseCase>(relaxed = true),
             llmConnectionValidator = object : LlmConnectionValidator {
                 override suspend fun validate(endpointUrl: String, apiKey: String?): Result<LlmConnectionTestResult> =
                     Result.success(
@@ -68,7 +85,11 @@ class SettingsViewModelTest {
     @Test
     fun `saveLlmConfiguration does not persist when validation fails`() = runTest(testDispatcher) {
         viewModel = SettingsViewModel(
+            getProjectsUseCase = getProjectsUseCase,
             llmConfigurationRepository = repository,
+            agentDefinitionRepository = agentDefinitionRepository,
+            saveAgentDefinitionUseCase = mockk(relaxed = true),
+            deleteAgentDefinitionUseCase = mockk(relaxed = true),
             llmConnectionValidator = object : LlmConnectionValidator {
                 override suspend fun validate(endpointUrl: String, apiKey: String?): Result<LlmConnectionTestResult> =
                     Result.failure(IllegalStateException("Endpoint unreachable"))
@@ -98,6 +119,20 @@ class SettingsViewModelTest {
 
         assertEquals("Enter a display name for the LLM configuration", viewModel.uiState.llmError)
         assertFalse(viewModel.uiState.isLlmTesting)
+    }
+
+    @Test
+    fun `local validation prevents blank agent fields before save`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        viewModel.startNewAgentDefinition()
+        viewModel.updateAgentEditorScope(AgentScope.GLOBAL)
+        viewModel.saveAgentDefinition()
+
+        advanceUntilIdle()
+
+        assertEquals("Enter an agent name", viewModel.uiState.agentError)
+        assertFalse(viewModel.uiState.isAgentSaving)
     }
 
     @Test

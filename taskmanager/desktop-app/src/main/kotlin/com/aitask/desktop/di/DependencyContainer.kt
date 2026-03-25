@@ -5,6 +5,7 @@ import com.aitask.core.domain.repository.*
 import com.aitask.core.domain.service.GitService
 import com.aitask.core.domain.service.HealthCheckService
 import com.aitask.core.domain.service.IDEService
+import com.aitask.core.domain.service.AgentExecutionService
 import com.aitask.core.domain.service.GitAssistantSuggestionService
 import com.aitask.core.domain.service.LlmConnectionValidator
 import com.aitask.core.domain.service.TaskContentGenerationService
@@ -25,6 +26,7 @@ import com.aitask.core.domain.validation.TaskValidator
 import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
+import com.aitask.core.infrastructure.llm.DefaultAgentExecutionService
 import com.aitask.core.infrastructure.llm.DefaultGitAssistantSuggestionService
 import com.aitask.core.infrastructure.llm.DefaultLlmConnectionValidator
 import com.aitask.core.infrastructure.llm.DefaultTaskContentGenerationService
@@ -62,6 +64,10 @@ object DependencyContainer {
     
     val activityRepository: ActivityRepository by lazy {
         ActivityRepositoryImpl()
+    }
+
+    val agentDefinitionRepository: AgentDefinitionRepository by lazy {
+        AgentDefinitionRepositoryImpl()
     }
 
     val preRunScriptRepository: PreRunScriptRepository by lazy {
@@ -176,6 +182,10 @@ object DependencyContainer {
         DefaultGitAssistantSuggestionService()
     }
 
+    val agentExecutionService: AgentExecutionService by lazy {
+        DefaultAgentExecutionService()
+    }
+
     val pluginManagementService: PluginManagementService by lazy {
         InMemoryPluginManagementService(
             activityRepository = activityRepository,
@@ -196,6 +206,10 @@ object DependencyContainer {
     
     val getProjectsUseCase: GetProjectsUseCase by lazy {
         GetProjectsUseCase(projectRepository)
+    }
+
+    val getAgentDefinitionsUseCase: GetAgentDefinitionsUseCase by lazy {
+        GetAgentDefinitionsUseCase(agentDefinitionRepository)
     }
     
     val updateProjectUseCase: UpdateProjectUseCase by lazy {
@@ -246,6 +260,26 @@ object DependencyContainer {
     
     val deleteTaskUseCase: DeleteTaskUseCase by lazy {
         DeleteTaskUseCase(taskRepository, activityRepository)
+    }
+
+    val saveAgentDefinitionUseCase: SaveAgentDefinitionUseCase by lazy {
+        SaveAgentDefinitionUseCase(agentDefinitionRepository)
+    }
+
+    val deleteAgentDefinitionUseCase: DeleteAgentDefinitionUseCase by lazy {
+        DeleteAgentDefinitionUseCase(agentDefinitionRepository)
+    }
+
+    val runAgentUseCase: RunAgentUseCase by lazy {
+        RunAgentUseCase(
+            taskRepository,
+            projectRepository,
+            repositoryRepository,
+            agentDefinitionRepository,
+            llmConfigurationRepository,
+            agentExecutionService,
+            activityRepository
+        )
     }
     
     // Workspace Use Cases

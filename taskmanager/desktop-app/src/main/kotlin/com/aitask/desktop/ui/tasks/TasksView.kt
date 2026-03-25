@@ -291,8 +291,15 @@ fun TasksView(
                             onUseGitAssistantSuggestion = { taskId, mode, suggestion ->
                                 viewModel.markGitAssistantSuggestionUsed(taskId, mode, suggestion)
                             },
+                            onRunAgent = { taskId, agentId ->
+                                viewModel.runAgent(taskId, agentId)
+                            },
+                            onClearAgentRunResult = { viewModel.clearAgentRunResult() },
+                            onSelectAgent = { viewModel.selectAgent(it) },
                             availableIDEs = uiState.availableIDEs,
                             preferredIDEs = uiState.projectRepositories.flatMap { it.preferredIDEs }.distinct(),
+                            availableAgents = uiState.availableAgents,
+                            selectedAgentId = uiState.selectedAgentId,
                             isGeneratingWorkspace = uiState.isGeneratingWorkspace,
                             workspaceGenerationProgress = uiState.workspaceGenerationProgress,
                             isLaunchingIDE = uiState.isLaunchingIDE,
@@ -305,7 +312,11 @@ fun TasksView(
                             gitAssistantSuggestionError = uiState.gitAssistantSuggestionError,
                             gitAssistantSuggestion = uiState.gitAssistantSuggestion,
                             gitAssistantSuggestionTargetTaskId = uiState.gitAssistantSuggestionTargetTaskId,
-                            gitAssistantSuggestionMode = uiState.gitAssistantSuggestionMode
+                            gitAssistantSuggestionMode = uiState.gitAssistantSuggestionMode,
+                            isRunningAgent = uiState.isRunningAgent,
+                            agentRunError = uiState.agentRunError,
+                            agentRunResult = uiState.agentRunResult,
+                            agentRunTargetTaskId = uiState.agentRunTargetTaskId
                         )
                     }
                 }
