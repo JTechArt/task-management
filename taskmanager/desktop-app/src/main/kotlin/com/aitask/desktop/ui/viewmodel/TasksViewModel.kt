@@ -4,6 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.aitask.core.domain.model.*
+import com.aitask.core.domain.repository.ActivityRepository
+import com.aitask.core.domain.repository.AgentDefinitionRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.SlackNotificationService
@@ -26,10 +28,15 @@ class TasksViewModel(
     private val generateWorkspaceUseCase: GenerateWorkspaceUseCase = DependencyContainer.generateWorkspaceUseCase,
     private val cleanupWorkspaceUseCase: CleanupWorkspaceUseCase = DependencyContainer.cleanupWorkspaceUseCase,
     private val launchIDEUseCase: LaunchIDEUseCase = DependencyContainer.launchIDEUseCase,
+    private val generateTaskContentUseCase: GenerateTaskContentUseCase = DependencyContainer.generateTaskContentUseCase,
+    private val generateGitAssistantSuggestionUseCase: GenerateGitAssistantSuggestionUseCase = DependencyContainer.generateGitAssistantSuggestionUseCase,
+    private val getAgentDefinitionsUseCase: GetAgentDefinitionsUseCase = DependencyContainer.getAgentDefinitionsUseCase,
+    private val runAgentUseCase: RunAgentUseCase = DependencyContainer.runAgentUseCase,
     private val ideService: IDEService = DependencyContainer.ideService,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
     private val projectRepository: com.aitask.core.domain.repository.ProjectRepository = DependencyContainer.projectRepository,
     private val slackNotificationService: com.aitask.core.domain.service.SlackNotificationService = DependencyContainer.slackNotificationService,
+    private val activityRepository: ActivityRepository = DependencyContainer.activityRepository,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     var uiState by mutableStateOf(TasksUiState())
@@ -38,6 +45,7 @@ class TasksViewModel(
     init {
         loadProjects()
         loadTasks()
+        loadAvailableAgents()
     }
     
     private fun loadProjects() {
@@ -124,7 +132,7 @@ class TasksViewModel(
             val result = updateTaskUseCase(taskId, request)
             result.fold(
                 onSuccess = { updatedTask ->
-                    loadTasks()
+                    handleTaskUpdated(updatedTask)
                     when (newStatus) {
                         TaskStatus.IN_PROGRESS -> TaskEvent.TASK_STARTED
                         TaskStatus.COMPLETED -> TaskEvent.TASK_COMPLETED
@@ -156,7 +164,7 @@ class TasksViewModel(
             result.fold(
                 onSuccess = { updatedTask ->
                     uiState = uiState.copy(selectedTask = updatedTask)
-                    loadTasks()
+                    handleTaskUpdated(updatedTask)
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
@@ -173,7 +181,7 @@ class TasksViewModel(
             result.fold(
                 onSuccess = { updatedTask ->
                     uiState = uiState.copy(selectedTask = updatedTask)
-                    loadTasks()
+                    handleTaskUpdated(updatedTask)
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
@@ -190,7 +198,7 @@ class TasksViewModel(
             result.fold(
                 onSuccess = { updatedTask ->
                     uiState = uiState.copy(selectedTask = updatedTask)
-                    loadTasks()
+                    handleTaskUpdated(updatedTask)
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
@@ -213,7 +221,7 @@ class TasksViewModel(
             result.fold(
                 onSuccess = { updatedTask ->
                     uiState = uiState.copy(selectedTask = updatedTask)
-                    loadTasks()
+                    handleTaskUpdated(updatedTask)
                 },
                 onFailure = { error ->
                     uiState = uiState.copy(
@@ -250,11 +258,13 @@ class TasksViewModel(
         // Load repositories for the selected task's project
         if (task != null) {
             scope.launch {
-                val repositories = DependencyContainer.repositoryRepository.findByProject(task.projectId)
+                val repositories = repositoryRepository.findByProject(task.projectId)
                 uiState = uiState.copy(projectRepositories = repositories)
             }
+            loadAvailableAgents(task.projectId, task, AgentTrigger.TASK_OPENED)
         } else {
             uiState = uiState.copy(projectRepositories = emptyList())
+            loadAvailableAgents(null)
         }
     }
 
@@ -266,7 +276,7 @@ class TasksViewModel(
         }
 
         scope.launch {
-            val repositories = DependencyContainer.repositoryRepository.findByProject(task.projectId)
+            val repositories = repositoryRepository.findByProject(task.projectId)
 
             // Determine default selection
             val defaultSelection = if (repositories.isNotEmpty()) {
@@ -429,6 +439,211 @@ class TasksViewModel(
         }
     }
 
+    fun generateTaskContentSuggestion(
+        projectId: UUID,
+        title: String,
+        currentDescription: String?,
+        taskType: TaskType,
+        mode: TaskContentGenerationMode,
+        targetTaskId: UUID? = null
+    ) {
+        uiState = uiState.copy(
+            isGeneratingTaskContent = true,
+            taskContentGenerationError = null,
+            taskContentSuggestion = null,
+            taskContentGenerationTargetTaskId = targetTaskId,
+            taskContentGenerationMode = mode
+        )
+        scope.launch {
+            val result = generateTaskContentUseCase(
+                TaskContentGenerationRequest(
+                    projectId = projectId,
+                    title = title,
+                    currentDescription = currentDescription,
+                    taskType = taskType,
+                    mode = mode
+                )
+            )
+            result.fold(
+                onSuccess = { suggestion ->
+                    uiState = uiState.copy(
+                        isGeneratingTaskContent = false,
+                        taskContentSuggestion = suggestion.generatedText,
+                        taskContentGenerationError = null
+                    )
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isGeneratingTaskContent = false,
+                        taskContentGenerationError = error.message ?: "Failed to generate task content"
+                    )
+                }
+            )
+        }
+    }
+
+    fun generateGitAssistantSuggestion(
+        taskId: UUID,
+        mode: GitAssistantSuggestionMode
+    ) {
+        uiState = uiState.copy(
+            isGeneratingGitAssistantSuggestion = true,
+            gitAssistantSuggestionError = null,
+            gitAssistantSuggestion = null,
+            gitAssistantSuggestionTargetTaskId = taskId,
+            gitAssistantSuggestionMode = mode
+        )
+        scope.launch {
+            val result = generateGitAssistantSuggestionUseCase(
+                GenerateGitAssistantSuggestionRequest(
+                    taskId = taskId,
+                    mode = mode
+                )
+            )
+            result.fold(
+                onSuccess = { suggestion ->
+                    uiState = uiState.copy(
+                        isGeneratingGitAssistantSuggestion = false,
+                        gitAssistantSuggestion = suggestion.generatedText,
+                        gitAssistantSuggestionError = null
+                    )
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isGeneratingGitAssistantSuggestion = false,
+                        gitAssistantSuggestionError = error.message ?: "Failed to generate git suggestion"
+                    )
+                }
+            )
+        }
+    }
+
+    fun clearGitAssistantSuggestion() {
+        uiState = uiState.copy(
+            gitAssistantSuggestion = null,
+            gitAssistantSuggestionError = null,
+            gitAssistantSuggestionTargetTaskId = null,
+            gitAssistantSuggestionMode = null,
+            isGeneratingGitAssistantSuggestion = false
+        )
+    }
+
+    fun loadAvailableAgents(projectId: UUID? = null, taskForAutoRun: Task? = null, trigger: AgentTrigger? = null) {
+        scope.launch {
+            val result = getAgentDefinitionsUseCase(projectId)
+            result.fold(
+                onSuccess = { agents ->
+                    uiState = uiState.copy(
+                        availableAgents = agents,
+                        selectedAgentId = agents.firstOrNull()?.id
+                    )
+                    if (taskForAutoRun != null && trigger != null) {
+                        runTriggeredAgent(taskForAutoRun, agents, trigger)
+                    }
+                },
+                onFailure = {
+                    uiState = uiState.copy(availableAgents = emptyList(), selectedAgentId = null)
+                }
+            )
+        }
+    }
+
+    fun selectAgent(agentId: UUID?) {
+        uiState = uiState.copy(selectedAgentId = agentId)
+    }
+
+    fun runAgent(taskId: UUID, agentId: UUID) {
+        uiState = uiState.copy(isRunningAgent = true, agentRunError = null, agentRunResult = null, agentRunTargetTaskId = taskId)
+        scope.launch {
+            val result = runAgentUseCase(RunAgentRequest(taskId = taskId, agentId = agentId))
+            result.fold(
+                onSuccess = { execution ->
+                    uiState = uiState.copy(
+                        isRunningAgent = false,
+                        agentRunResult = execution.generatedText,
+                        selectedAgentId = agentId
+                    )
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isRunningAgent = false,
+                        agentRunError = error.message ?: "Failed to run agent"
+                    )
+                }
+            )
+        }
+    }
+
+    fun clearAgentRunResult() {
+        uiState = uiState.copy(
+            agentRunResult = null,
+            agentRunError = null,
+            agentRunTargetTaskId = null,
+            isRunningAgent = false
+        )
+    }
+
+    fun markGitAssistantSuggestionUsed(
+        taskId: UUID,
+        mode: GitAssistantSuggestionMode,
+        suggestion: String
+    ) {
+        scope.launch {
+            val task = uiState.tasks.find { it.id == taskId } ?: return@launch
+            runCatching {
+                activityRepository.create(
+                    Activity(
+                        id = UUID.randomUUID(),
+                        type = ActivityType.LLM_SUGGESTION_USED,
+                        entityType = "task",
+                        entityId = task.id,
+                        description = "Used AI-generated ${mode.name.lowercase().replace('_', ' ')} suggestion for task: ${task.title}",
+                        metadata = mapOf(
+                            "mode" to mode.name,
+                            "taskTitle" to task.title,
+                            "suggestionLength" to suggestion.length.toString(),
+                            "branchName" to (task.branchName ?: "")
+                        ).filterValues { it.isNotBlank() },
+                        createdAt = java.time.Instant.now(),
+                        status = ActivityStatus.SUCCESS,
+                        projectId = task.projectId
+                    )
+                )
+            }
+            clearGitAssistantSuggestion()
+        }
+    }
+
+    fun clearTaskContentSuggestion() {
+        uiState = uiState.copy(
+            taskContentSuggestion = null,
+            taskContentGenerationError = null,
+            taskContentGenerationTargetTaskId = null,
+            taskContentGenerationMode = null,
+            isGeneratingTaskContent = false
+        )
+    }
+
+    fun updateTaskDescription(taskId: UUID, description: String?) {
+        scope.launch {
+            val result = updateTaskUseCase(
+                taskId,
+                UpdateTaskRequest(description = description?.takeIf { it.isNotBlank() })
+            )
+            result.fold(
+                onSuccess = { updatedTask ->
+                    uiState = uiState.copy(selectedTask = updatedTask)
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to update task description"
+                    )
+                }
+            )
+        }
+    }
+
     fun loadProjectRepositories(projectId: UUID) {
         scope.launch {
             try {
@@ -438,6 +653,16 @@ class TasksViewModel(
                 // Silently fail
             }
         }
+    }
+
+    private fun handleTaskUpdated(updatedTask: Task) {
+        loadTasks()
+        loadAvailableAgents(updatedTask.projectId, updatedTask, AgentTrigger.TASK_UPDATED)
+    }
+
+    private fun runTriggeredAgent(task: Task, agents: List<AgentDefinition>, trigger: AgentTrigger) {
+        val candidate = agents.firstOrNull { it.isEnabled && it.trigger == trigger } ?: return
+        runAgent(task.id, candidate.id)
     }
 
     fun clearSuccessMessages() {
@@ -525,5 +750,21 @@ data class TasksUiState(
     val showCleanupConfirmationDialog: Boolean = false,
     val taskToCleanup: Task? = null,
     val cleanupConfirmationTypedText: String = "",
-    val isCleaningUpWorkspace: Boolean = false
+    val isCleaningUpWorkspace: Boolean = false,
+    val isGeneratingTaskContent: Boolean = false,
+    val taskContentGenerationError: String? = null,
+    val taskContentSuggestion: String? = null,
+    val taskContentGenerationTargetTaskId: UUID? = null,
+    val taskContentGenerationMode: TaskContentGenerationMode? = null,
+    val isGeneratingGitAssistantSuggestion: Boolean = false,
+    val gitAssistantSuggestionError: String? = null,
+    val gitAssistantSuggestion: String? = null,
+    val gitAssistantSuggestionTargetTaskId: UUID? = null,
+    val gitAssistantSuggestionMode: GitAssistantSuggestionMode? = null,
+    val availableAgents: List<AgentDefinition> = emptyList(),
+    val selectedAgentId: UUID? = null,
+    val isRunningAgent: Boolean = false,
+    val agentRunError: String? = null,
+    val agentRunResult: String? = null,
+    val agentRunTargetTaskId: UUID? = null
 )

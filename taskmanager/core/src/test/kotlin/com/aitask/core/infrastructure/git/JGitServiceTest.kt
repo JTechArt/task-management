@@ -11,9 +11,16 @@ import org.eclipse.jgit.transport.PushConnection
 import org.eclipse.jgit.transport.SshTransport
 import org.eclipse.jgit.transport.URIish
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
+import kotlin.io.path.writeText
 
 class JGitServiceTest {
+    @TempDir
+    lateinit var tempDir: Path
+
     @Test
     fun `should attach SSH transport callback for clone commands`() {
         val command = configureTransportAuthentication(
@@ -31,6 +38,25 @@ class JGitServiceTest {
 
         assertNotNull(callback)
         assertNotNull(transport.sshSessionFactory)
+    }
+
+    @Test
+    fun `getStagedChangesSummary includes staged files and diff summary`() = kotlinx.coroutines.test.runTest {
+        val repositoryDir = tempDir.resolve("repo").toFile()
+        repositoryDir.mkdirs()
+        Git.init().setDirectory(repositoryDir).call().use { git ->
+            val file = repositoryDir.toPath().resolve("note.txt")
+            file.writeText("hello world")
+            git.add().addFilepattern("note.txt").call()
+        }
+
+        val service = JGitService()
+        val result = service.getStagedChangesSummary(repositoryDir.absolutePath)
+
+        assertTrue(result.isSuccess)
+        val summary = result.getOrThrow()
+        assertTrue(summary.contains("Staged files:"))
+        assertTrue(summary.contains("note.txt"))
     }
 
     private fun transportConfigCallback(command: TransportCommand<*, *>): TransportConfigCallback {

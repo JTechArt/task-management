@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.*
@@ -302,15 +304,39 @@ fun TaskDetailView(
     onSaveBmadToolOverride: (UUID, List<String>) -> Unit = { _, _ -> },
     onResetBmadToolOverride: (UUID) -> Unit = {},
     onSaveBmadInjectionOverride: (UUID, Boolean?) -> Unit = { _, _ -> },
+    onSaveDescription: (UUID, String?) -> Unit = { _, _ -> },
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
     onCleanupWorkspace: ((Task) -> Unit)? = null,
+    onGenerateTaskContentSuggestion: ((UUID, String, String?, TaskType, TaskContentGenerationMode, UUID?) -> Unit)? = null,
+    onClearTaskContentSuggestion: (() -> Unit)? = null,
+    onGenerateGitAssistantSuggestion: ((UUID, GitAssistantSuggestionMode) -> Unit)? = null,
+    onClearGitAssistantSuggestion: (() -> Unit)? = null,
+    onUseGitAssistantSuggestion: ((UUID, GitAssistantSuggestionMode, String) -> Unit)? = null,
+    onRunAgent: ((UUID, UUID) -> Unit)? = null,
+    onClearAgentRunResult: (() -> Unit)? = null,
+    onSelectAgent: ((UUID?) -> Unit)? = null,
     availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
     preferredIDEs: List<IDEType> = emptyList(),
+    availableAgents: List<AgentDefinition> = emptyList(),
+    selectedAgentId: UUID? = null,
     isGeneratingWorkspace: Boolean = false,
     workspaceGenerationProgress: String? = null,
     isLaunchingIDE: Boolean = false,
     isCleaningUpWorkspace: Boolean = false,
+    isGeneratingTaskContent: Boolean = false,
+    taskContentGenerationError: String? = null,
+    taskContentSuggestion: String? = null,
+    taskContentSuggestionTargetTaskId: UUID? = null,
+    isGeneratingGitAssistantSuggestion: Boolean = false,
+    gitAssistantSuggestionError: String? = null,
+    gitAssistantSuggestion: String? = null,
+    gitAssistantSuggestionTargetTaskId: UUID? = null,
+    gitAssistantSuggestionMode: GitAssistantSuggestionMode? = null,
+    isRunningAgent: Boolean = false,
+    agentRunError: String? = null,
+    agentRunResult: String? = null,
+    agentRunTargetTaskId: UUID? = null,
     modifier: Modifier = Modifier
 ) {
     var methodologyExpanded by remember { mutableStateOf(false) }
@@ -323,7 +349,12 @@ fun TaskDetailView(
     var selectedInjectionOverride by remember(task.bmadInjectionEnabledOverride) {
         mutableStateOf(task.bmadInjectionEnabledOverride)
     }
+    var descriptionDraft by remember(task.description) { mutableStateOf(task.description ?: "") }
     val scrollState = rememberScrollState()
+    val taskContentSuggestionForCurrentTask = taskContentSuggestionTargetTaskId == task.id && taskContentSuggestion != null
+    val gitAssistantSuggestionForCurrentTask = gitAssistantSuggestionTargetTaskId == task.id && gitAssistantSuggestion != null
+    val agentRunResultForCurrentTask = agentRunTargetTaskId == task.id && agentRunResult != null
+    val clipboardManager = LocalClipboardManager.current
     LaunchedEffect(task.methodologyOverride) {
         selectedMethodologyOverride = task.methodologyOverride
     }
@@ -332,6 +363,9 @@ fun TaskDetailView(
     }
     LaunchedEffect(task.bmadInjectionEnabledOverride) {
         selectedInjectionOverride = task.bmadInjectionEnabledOverride
+    }
+    LaunchedEffect(task.description) {
+        descriptionDraft = task.description ?: ""
     }
     Column(
         modifier = modifier
@@ -373,6 +407,287 @@ fun TaskDetailView(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Description editor",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Generate a description or summary, then edit it before saving.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                OutlinedTextField(
+                    value = descriptionDraft,
+                    onValueChange = { descriptionDraft = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 4,
+                    maxLines = 8,
+                    label = { Text("Task description / summary") }
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            onGenerateTaskContentSuggestion?.invoke(
+                                task.projectId,
+                                task.title,
+                                descriptionDraft.takeIf { it.isNotBlank() },
+                                task.taskType,
+                                TaskContentGenerationMode.DESCRIPTION,
+                                task.id
+                            )
+                        },
+                        enabled = !isGeneratingTaskContent && onGenerateTaskContentSuggestion != null
+                    ) {
+                        Text(if (isGeneratingTaskContent) "Generating..." else "Generate description")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            onGenerateTaskContentSuggestion?.invoke(
+                                task.projectId,
+                                task.title,
+                                descriptionDraft.takeIf { it.isNotBlank() },
+                                task.taskType,
+                                TaskContentGenerationMode.SUMMARY,
+                                task.id
+                            )
+                        },
+                        enabled = !isGeneratingTaskContent && onGenerateTaskContentSuggestion != null
+                    ) {
+                        Text("Generate summary")
+                    }
+                }
+                if (taskContentSuggestionForCurrentTask) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Generated suggestion",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = taskContentSuggestion!!,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    descriptionDraft = taskContentSuggestion!!
+                                    onClearTaskContentSuggestion?.invoke()
+                                }) {
+                                    Text("Use suggestion")
+                                }
+                                OutlinedButton(onClick = { onClearTaskContentSuggestion?.invoke() }) {
+                                    Text("Discard")
+                                }
+                            }
+                        }
+                    }
+                }
+                if (taskContentGenerationError != null && taskContentSuggestionTargetTaskId == task.id) {
+                    Text(
+                        text = taskContentGenerationError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { onSaveDescription(task.id, descriptionDraft.trim().takeIf { it.isNotEmpty() }) },
+                        enabled = descriptionDraft.trim() != (task.description ?: "")
+                    ) {
+                        Text("Save description")
+                    }
+                    OutlinedButton(
+                        onClick = { descriptionDraft = task.description ?: "" },
+                        enabled = descriptionDraft != (task.description ?: "")
+                    ) {
+                        Text("Revert")
+                    }
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Git assistant",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Draft commit messages, PR descriptions, or comment text from the current task context.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            onGenerateGitAssistantSuggestion?.invoke(task.id, GitAssistantSuggestionMode.COMMIT_MESSAGE)
+                        },
+                        enabled = !isGeneratingGitAssistantSuggestion && onGenerateGitAssistantSuggestion != null
+                    ) {
+                        Text(if (isGeneratingGitAssistantSuggestion && gitAssistantSuggestionMode == GitAssistantSuggestionMode.COMMIT_MESSAGE) "Generating..." else "Commit message")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            onGenerateGitAssistantSuggestion?.invoke(task.id, GitAssistantSuggestionMode.PR_DESCRIPTION)
+                        },
+                        enabled = !isGeneratingGitAssistantSuggestion && onGenerateGitAssistantSuggestion != null
+                    ) {
+                        Text("PR description")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            onGenerateGitAssistantSuggestion?.invoke(task.id, GitAssistantSuggestionMode.COMMENT_DRAFT)
+                        },
+                        enabled = !isGeneratingGitAssistantSuggestion && onGenerateGitAssistantSuggestion != null
+                    ) {
+                        Text("Comment draft")
+                    }
+                }
+                if (gitAssistantSuggestionForCurrentTask) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "AI-generated ${gitAssistantSuggestionMode?.name?.lowercase()?.replace('_', ' ') ?: "suggestion"}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = gitAssistantSuggestion!!,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    clipboardManager.setText(AnnotatedString(gitAssistantSuggestion!!))
+                                    onUseGitAssistantSuggestion?.invoke(
+                                        task.id,
+                                        gitAssistantSuggestionMode ?: GitAssistantSuggestionMode.COMMIT_MESSAGE,
+                                        gitAssistantSuggestion!!
+                                    )
+                                }) {
+                                    Text("Use suggestion")
+                                }
+                                OutlinedButton(onClick = { onClearGitAssistantSuggestion?.invoke() }) {
+                                    Text("Discard")
+                                }
+                            }
+                        }
+                    }
+                }
+                if (gitAssistantSuggestionError != null && gitAssistantSuggestionTargetTaskId == task.id) {
+                    Text(
+                        text = gitAssistantSuggestionError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            var agentExpanded by remember { mutableStateOf(false) }
+            val selectedAgent = availableAgents.firstOrNull { it.id == selectedAgentId } ?: availableAgents.firstOrNull()
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Agent runner",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Run a saved agent against this task and record the result in activity history.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                ExposedDropdownMenuBox(
+                    expanded = agentExpanded,
+                    onExpandedChange = { agentExpanded = it }
+                ) {
+                    OutlinedTextField(
+                        value = selectedAgent?.name ?: "Select agent",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Agent") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = agentExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(expanded = agentExpanded, onDismissRequest = { agentExpanded = false }) {
+                        availableAgents.forEach { agent ->
+                            DropdownMenuItem(
+                                text = { Text(agent.name) },
+                                onClick = {
+                                    onSelectAgent?.invoke(agent.id)
+                                    agentExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            val chosen = selectedAgent ?: return@Button
+                            onRunAgent?.invoke(task.id, chosen.id)
+                        },
+                        enabled = !isRunningAgent && availableAgents.isNotEmpty() && onRunAgent != null
+                    ) {
+                        Text(if (isRunningAgent && agentRunTargetTaskId == task.id) "Running..." else "Run agent")
+                    }
+                    OutlinedButton(
+                        onClick = { onClearAgentRunResult?.invoke() },
+                        enabled = agentRunResultForCurrentTask || (agentRunError != null && agentRunTargetTaskId == task.id)
+                    ) {
+                        Text("Clear")
+                    }
+                }
+                if (agentRunResultForCurrentTask) {
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+                        Text(
+                            text = agentRunResult!!,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+                if (agentRunError != null && agentRunTargetTaskId == task.id) {
+                    Text(
+                        text = agentRunError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
         }
 
         Divider()

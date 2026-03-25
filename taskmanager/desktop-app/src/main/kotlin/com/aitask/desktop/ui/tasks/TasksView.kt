@@ -263,6 +263,9 @@ fun TasksView(
                             onSaveBmadInjectionOverride = { taskId, enabled ->
                                 viewModel.updateTaskBmadInjectionOverride(taskId, enabled)
                             },
+                            onSaveDescription = { taskId, description ->
+                                viewModel.updateTaskDescription(taskId, description)
+                            },
                             onGenerateWorkspace = { taskId ->
                                 viewModel.showRepositorySelectionDialog(taskId)
                             },
@@ -270,12 +273,50 @@ fun TasksView(
                                 viewModel.launchIDE(taskId, ideType)
                             },
                             onCleanupWorkspace = { task -> viewModel.showCleanupConfirmationDialog(task) },
+                            onGenerateTaskContentSuggestion = { projectId, title, currentDescription, taskType, mode, targetTaskId ->
+                                viewModel.generateTaskContentSuggestion(
+                                    projectId = projectId,
+                                    title = title,
+                                    currentDescription = currentDescription,
+                                    taskType = taskType,
+                                    mode = mode,
+                                    targetTaskId = targetTaskId
+                                )
+                            },
+                            onClearTaskContentSuggestion = { viewModel.clearTaskContentSuggestion() },
+                            onGenerateGitAssistantSuggestion = { taskId, mode ->
+                                viewModel.generateGitAssistantSuggestion(taskId, mode)
+                            },
+                            onClearGitAssistantSuggestion = { viewModel.clearGitAssistantSuggestion() },
+                            onUseGitAssistantSuggestion = { taskId, mode, suggestion ->
+                                viewModel.markGitAssistantSuggestionUsed(taskId, mode, suggestion)
+                            },
+                            onRunAgent = { taskId, agentId ->
+                                viewModel.runAgent(taskId, agentId)
+                            },
+                            onClearAgentRunResult = { viewModel.clearAgentRunResult() },
+                            onSelectAgent = { viewModel.selectAgent(it) },
                             availableIDEs = uiState.availableIDEs,
                             preferredIDEs = uiState.projectRepositories.flatMap { it.preferredIDEs }.distinct(),
+                            availableAgents = uiState.availableAgents,
+                            selectedAgentId = uiState.selectedAgentId,
                             isGeneratingWorkspace = uiState.isGeneratingWorkspace,
                             workspaceGenerationProgress = uiState.workspaceGenerationProgress,
                             isLaunchingIDE = uiState.isLaunchingIDE,
-                            isCleaningUpWorkspace = uiState.isCleaningUpWorkspace
+                            isCleaningUpWorkspace = uiState.isCleaningUpWorkspace,
+                            isGeneratingTaskContent = uiState.isGeneratingTaskContent,
+                            taskContentGenerationError = uiState.taskContentGenerationError,
+                            taskContentSuggestion = uiState.taskContentSuggestion,
+                            taskContentSuggestionTargetTaskId = uiState.taskContentGenerationTargetTaskId,
+                            isGeneratingGitAssistantSuggestion = uiState.isGeneratingGitAssistantSuggestion,
+                            gitAssistantSuggestionError = uiState.gitAssistantSuggestionError,
+                            gitAssistantSuggestion = uiState.gitAssistantSuggestion,
+                            gitAssistantSuggestionTargetTaskId = uiState.gitAssistantSuggestionTargetTaskId,
+                            gitAssistantSuggestionMode = uiState.gitAssistantSuggestionMode,
+                            isRunningAgent = uiState.isRunningAgent,
+                            agentRunError = uiState.agentRunError,
+                            agentRunResult = uiState.agentRunResult,
+                            agentRunTargetTaskId = uiState.agentRunTargetTaskId
                         )
                     }
                 }
@@ -288,6 +329,7 @@ fun TasksView(
         CreateTaskDialog(
             projects = uiState.projects,
             onDismiss = { viewModel.hideCreateDialog() },
+            viewModel = viewModel,
             onConfirm = { title, description, taskType, projectId, methodologyOverride ->
                 viewModel.createTask(title, description, taskType, projectId, methodologyOverride)
             },

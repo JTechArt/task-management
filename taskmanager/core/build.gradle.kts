@@ -44,6 +44,9 @@ dependencies {
     api("io.ktor:ktor-client-cio-jvm:$ktorVersion")
     api("io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion")
     api("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
+    api("io.ktor:ktor-server-core-jvm:$ktorVersion")
+    api("io.ktor:ktor-server-netty-jvm:$ktorVersion")
+    api("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")
 
     // Git
     api("org.eclipse.jgit:org.eclipse.jgit:$jgitVersion")
@@ -54,6 +57,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
     testImplementation("io.mockk:mockk-jvm:$mockkVersion")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
+    testRuntimeOnly("com.h2database:h2:2.2.224")
 }
 
 kotlin {

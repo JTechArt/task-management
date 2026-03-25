@@ -168,6 +168,43 @@ class JGitService : GitService {
         }
     }
 
+    override suspend fun getStagedChangesSummary(repositoryPath: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            Git.open(File(repositoryPath)).use { git ->
+                val status = git.status().call()
+                val stagedFiles = buildList {
+                    addAll(status.added)
+                    addAll(status.changed)
+                    addAll(status.removed)
+                }.distinct().sorted()
+
+                if (stagedFiles.isEmpty()) {
+                    return@withContext Result.success("No staged changes detected.")
+                }
+
+                val diffSummary = buildString {
+                    appendLine("Staged files:")
+                    stagedFiles.forEach { file ->
+                        appendLine("- $file")
+                    }
+
+                    val entries = runCatching { git.diff().setCached(true).call() }.getOrDefault(emptyList())
+                    if (entries.isNotEmpty()) {
+                        appendLine("Staged diff summary:")
+                        entries.forEach { entry ->
+                            appendLine("- ${entry.changeType.name}: ${entry.oldPath} -> ${entry.newPath}")
+                        }
+                    }
+                }
+
+                Result.success(diffSummary.trim())
+            }
+        } catch (e: Exception) {
+            logger.warn(e) { "Failed to load staged changes summary for $repositoryPath" }
+            Result.failure(e)
+        }
+    }
+
 }
 
 internal fun <C : TransportCommand<C, *>> configureTransportAuthentication(
