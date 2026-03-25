@@ -7,6 +7,7 @@ import com.aitask.core.domain.service.HealthCheckService
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.McpBridgeService
 import com.aitask.core.domain.service.AgentExecutionService
+import com.aitask.core.domain.service.GeppaConnectionValidator
 import com.aitask.core.domain.service.GitAssistantSuggestionService
 import com.aitask.core.domain.service.LlmConnectionValidator
 import com.aitask.core.domain.service.TaskContentGenerationService
@@ -28,6 +29,7 @@ import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
 import com.aitask.core.infrastructure.llm.DefaultAgentExecutionService
+import com.aitask.core.infrastructure.llm.DefaultGeppaConnectionValidator
 import com.aitask.core.infrastructure.llm.DefaultGitAssistantSuggestionService
 import com.aitask.core.infrastructure.llm.DefaultLlmConnectionValidator
 import com.aitask.core.infrastructure.llm.DefaultTaskContentGenerationService
@@ -178,6 +180,14 @@ object DependencyContainer {
 
     val llmConnectionValidator: LlmConnectionValidator by lazy {
         DefaultLlmConnectionValidator()
+    }
+
+    val geppaConfigurationRepository: GeppaConfigurationRepository by lazy {
+        GeppaConfigurationRepositoryImpl()
+    }
+
+    val geppaConnectionValidator: GeppaConnectionValidator by lazy {
+        DefaultGeppaConnectionValidator()
     }
 
     val taskContentGenerationService: TaskContentGenerationService by lazy {

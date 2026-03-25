@@ -7,14 +7,18 @@ import com.aitask.core.domain.model.AgentDefinition
 import com.aitask.core.domain.model.AgentDefinitionRequest
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.AgentTrigger
+import com.aitask.core.domain.model.GeppaConfiguration
+import com.aitask.core.domain.model.GeppaConfigurationRequest
 import com.aitask.core.domain.model.McpServerConfiguration
 import com.aitask.core.domain.model.McpServerConfigurationRequest
 import com.aitask.core.domain.model.LlmConfiguration
 import com.aitask.core.domain.model.LlmConfigurationRequest
 import com.aitask.core.domain.repository.AgentDefinitionRepository
+import com.aitask.core.domain.repository.GeppaConfigurationRepository
 import com.aitask.core.domain.repository.McpServerConfigurationRepository
 import com.aitask.core.domain.repository.LlmConfigurationRepository
 import com.aitask.core.domain.usecase.DeleteAgentDefinitionUseCase
+import com.aitask.core.domain.service.GeppaConnectionValidator
 import com.aitask.core.domain.service.LlmConnectionValidator
 import com.aitask.core.domain.service.McpBridgeService
 import com.aitask.core.domain.usecase.CreateBackupUseCase
@@ -46,6 +50,8 @@ class SettingsViewModel(
     private val saveAgentDefinitionUseCase: SaveAgentDefinitionUseCase = DependencyContainer.saveAgentDefinitionUseCase,
     private val deleteAgentDefinitionUseCase: DeleteAgentDefinitionUseCase = DependencyContainer.deleteAgentDefinitionUseCase,
     private val llmConnectionValidator: LlmConnectionValidator = DependencyContainer.llmConnectionValidator,
+    private val geppaConfigurationRepository: GeppaConfigurationRepository = DependencyContainer.geppaConfigurationRepository,
+    private val geppaConnectionValidator: GeppaConnectionValidator = DependencyContainer.geppaConnectionValidator,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
     var uiState by mutableStateOf(SettingsUiState())
@@ -56,6 +62,7 @@ class SettingsViewModel(
         loadLlmConfigurations()
         loadAgentDefinitions()
         loadMcpConfiguration()
+        loadGeppaConfiguration()
     }
 
     fun loadProjects() {
@@ -136,6 +143,119 @@ class SettingsViewModel(
                 )
             }
         }
+    }
+
+    fun loadGeppaConfiguration() {
+        scope.launch {
+            uiState = uiState.copy(isGeppaLoading = true, geppaError = null)
+            try {
+                val configuration = geppaConfigurationRepository.find()
+                val editor = configuration?.let {
+                    GeppaConfigurationEditorState(
+                        id = it.id,
+                        isEnabled = it.isEnabled,
+                        endpointUrl = it.endpointUrl
+                    )
+                } ?: GeppaConfigurationEditorState()
+                uiState = uiState.copy(
+                    isGeppaLoading = false,
+                    geppaEditor = editor
+                )
+            } catch (error: Exception) {
+                uiState = uiState.copy(
+                    isGeppaLoading = false,
+                    geppaError = error.message ?: "Failed to load GEPPA configuration"
+                )
+            }
+        }
+    }
+
+    fun updateGeppaEditorEnabled(isEnabled: Boolean) = updateGeppaEditor { it.copy(isEnabled = isEnabled) }
+
+    fun updateGeppaEditorEndpoint(endpointUrl: String) = updateGeppaEditor { it.copy(endpointUrl = endpointUrl) }
+
+    fun testGeppaConnection() {
+        val editor = uiState.geppaEditor
+        if (editor.endpointUrl.isBlank()) {
+            uiState = uiState.copy(geppaError = "Enter the GEPPA endpoint URL before testing")
+            return
+        }
+        scope.launch {
+            uiState = uiState.copy(isGeppaTesting = true, geppaError = null, geppaFeedback = null)
+            val result = geppaConnectionValidator.validate(editor.endpointUrl)
+            result.fold(
+                onSuccess = { testResult ->
+                    uiState = uiState.copy(
+                        isGeppaTesting = false,
+                        geppaFeedback = "Connection succeeded via ${testResult.probeUrl} in ${testResult.latencyMillis} ms"
+                    )
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isGeppaTesting = false,
+                        geppaError = error.message ?: "GEPPA connection test failed"
+                    )
+                }
+            )
+        }
+    }
+
+    fun saveGeppaConfiguration() {
+        val editor = uiState.geppaEditor
+        if (editor.isEnabled && editor.endpointUrl.isBlank()) {
+            uiState = uiState.copy(geppaError = "Enter the GEPPA endpoint URL")
+            return
+        }
+        scope.launch {
+            uiState = uiState.copy(isGeppaSaving = true, geppaError = null, geppaFeedback = null)
+            if (editor.isEnabled) {
+                val validation = geppaConnectionValidator.validate(editor.endpointUrl)
+                validation.fold(
+                    onSuccess = { saveGeppaToRepository(editor) },
+                    onFailure = { error ->
+                        uiState = uiState.copy(
+                            isGeppaSaving = false,
+                            geppaError = error.message ?: "GEPPA endpoint validation failed"
+                        )
+                    }
+                )
+            } else {
+                saveGeppaToRepository(editor)
+            }
+        }
+    }
+
+    fun clearGeppaFeedback() {
+        uiState = uiState.copy(geppaFeedback = null, geppaError = null)
+    }
+
+    private suspend fun saveGeppaToRepository(editor: GeppaConfigurationEditorState) {
+        try {
+            geppaConfigurationRepository.save(
+                GeppaConfigurationRequest(
+                    id = editor.id,
+                    isEnabled = editor.isEnabled,
+                    endpointUrl = editor.endpointUrl
+                )
+            )
+            uiState = uiState.copy(
+                isGeppaSaving = false,
+                geppaFeedback = if (editor.isEnabled) "GEPPA integration enabled" else "GEPPA integration disabled"
+            )
+        } catch (error: Exception) {
+            uiState = uiState.copy(
+                isGeppaSaving = false,
+                geppaError = error.message ?: "Failed to save GEPPA configuration"
+            )
+        }
+    }
+
+    private fun updateGeppaEditor(transform: (GeppaConfigurationEditorState) -> GeppaConfigurationEditorState) {
+        uiState = uiState.copy(
+            geppaEditor = transform(uiState.geppaEditor),
+            geppaError = null,
+            geppaFeedback = null
+        )
     }
 
     fun startNewLlmConfiguration() {
@@ -712,6 +832,12 @@ data class McpServerEditorState(
     val port: Int = 3333
 )
 
+data class GeppaConfigurationEditorState(
+    val id: UUID? = null,
+    val isEnabled: Boolean = false,
+    val endpointUrl: String = ""
+)
+
 data class SettingsUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -747,5 +873,11 @@ data class SettingsUiState(
         resources = emptyList(),
         safetyNotes = listOf("MCP bridge disabled")
     ),
-    val mcpEditor: McpServerEditorState = McpServerEditorState()
+    val mcpEditor: McpServerEditorState = McpServerEditorState(),
+    val isGeppaLoading: Boolean = false,
+    val isGeppaSaving: Boolean = false,
+    val isGeppaTesting: Boolean = false,
+    val geppaError: String? = null,
+    val geppaFeedback: String? = null,
+    val geppaEditor: GeppaConfigurationEditorState = GeppaConfigurationEditorState()
 )

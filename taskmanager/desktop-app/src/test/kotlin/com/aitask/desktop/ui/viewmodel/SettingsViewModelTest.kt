@@ -1,12 +1,15 @@
 package com.aitask.desktop.ui.viewmodel
 
 import com.aitask.core.data.repository.InMemoryLlmConfigurationRepository
+import com.aitask.core.domain.model.GeppaConnectionTestResult
 import com.aitask.core.domain.model.McpServerConfiguration
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.McpServerConfigurationRequest
 import com.aitask.core.domain.repository.AgentDefinitionRepository
+import com.aitask.core.domain.repository.GeppaConfigurationRepository
 import com.aitask.core.domain.repository.McpServerConfigurationRepository
 import com.aitask.core.domain.model.LlmConnectionTestResult
+import com.aitask.core.domain.service.GeppaConnectionValidator
 import com.aitask.core.domain.service.McpServerManifest
 import com.aitask.core.domain.service.McpBridgeService
 import com.aitask.core.domain.service.LlmConnectionValidator
@@ -38,6 +41,8 @@ class SettingsViewModelTest {
     private lateinit var agentDefinitionRepository: AgentDefinitionRepository
     private lateinit var mcpServerConfigurationRepository: McpServerConfigurationRepository
     private lateinit var mcpBridgeService: McpBridgeService
+    private lateinit var geppaConfigurationRepository: GeppaConfigurationRepository
+    private lateinit var geppaConnectionValidator: GeppaConnectionValidator
     private lateinit var viewModel: SettingsViewModel
 
     @BeforeEach
@@ -47,6 +52,8 @@ class SettingsViewModelTest {
         agentDefinitionRepository = mockk()
         mcpServerConfigurationRepository = mockk()
         mcpBridgeService = mockk()
+        geppaConfigurationRepository = mockk()
+        geppaConnectionValidator = mockk()
         coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(emptyList())
         coEvery { agentDefinitionRepository.findAll() } returns emptyList()
         coEvery { mcpServerConfigurationRepository.find() } returns null
@@ -70,6 +77,7 @@ class SettingsViewModelTest {
         )
         coEvery { mcpBridgeService.sync() } returns mcpBridgeService.currentManifest()
         coEvery { mcpBridgeService.stop() } returns mcpBridgeService.currentManifest()
+        coEvery { geppaConfigurationRepository.find() } returns null
         viewModel = SettingsViewModel(
             getProjectsUseCase = getProjectsUseCase,
             llmConfigurationRepository = repository,
@@ -88,6 +96,8 @@ class SettingsViewModelTest {
                         )
                     )
             },
+            geppaConfigurationRepository = geppaConfigurationRepository,
+            geppaConnectionValidator = geppaConnectionValidator,
             scope = CoroutineScope(testDispatcher)
         )
     }
@@ -130,6 +140,8 @@ class SettingsViewModelTest {
                 override suspend fun validate(endpointUrl: String, apiKey: String?): Result<LlmConnectionTestResult> =
                     Result.failure(IllegalStateException("Endpoint unreachable"))
             },
+            geppaConfigurationRepository = geppaConfigurationRepository,
+            geppaConnectionValidator = geppaConnectionValidator,
             scope = CoroutineScope(testDispatcher)
         )
         advanceUntilIdle()
@@ -185,6 +197,81 @@ class SettingsViewModelTest {
 
         assertEquals("Enter an agent name", viewModel.uiState.agentError)
         assertFalse(viewModel.uiState.isAgentSaving)
+    }
+
+    @Test
+    fun `saveGeppaConfiguration persists when disabled without validating connection`() = runTest(testDispatcher) {
+        val savedConfig = com.aitask.core.domain.model.GeppaConfiguration(
+            id = java.util.UUID.randomUUID(),
+            isEnabled = false,
+            endpointUrl = "",
+            createdAt = java.time.Instant.now(),
+            updatedAt = java.time.Instant.now()
+        )
+        coEvery { geppaConfigurationRepository.save(any()) } returns savedConfig
+        advanceUntilIdle()
+
+        viewModel.updateGeppaEditorEnabled(false)
+        viewModel.saveGeppaConfiguration()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.isGeppaSaving)
+        assertEquals("GEPPA integration disabled", viewModel.uiState.geppaFeedback)
+        coVerify(exactly = 0) { geppaConnectionValidator.validate(any()) }
+        coVerify { geppaConfigurationRepository.save(match { !it.isEnabled }) }
+    }
+
+    @Test
+    fun `saveGeppaConfiguration validates connection when enabled`() = runTest(testDispatcher) {
+        val savedConfig = com.aitask.core.domain.model.GeppaConfiguration(
+            id = java.util.UUID.randomUUID(),
+            isEnabled = true,
+            endpointUrl = "http://localhost:8080",
+            createdAt = java.time.Instant.now(),
+            updatedAt = java.time.Instant.now()
+        )
+        coEvery { geppaConnectionValidator.validate(any()) } returns Result.success(
+            GeppaConnectionTestResult(probeUrl = "http://localhost:8080/health", statusCode = 200, latencyMillis = 5)
+        )
+        coEvery { geppaConfigurationRepository.save(any()) } returns savedConfig
+        advanceUntilIdle()
+
+        viewModel.updateGeppaEditorEnabled(true)
+        viewModel.updateGeppaEditorEndpoint("http://localhost:8080")
+        viewModel.saveGeppaConfiguration()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.isGeppaSaving)
+        assertEquals("GEPPA integration enabled", viewModel.uiState.geppaFeedback)
+        coVerify { geppaConnectionValidator.validate("http://localhost:8080") }
+    }
+
+    @Test
+    fun `saveGeppaConfiguration shows error when enabled but connection fails`() = runTest(testDispatcher) {
+        coEvery { geppaConnectionValidator.validate(any()) } returns Result.failure(
+            IllegalStateException("Unable to reach the GEPPA endpoint")
+        )
+        advanceUntilIdle()
+
+        viewModel.updateGeppaEditorEnabled(true)
+        viewModel.updateGeppaEditorEndpoint("http://localhost:9999")
+        viewModel.saveGeppaConfiguration()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.isGeppaSaving)
+        assertEquals("Unable to reach the GEPPA endpoint", viewModel.uiState.geppaError)
+        coVerify(exactly = 0) { geppaConfigurationRepository.save(any()) }
+    }
+
+    @Test
+    fun `saveGeppaConfiguration rejects blank endpoint when enabled`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        viewModel.updateGeppaEditorEnabled(true)
+        viewModel.saveGeppaConfiguration()
+
+        assertEquals("Enter the GEPPA endpoint URL", viewModel.uiState.geppaError)
+        assertFalse(viewModel.uiState.isGeppaSaving)
     }
 
     @Test

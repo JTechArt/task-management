@@ -50,6 +50,7 @@ import com.aitask.core.domain.model.AgentDefinition
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.AgentTrigger
 import com.aitask.core.domain.service.McpServerManifest
+import com.aitask.desktop.ui.viewmodel.GeppaConfigurationEditorState
 import com.aitask.desktop.ui.viewmodel.SettingsViewModel
 
 @Composable
@@ -179,6 +180,15 @@ fun SettingsView(
             onSave = { viewModel.saveMcpConfiguration() },
             onRefresh = { viewModel.loadMcpConfiguration() },
             onClearMessage = { viewModel.clearMcpFeedback() }
+        )
+
+        GeppaConfigurationCard(
+            uiState = uiState,
+            onEnabledChange = { viewModel.updateGeppaEditorEnabled(it) },
+            onEndpointChange = { viewModel.updateGeppaEditorEndpoint(it) },
+            onTest = { viewModel.testGeppaConnection() },
+            onSave = { viewModel.saveGeppaConfiguration() },
+            onClearMessage = { viewModel.clearGeppaFeedback() }
         )
 
         Card(
@@ -910,6 +920,107 @@ private fun McpBridgeCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GeppaConfigurationCard(
+    uiState: com.aitask.desktop.ui.viewmodel.SettingsUiState,
+    onEnabledChange: (Boolean) -> Unit,
+    onEndpointChange: (String) -> Unit,
+    onTest: () -> Unit,
+    onSave: () -> Unit,
+    onClearMessage: () -> Unit
+) {
+    val editor = uiState.geppaEditor
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "GEPPA prompt optimization",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Connect to a GEPPA service to optimize prompts for consistency and quality before they are used in AI-assisted workflows.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            uiState.geppaFeedback?.let { feedback ->
+                Snackbar(
+                    modifier = Modifier.fillMaxWidth(),
+                    action = { TextButton(onClick = onClearMessage) { Text("Dismiss") } }
+                ) { Text(feedback) }
+            }
+
+            uiState.geppaError?.let { error ->
+                Text(text = error, color = MaterialTheme.colorScheme.error)
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = editor.isEnabled,
+                    onCheckedChange = onEnabledChange
+                )
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Enable GEPPA integration",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "When enabled, GEPPA integration is configured and available.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = editor.endpointUrl,
+                onValueChange = onEndpointChange,
+                label = { Text("GEPPA endpoint URL") },
+                placeholder = { Text("http://localhost:8080") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = editor.isEnabled
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onTest,
+                    enabled = editor.isEnabled && editor.endpointUrl.isNotBlank() &&
+                        !uiState.isGeppaSaving && !uiState.isGeppaTesting
+                ) {
+                    Text(if (uiState.isGeppaTesting) "Testing…" else "Test connection")
+                }
+                Button(
+                    onClick = onSave,
+                    enabled = !uiState.isGeppaSaving && !uiState.isGeppaTesting
+                ) {
+                    Text(if (uiState.isGeppaSaving) "Saving…" else "Save")
+                }
+                if (uiState.isGeppaLoading) {
+                    CircularProgressIndicator(modifier = Modifier.width(20.dp))
                 }
             }
         }
