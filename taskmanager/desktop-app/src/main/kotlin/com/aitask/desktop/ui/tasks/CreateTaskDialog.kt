@@ -6,17 +6,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.aitask.core.domain.model.Methodology
 import com.aitask.core.domain.model.Project
 import com.aitask.core.domain.model.TaskType
+import com.aitask.core.domain.model.TaskContentGenerationMode
+import com.aitask.desktop.ui.viewmodel.TasksViewModel
 import java.util.UUID
 
 @Composable
 fun CreateTaskDialog(
     projects: List<Project>,
     onDismiss: () -> Unit,
+    viewModel: TasksViewModel,
     onConfirm: (
         title: String,
         description: String?,
@@ -33,6 +37,7 @@ fun CreateTaskDialog(
     var methodologyOverride by remember { mutableStateOf<Methodology?>(null) }
     var selectedProject by remember { mutableStateOf<Project?>(projects.firstOrNull()) }
     var showDiscardConfirm by remember { mutableStateOf(false) }
+    val uiState = viewModel.uiState
     val hasUnsavedChanges = title.isNotBlank() || description.isNotBlank() ||
         selectedProject != projects.firstOrNull() || taskType != TaskType.FEATURE
     val requestDismiss: () -> Unit = {
@@ -79,6 +84,84 @@ fun CreateTaskDialog(
                     minLines = 3,
                     maxLines = 5
                 )
+
+                if (uiState.taskContentSuggestion != null && uiState.taskContentGenerationTargetTaskId == null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "Generated suggestion",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = uiState.taskContentSuggestion!!,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    description = uiState.taskContentSuggestion!!
+                                    viewModel.clearTaskContentSuggestion()
+                                }) {
+                                    Text("Use suggestion")
+                                }
+                                OutlinedButton(onClick = { viewModel.clearTaskContentSuggestion() }) {
+                                    Text("Discard")
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (uiState.taskContentGenerationError != null && uiState.taskContentGenerationTargetTaskId == null) {
+                    Text(
+                        text = uiState.taskContentGenerationError!!,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            selectedProject?.let { project ->
+                                viewModel.generateTaskContentSuggestion(
+                                    projectId = project.id,
+                                    title = title.ifBlank { "Task description" },
+                                    currentDescription = description.takeIf { it.isNotBlank() },
+                                    taskType = taskType,
+                                    mode = TaskContentGenerationMode.DESCRIPTION
+                                )
+                            }
+                        },
+                        enabled = !isSaving && selectedProject != null && !uiState.isGeneratingTaskContent
+                    ) {
+                        Text(if (uiState.isGeneratingTaskContent) "Generating..." else "Generate description")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            selectedProject?.let { project ->
+                                viewModel.generateTaskContentSuggestion(
+                                    projectId = project.id,
+                                    title = title.ifBlank { "Task summary" },
+                                    currentDescription = description.takeIf { it.isNotBlank() },
+                                    taskType = taskType,
+                                    mode = TaskContentGenerationMode.SUMMARY
+                                )
+                            }
+                        },
+                        enabled = !isSaving && selectedProject != null && !uiState.isGeneratingTaskContent
+                    ) {
+                        Text("Generate summary")
+                    }
+                }
                 
                 // Project dropdown
                 var projectExpanded by remember { mutableStateOf(false) }

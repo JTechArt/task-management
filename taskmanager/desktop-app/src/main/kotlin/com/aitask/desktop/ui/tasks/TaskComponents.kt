@@ -302,15 +302,22 @@ fun TaskDetailView(
     onSaveBmadToolOverride: (UUID, List<String>) -> Unit = { _, _ -> },
     onResetBmadToolOverride: (UUID) -> Unit = {},
     onSaveBmadInjectionOverride: (UUID, Boolean?) -> Unit = { _, _ -> },
+    onSaveDescription: (UUID, String?) -> Unit = { _, _ -> },
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
     onCleanupWorkspace: ((Task) -> Unit)? = null,
+    onGenerateTaskContentSuggestion: ((UUID, String, String?, TaskType, TaskContentGenerationMode, UUID?) -> Unit)? = null,
+    onClearTaskContentSuggestion: (() -> Unit)? = null,
     availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
     preferredIDEs: List<IDEType> = emptyList(),
     isGeneratingWorkspace: Boolean = false,
     workspaceGenerationProgress: String? = null,
     isLaunchingIDE: Boolean = false,
     isCleaningUpWorkspace: Boolean = false,
+    isGeneratingTaskContent: Boolean = false,
+    taskContentGenerationError: String? = null,
+    taskContentSuggestion: String? = null,
+    taskContentSuggestionTargetTaskId: UUID? = null,
     modifier: Modifier = Modifier
 ) {
     var methodologyExpanded by remember { mutableStateOf(false) }
@@ -323,7 +330,9 @@ fun TaskDetailView(
     var selectedInjectionOverride by remember(task.bmadInjectionEnabledOverride) {
         mutableStateOf(task.bmadInjectionEnabledOverride)
     }
+    var descriptionDraft by remember(task.description) { mutableStateOf(task.description ?: "") }
     val scrollState = rememberScrollState()
+    val taskContentSuggestionForCurrentTask = taskContentSuggestionTargetTaskId == task.id && taskContentSuggestion != null
     LaunchedEffect(task.methodologyOverride) {
         selectedMethodologyOverride = task.methodologyOverride
     }
@@ -332,6 +341,9 @@ fun TaskDetailView(
     }
     LaunchedEffect(task.bmadInjectionEnabledOverride) {
         selectedInjectionOverride = task.bmadInjectionEnabledOverride
+    }
+    LaunchedEffect(task.description) {
+        descriptionDraft = task.description ?: ""
     }
     Column(
         modifier = modifier
@@ -373,6 +385,119 @@ fun TaskDetailView(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Description editor",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Generate a description or summary, then edit it before saving.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                OutlinedTextField(
+                    value = descriptionDraft,
+                    onValueChange = { descriptionDraft = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 4,
+                    maxLines = 8,
+                    label = { Text("Task description / summary") }
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            onGenerateTaskContentSuggestion?.invoke(
+                                task.projectId,
+                                task.title,
+                                descriptionDraft.takeIf { it.isNotBlank() },
+                                task.taskType,
+                                TaskContentGenerationMode.DESCRIPTION,
+                                task.id
+                            )
+                        },
+                        enabled = !isGeneratingTaskContent && onGenerateTaskContentSuggestion != null
+                    ) {
+                        Text(if (isGeneratingTaskContent) "Generating..." else "Generate description")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            onGenerateTaskContentSuggestion?.invoke(
+                                task.projectId,
+                                task.title,
+                                descriptionDraft.takeIf { it.isNotBlank() },
+                                task.taskType,
+                                TaskContentGenerationMode.SUMMARY,
+                                task.id
+                            )
+                        },
+                        enabled = !isGeneratingTaskContent && onGenerateTaskContentSuggestion != null
+                    ) {
+                        Text("Generate summary")
+                    }
+                }
+                if (taskContentSuggestionForCurrentTask) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Generated suggestion",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = taskContentSuggestion!!,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    descriptionDraft = taskContentSuggestion!!
+                                    onClearTaskContentSuggestion?.invoke()
+                                }) {
+                                    Text("Use suggestion")
+                                }
+                                OutlinedButton(onClick = { onClearTaskContentSuggestion?.invoke() }) {
+                                    Text("Discard")
+                                }
+                            }
+                        }
+                    }
+                }
+                if (taskContentGenerationError != null && taskContentSuggestionTargetTaskId == task.id) {
+                    Text(
+                        text = taskContentGenerationError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { onSaveDescription(task.id, descriptionDraft.trim().takeIf { it.isNotEmpty() }) },
+                        enabled = descriptionDraft.trim() != (task.description ?: "")
+                    ) {
+                        Text("Save description")
+                    }
+                    OutlinedButton(
+                        onClick = { descriptionDraft = task.description ?: "" },
+                        enabled = descriptionDraft != (task.description ?: "")
+                    ) {
+                        Text("Revert")
+                    }
+                }
+            }
         }
 
         Divider()

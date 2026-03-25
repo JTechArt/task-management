@@ -263,6 +263,9 @@ fun TasksView(
                             onSaveBmadInjectionOverride = { taskId, enabled ->
                                 viewModel.updateTaskBmadInjectionOverride(taskId, enabled)
                             },
+                            onSaveDescription = { taskId, description ->
+                                viewModel.updateTaskDescription(taskId, description)
+                            },
                             onGenerateWorkspace = { taskId ->
                                 viewModel.showRepositorySelectionDialog(taskId)
                             },
@@ -270,12 +273,27 @@ fun TasksView(
                                 viewModel.launchIDE(taskId, ideType)
                             },
                             onCleanupWorkspace = { task -> viewModel.showCleanupConfirmationDialog(task) },
+                            onGenerateTaskContentSuggestion = { projectId, title, currentDescription, taskType, mode, targetTaskId ->
+                                viewModel.generateTaskContentSuggestion(
+                                    projectId = projectId,
+                                    title = title,
+                                    currentDescription = currentDescription,
+                                    taskType = taskType,
+                                    mode = mode,
+                                    targetTaskId = targetTaskId
+                                )
+                            },
+                            onClearTaskContentSuggestion = { viewModel.clearTaskContentSuggestion() },
                             availableIDEs = uiState.availableIDEs,
                             preferredIDEs = uiState.projectRepositories.flatMap { it.preferredIDEs }.distinct(),
                             isGeneratingWorkspace = uiState.isGeneratingWorkspace,
                             workspaceGenerationProgress = uiState.workspaceGenerationProgress,
                             isLaunchingIDE = uiState.isLaunchingIDE,
-                            isCleaningUpWorkspace = uiState.isCleaningUpWorkspace
+                            isCleaningUpWorkspace = uiState.isCleaningUpWorkspace,
+                            isGeneratingTaskContent = uiState.isGeneratingTaskContent,
+                            taskContentGenerationError = uiState.taskContentGenerationError,
+                            taskContentSuggestion = uiState.taskContentSuggestion,
+                            taskContentSuggestionTargetTaskId = uiState.taskContentGenerationTargetTaskId
                         )
                     }
                 }
@@ -288,6 +306,7 @@ fun TasksView(
         CreateTaskDialog(
             projects = uiState.projects,
             onDismiss = { viewModel.hideCreateDialog() },
+            viewModel = viewModel,
             onConfirm = { title, description, taskType, projectId, methodologyOverride ->
                 viewModel.createTask(title, description, taskType, projectId, methodologyOverride)
             },

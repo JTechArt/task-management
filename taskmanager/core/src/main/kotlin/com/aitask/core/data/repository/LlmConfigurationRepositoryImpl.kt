@@ -40,6 +40,12 @@ class LlmConfigurationRepositoryImpl(
             .singleOrNull()
     }
 
+    override suspend fun findApiKey(id: UUID): String? = newSuspendedTransaction {
+        val row = findRowById(id) ?: return@newSuspendedTransaction null
+        val encrypted = row[LlmConfigurations.apiKeyEncrypted] ?: return@newSuspendedTransaction null
+        encryptionService.decrypt(encrypted).getOrNull()
+    }
+
     override suspend fun save(request: LlmConfigurationRequest): LlmConfiguration = newSuspendedTransaction {
         val existing = request.id?.let { findRowById(it) }
         val now = Instant.now()

@@ -8,6 +8,7 @@ interface LlmConfigurationRepository {
     suspend fun findAll(): List<LlmConfiguration>
     suspend fun findById(id: UUID): LlmConfiguration?
     suspend fun findDefault(): LlmConfiguration?
+    suspend fun findApiKey(id: UUID): String?
     suspend fun save(request: LlmConfigurationRequest): LlmConfiguration
     suspend fun delete(id: UUID): Boolean
     suspend fun setDefault(id: UUID): LlmConfiguration?

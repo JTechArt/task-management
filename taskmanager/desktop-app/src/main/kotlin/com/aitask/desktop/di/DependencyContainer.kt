@@ -6,6 +6,7 @@ import com.aitask.core.domain.service.GitService
 import com.aitask.core.domain.service.HealthCheckService
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.LlmConnectionValidator
+import com.aitask.core.domain.service.TaskContentGenerationService
 import com.aitask.core.domain.service.RuleApplicationService
 import com.aitask.core.domain.service.EncryptionService
 import com.aitask.core.domain.service.OAuthService
@@ -24,6 +25,7 @@ import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
 import com.aitask.core.infrastructure.llm.DefaultLlmConnectionValidator
+import com.aitask.core.infrastructure.llm.DefaultTaskContentGenerationService
 import com.aitask.core.infrastructure.plugin.DefaultPluginPrerequisiteProbe
 import com.aitask.core.infrastructure.plugin.InMemoryPluginManagementService
 import com.aitask.core.infrastructure.rules.FileSystemRuleApplicationService
@@ -162,6 +164,10 @@ object DependencyContainer {
 
     val llmConnectionValidator: LlmConnectionValidator by lazy {
         DefaultLlmConnectionValidator()
+    }
+
+    val taskContentGenerationService: TaskContentGenerationService by lazy {
+        DefaultTaskContentGenerationService()
     }
 
     val pluginManagementService: PluginManagementService by lazy {
@@ -338,6 +344,14 @@ object DependencyContainer {
 
     val getOAuthStatusUseCase: GetOAuthStatusUseCase by lazy {
         GetOAuthStatusUseCase(oauthConnectionRepository, oauthService)
+    }
+
+    val generateTaskContentUseCase: GenerateTaskContentUseCase by lazy {
+        GenerateTaskContentUseCase(
+            projectRepository,
+            llmConfigurationRepository,
+            taskContentGenerationService
+        )
     }
 
     val exportDataUseCase: ExportDataUseCase by lazy {

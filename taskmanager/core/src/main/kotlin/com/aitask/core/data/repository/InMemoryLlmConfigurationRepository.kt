@@ -42,6 +42,9 @@ class InMemoryLlmConfigurationRepository : LlmConfigurationRepository {
     override suspend fun findDefault(): LlmConfiguration? =
         configurations.values.firstOrNull { it.isDefault }?.toDomain()
 
+    override suspend fun findApiKey(id: UUID): String? =
+        configurations[id]?.apiKey
+
     override suspend fun save(request: LlmConfigurationRequest): LlmConfiguration {
         val now = Instant.now()
         val existing = request.id?.let { configurations[it] }

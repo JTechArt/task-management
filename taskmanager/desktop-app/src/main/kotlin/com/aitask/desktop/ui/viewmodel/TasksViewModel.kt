@@ -26,6 +26,7 @@ class TasksViewModel(
     private val generateWorkspaceUseCase: GenerateWorkspaceUseCase = DependencyContainer.generateWorkspaceUseCase,
     private val cleanupWorkspaceUseCase: CleanupWorkspaceUseCase = DependencyContainer.cleanupWorkspaceUseCase,
     private val launchIDEUseCase: LaunchIDEUseCase = DependencyContainer.launchIDEUseCase,
+    private val generateTaskContentUseCase: GenerateTaskContentUseCase = DependencyContainer.generateTaskContentUseCase,
     private val ideService: IDEService = DependencyContainer.ideService,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
     private val projectRepository: com.aitask.core.domain.repository.ProjectRepository = DependencyContainer.projectRepository,
@@ -429,6 +430,79 @@ class TasksViewModel(
         }
     }
 
+    fun generateTaskContentSuggestion(
+        projectId: UUID,
+        title: String,
+        currentDescription: String?,
+        taskType: TaskType,
+        mode: TaskContentGenerationMode,
+        targetTaskId: UUID? = null
+    ) {
+        uiState = uiState.copy(
+            isGeneratingTaskContent = true,
+            taskContentGenerationError = null,
+            taskContentSuggestion = null,
+            taskContentGenerationTargetTaskId = targetTaskId,
+            taskContentGenerationMode = mode
+        )
+        scope.launch {
+            val result = generateTaskContentUseCase(
+                TaskContentGenerationRequest(
+                    projectId = projectId,
+                    title = title,
+                    currentDescription = currentDescription,
+                    taskType = taskType,
+                    mode = mode
+                )
+            )
+            result.fold(
+                onSuccess = { suggestion ->
+                    uiState = uiState.copy(
+                        isGeneratingTaskContent = false,
+                        taskContentSuggestion = suggestion.generatedText,
+                        taskContentGenerationError = null
+                    )
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isGeneratingTaskContent = false,
+                        taskContentGenerationError = error.message ?: "Failed to generate task content"
+                    )
+                }
+            )
+        }
+    }
+
+    fun clearTaskContentSuggestion() {
+        uiState = uiState.copy(
+            taskContentSuggestion = null,
+            taskContentGenerationError = null,
+            taskContentGenerationTargetTaskId = null,
+            taskContentGenerationMode = null,
+            isGeneratingTaskContent = false
+        )
+    }
+
+    fun updateTaskDescription(taskId: UUID, description: String?) {
+        scope.launch {
+            val result = updateTaskUseCase(
+                taskId,
+                UpdateTaskRequest(description = description?.takeIf { it.isNotBlank() })
+            )
+            result.fold(
+                onSuccess = { updatedTask ->
+                    uiState = uiState.copy(selectedTask = updatedTask)
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        error = error.message ?: "Failed to update task description"
+                    )
+                }
+            )
+        }
+    }
+
     fun loadProjectRepositories(projectId: UUID) {
         scope.launch {
             try {
@@ -525,5 +599,10 @@ data class TasksUiState(
     val showCleanupConfirmationDialog: Boolean = false,
     val taskToCleanup: Task? = null,
     val cleanupConfirmationTypedText: String = "",
-    val isCleaningUpWorkspace: Boolean = false
+    val isCleaningUpWorkspace: Boolean = false,
+    val isGeneratingTaskContent: Boolean = false,
+    val taskContentGenerationError: String? = null,
+    val taskContentSuggestion: String? = null,
+    val taskContentGenerationTargetTaskId: UUID? = null,
+    val taskContentGenerationMode: TaskContentGenerationMode? = null
 )
