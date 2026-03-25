@@ -5,6 +5,7 @@ import com.aitask.core.domain.repository.*
 import com.aitask.core.domain.service.GitService
 import com.aitask.core.domain.service.HealthCheckService
 import com.aitask.core.domain.service.IDEService
+import com.aitask.core.domain.service.McpBridgeService
 import com.aitask.core.domain.service.AgentExecutionService
 import com.aitask.core.domain.service.GitAssistantSuggestionService
 import com.aitask.core.domain.service.LlmConnectionValidator
@@ -30,6 +31,7 @@ import com.aitask.core.infrastructure.llm.DefaultAgentExecutionService
 import com.aitask.core.infrastructure.llm.DefaultGitAssistantSuggestionService
 import com.aitask.core.infrastructure.llm.DefaultLlmConnectionValidator
 import com.aitask.core.infrastructure.llm.DefaultTaskContentGenerationService
+import com.aitask.core.infrastructure.mcp.DefaultMcpBridgeService
 import com.aitask.core.infrastructure.plugin.DefaultPluginPrerequisiteProbe
 import com.aitask.core.infrastructure.plugin.InMemoryPluginManagementService
 import com.aitask.core.infrastructure.rules.FileSystemRuleApplicationService
@@ -68,6 +70,10 @@ object DependencyContainer {
 
     val agentDefinitionRepository: AgentDefinitionRepository by lazy {
         AgentDefinitionRepositoryImpl()
+    }
+
+    val mcpServerConfigurationRepository: McpServerConfigurationRepository by lazy {
+        McpServerConfigurationRepositoryImpl()
     }
 
     val preRunScriptRepository: PreRunScriptRepository by lazy {
@@ -184,6 +190,15 @@ object DependencyContainer {
 
     val agentExecutionService: AgentExecutionService by lazy {
         DefaultAgentExecutionService()
+    }
+
+    val mcpBridgeService: McpBridgeService by lazy {
+        DefaultMcpBridgeService(
+            settingsRepository = mcpServerConfigurationRepository,
+            projectRepository = projectRepository,
+            taskRepository = taskRepository,
+            repositoryRepository = repositoryRepository
+        )
     }
 
     val pluginManagementService: PluginManagementService by lazy {

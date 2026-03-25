@@ -7,12 +7,16 @@ import com.aitask.core.domain.model.AgentDefinition
 import com.aitask.core.domain.model.AgentDefinitionRequest
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.AgentTrigger
+import com.aitask.core.domain.model.McpServerConfiguration
+import com.aitask.core.domain.model.McpServerConfigurationRequest
 import com.aitask.core.domain.model.LlmConfiguration
 import com.aitask.core.domain.model.LlmConfigurationRequest
 import com.aitask.core.domain.repository.AgentDefinitionRepository
+import com.aitask.core.domain.repository.McpServerConfigurationRepository
 import com.aitask.core.domain.repository.LlmConfigurationRepository
 import com.aitask.core.domain.usecase.DeleteAgentDefinitionUseCase
 import com.aitask.core.domain.service.LlmConnectionValidator
+import com.aitask.core.domain.service.McpBridgeService
 import com.aitask.core.domain.usecase.CreateBackupUseCase
 import com.aitask.core.domain.usecase.ExportDataUseCase
 import com.aitask.core.domain.usecase.ImportDataUseCase
@@ -37,6 +41,8 @@ class SettingsViewModel(
     private val getProjectsUseCase: GetProjectsUseCase = DependencyContainer.getProjectsUseCase,
     private val llmConfigurationRepository: LlmConfigurationRepository = DependencyContainer.llmConfigurationRepository,
     private val agentDefinitionRepository: AgentDefinitionRepository = DependencyContainer.agentDefinitionRepository,
+    private val mcpServerConfigurationRepository: McpServerConfigurationRepository = DependencyContainer.mcpServerConfigurationRepository,
+    private val mcpBridgeService: McpBridgeService = DependencyContainer.mcpBridgeService,
     private val saveAgentDefinitionUseCase: SaveAgentDefinitionUseCase = DependencyContainer.saveAgentDefinitionUseCase,
     private val deleteAgentDefinitionUseCase: DeleteAgentDefinitionUseCase = DependencyContainer.deleteAgentDefinitionUseCase,
     private val llmConnectionValidator: LlmConnectionValidator = DependencyContainer.llmConnectionValidator,
@@ -49,6 +55,7 @@ class SettingsViewModel(
         loadProjects()
         loadLlmConfigurations()
         loadAgentDefinitions()
+        loadMcpConfiguration()
     }
 
     fun loadProjects() {
@@ -100,6 +107,32 @@ class SettingsViewModel(
                 uiState = uiState.copy(
                     isAgentLoading = false,
                     agentError = error.message ?: "Failed to load agent definitions"
+                )
+            }
+        }
+    }
+
+    fun loadMcpConfiguration() {
+        scope.launch {
+            uiState = uiState.copy(isMcpLoading = true, mcpError = null)
+            try {
+                val configuration = mcpServerConfigurationRepository.find()
+                val editor = configuration?.let {
+                    McpServerEditorState(
+                        id = it.id,
+                        isEnabled = it.isEnabled,
+                        port = it.port
+                    )
+                } ?: McpServerEditorState()
+                uiState = uiState.copy(
+                    isMcpLoading = false,
+                    mcpEditor = editor,
+                    mcpManifest = mcpBridgeService.currentManifest()
+                )
+            } catch (error: Exception) {
+                uiState = uiState.copy(
+                    isMcpLoading = false,
+                    mcpError = error.message ?: "Failed to load MCP configuration"
                 )
             }
         }
@@ -179,6 +212,10 @@ class SettingsViewModel(
     fun updateAgentEditorTrigger(trigger: AgentTrigger) = updateAgentEditor { it.copy(trigger = trigger) }
 
     fun updateAgentEditorEnabled(isEnabled: Boolean) = updateAgentEditor { it.copy(isEnabled = isEnabled) }
+
+    fun updateMcpEditorEnabled(isEnabled: Boolean) = updateMcpEditor { it.copy(isEnabled = isEnabled) }
+
+    fun updateMcpEditorPort(port: String) = updateMcpEditor { it.copy(port = port.toIntOrNull() ?: it.port) }
 
     fun testLlmConfigurationConnection() {
         val editor = uiState.llmEditor
@@ -288,6 +325,47 @@ class SettingsViewModel(
         }
     }
 
+    fun saveMcpConfiguration() {
+        val editor = uiState.mcpEditor
+        val validationError = validateMcpEditorLocally(editor)
+        if (validationError != null) {
+            uiState = uiState.copy(mcpError = validationError)
+            return
+        }
+        scope.launch {
+            uiState = uiState.copy(isMcpSaving = true, mcpError = null, mcpFeedback = null)
+            try {
+                val saved = mcpServerConfigurationRepository.save(
+                    McpServerConfigurationRequest(
+                        id = editor.id,
+                        isEnabled = editor.isEnabled,
+                        port = editor.port
+                    )
+                )
+                val manifest = if (saved.isEnabled) {
+                    mcpBridgeService.sync()
+                } else {
+                    mcpBridgeService.stop()
+                }
+                uiState = uiState.copy(
+                    isMcpSaving = false,
+                    mcpEditor = editor.copy(id = saved.id),
+                    mcpManifest = manifest,
+                    mcpFeedback = if (saved.isEnabled) {
+                        "MCP bridge available at ${saved.endpointUrl}"
+                    } else {
+                        "MCP bridge disabled"
+                    }
+                )
+            } catch (error: Exception) {
+                uiState = uiState.copy(
+                    isMcpSaving = false,
+                    mcpError = error.message ?: "Failed to save MCP configuration"
+                )
+            }
+        }
+    }
+
     fun deleteAgentDefinition(id: UUID) {
         scope.launch {
             uiState = uiState.copy(agentError = null, agentFeedback = null)
@@ -363,6 +441,11 @@ class SettingsViewModel(
         else -> null
     }
 
+    private fun validateMcpEditorLocally(editor: McpServerEditorState): String? = when {
+        editor.port !in 1..65535 -> "Enter a valid MCP port between 1 and 65535"
+        else -> null
+    }
+
     private fun updateLlmEditor(transform: (LlmConfigurationEditorState) -> LlmConfigurationEditorState) {
         uiState = uiState.copy(
             llmEditor = transform(uiState.llmEditor),
@@ -376,6 +459,14 @@ class SettingsViewModel(
             agentEditor = transform(uiState.agentEditor),
             agentError = null,
             agentFeedback = null
+        )
+    }
+
+    private fun updateMcpEditor(transform: (McpServerEditorState) -> McpServerEditorState) {
+        uiState = uiState.copy(
+            mcpEditor = transform(uiState.mcpEditor),
+            mcpError = null,
+            mcpFeedback = null
         )
     }
 
@@ -588,6 +679,10 @@ class SettingsViewModel(
     fun clearRestoreFeedback() {
         uiState = uiState.copy(restoreFeedback = null)
     }
+
+    fun clearMcpFeedback() {
+        uiState = uiState.copy(mcpFeedback = null, mcpError = null)
+    }
 }
 
 data class LlmConfigurationEditorState(
@@ -609,6 +704,12 @@ data class AgentDefinitionEditorState(
     val projectId: UUID? = null,
     val trigger: AgentTrigger = AgentTrigger.MANUAL,
     val isEnabled: Boolean = true
+)
+
+data class McpServerEditorState(
+    val id: UUID? = null,
+    val isEnabled: Boolean = false,
+    val port: Int = 3333
 )
 
 data class SettingsUiState(
@@ -633,5 +734,18 @@ data class SettingsUiState(
     val agentError: String? = null,
     val agentFeedback: String? = null,
     val agentDefinitions: List<AgentDefinition> = emptyList(),
-    val agentEditor: AgentDefinitionEditorState = AgentDefinitionEditorState()
+    val agentEditor: AgentDefinitionEditorState = AgentDefinitionEditorState(),
+    val isMcpLoading: Boolean = false,
+    val isMcpSaving: Boolean = false,
+    val mcpError: String? = null,
+    val mcpFeedback: String? = null,
+    val mcpManifest: com.aitask.core.domain.service.McpServerManifest = com.aitask.core.domain.service.McpServerManifest(
+        serverName = "AiTask MCP bridge",
+        endpointUrl = "http://127.0.0.1:3333/mcp",
+        capabilities = listOf("task-context", "project-context", "repository-context"),
+        tools = emptyList(),
+        resources = emptyList(),
+        safetyNotes = listOf("MCP bridge disabled")
+    ),
+    val mcpEditor: McpServerEditorState = McpServerEditorState()
 )

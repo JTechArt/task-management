@@ -12,6 +12,7 @@ import com.aitask.core.config.AppConfig
 import com.aitask.core.config.ConfigLoader
 import com.aitask.core.config.EnvConfigLoader
 import com.aitask.core.logging.logStartup
+import com.aitask.desktop.di.DependencyContainer
 import com.aitask.desktop.ui.*
 import com.aitask.desktop.ui.activity.ActivityView
 import com.aitask.desktop.ui.dashboard.DashboardView
@@ -21,6 +22,7 @@ import com.aitask.desktop.ui.projects.ProjectsView
 import com.aitask.desktop.ui.tasks.TasksView
 import com.aitask.desktop.ui.rules.RulesView
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.runBlocking
 
 private val logger = KotlinLogging.logger {}
 
@@ -40,9 +42,17 @@ class AppLauncher(
         if (bootstrapResult.databaseError != null) {
             logger.warn { "Database initialization issue: ${bootstrapResult.databaseError}" }
         }
+        if (bootstrapResult.databaseInitialized) {
+            runBlocking {
+                DependencyContainer.mcpBridgeService.sync()
+            }
+        }
         application {
             Window(
-                onCloseRequest = ::exitApplication,
+                onCloseRequest = {
+                    runBlocking { DependencyContainer.mcpBridgeService.stop() }
+                    exitApplication()
+                },
                 title = config.appName
             ) {
                 AppSurface(config, bootstrapResult)

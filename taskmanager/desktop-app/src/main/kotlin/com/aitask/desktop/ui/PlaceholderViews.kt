@@ -49,6 +49,7 @@ import com.aitask.core.domain.model.LlmConfiguration
 import com.aitask.core.domain.model.AgentDefinition
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.AgentTrigger
+import com.aitask.core.domain.service.McpServerManifest
 import com.aitask.desktop.ui.viewmodel.SettingsViewModel
 
 @Composable
@@ -169,6 +170,15 @@ fun SettingsView(
             onEnabledChange = { viewModel.updateAgentEditorEnabled(it) },
             onSave = { viewModel.saveAgentDefinition() },
             onDelete = { viewModel.deleteAgentDefinition(it) }
+        )
+
+        McpBridgeCard(
+            uiState = uiState,
+            onEnabledChange = { viewModel.updateMcpEditorEnabled(it) },
+            onPortChange = { viewModel.updateMcpEditorPort(it) },
+            onSave = { viewModel.saveMcpConfiguration() },
+            onRefresh = { viewModel.loadMcpConfiguration() },
+            onClearMessage = { viewModel.clearMcpFeedback() }
         )
 
         Card(
@@ -780,6 +790,149 @@ private fun AgentDefinitionCard(
                 Text(text = error, color = MaterialTheme.colorScheme.error)
             }
         }
+    }
+}
+
+@Composable
+private fun McpBridgeCard(
+    uiState: com.aitask.desktop.ui.viewmodel.SettingsUiState,
+    onEnabledChange: (Boolean) -> Unit,
+    onPortChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onRefresh: () -> Unit,
+    onClearMessage: () -> Unit
+) {
+    val editor = uiState.mcpEditor
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "MCP bridge",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Expose safe task, project, and repository context to MCP-compatible tools through a local-only bridge.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = onRefresh) { Text("Refresh") }
+                    TextButton(onClick = onSave) { Text(if (editor.isEnabled) "Save & start" else "Save") }
+                }
+            }
+
+            uiState.mcpFeedback?.let { feedback ->
+                Snackbar(
+                    modifier = Modifier.fillMaxWidth(),
+                    action = { TextButton(onClick = onClearMessage) { Text("Dismiss") } }
+                ) { Text(feedback) }
+            }
+
+            uiState.mcpError?.let { error ->
+                Text(text = error, color = MaterialTheme.colorScheme.error)
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = editor.isEnabled,
+                    onCheckedChange = onEnabledChange
+                )
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Enable local bridge",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Listens on 127.0.0.1 only and never exposes credentials.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = editor.port.toString(),
+                onValueChange = onPortChange,
+                label = { Text("Local port") },
+                placeholder = { Text("3333") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+
+            val manifest = uiState.mcpManifest
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                InfoChipRow(label = "Endpoint", value = manifest.endpointUrl)
+                InfoChipRow(label = "Capabilities", value = manifest.capabilities.joinToString(", "))
+                InfoChipRow(label = "Tools", value = manifest.tools.joinToString(", ") { it.name })
+            }
+
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Connection guide",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Point MCP-compatible tools at the local bridge endpoint and request the `get_context` tool to read sanitized task context.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    manifest.safetyNotes.forEach { note ->
+                        Text(
+                            text = "• $note",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoChipRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

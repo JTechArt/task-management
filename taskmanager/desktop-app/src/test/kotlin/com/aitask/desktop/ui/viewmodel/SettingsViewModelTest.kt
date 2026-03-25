@@ -1,14 +1,21 @@
 package com.aitask.desktop.ui.viewmodel
 
 import com.aitask.core.data.repository.InMemoryLlmConfigurationRepository
+import com.aitask.core.domain.model.McpServerConfiguration
 import com.aitask.core.domain.model.AgentScope
+import com.aitask.core.domain.model.McpServerConfigurationRequest
 import com.aitask.core.domain.repository.AgentDefinitionRepository
+import com.aitask.core.domain.repository.McpServerConfigurationRepository
 import com.aitask.core.domain.model.LlmConnectionTestResult
+import com.aitask.core.domain.service.McpServerManifest
+import com.aitask.core.domain.service.McpBridgeService
 import com.aitask.core.domain.service.LlmConnectionValidator
 import com.aitask.core.domain.usecase.DeleteAgentDefinitionUseCase
 import com.aitask.core.domain.usecase.GetProjectsUseCase
 import com.aitask.core.domain.usecase.SaveAgentDefinitionUseCase
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,6 +36,8 @@ class SettingsViewModelTest {
     private lateinit var repository: InMemoryLlmConfigurationRepository
     private lateinit var getProjectsUseCase: GetProjectsUseCase
     private lateinit var agentDefinitionRepository: AgentDefinitionRepository
+    private lateinit var mcpServerConfigurationRepository: McpServerConfigurationRepository
+    private lateinit var mcpBridgeService: McpBridgeService
     private lateinit var viewModel: SettingsViewModel
 
     @BeforeEach
@@ -36,12 +45,37 @@ class SettingsViewModelTest {
         repository = InMemoryLlmConfigurationRepository()
         getProjectsUseCase = mockk()
         agentDefinitionRepository = mockk()
+        mcpServerConfigurationRepository = mockk()
+        mcpBridgeService = mockk()
         coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(emptyList())
         coEvery { agentDefinitionRepository.findAll() } returns emptyList()
+        coEvery { mcpServerConfigurationRepository.find() } returns null
+        coEvery { mcpServerConfigurationRepository.save(any()) } answers {
+            val request = arg<McpServerConfigurationRequest>(0)
+            McpServerConfiguration(
+                id = request.id ?: java.util.UUID.randomUUID(),
+                isEnabled = request.isEnabled,
+                port = request.port,
+                createdAt = java.time.Instant.now(),
+                updatedAt = java.time.Instant.now()
+            )
+        }
+        every { mcpBridgeService.currentManifest() } returns McpServerManifest(
+            serverName = "AiTask MCP bridge",
+            endpointUrl = "http://127.0.0.1:3333/mcp",
+            capabilities = listOf("task-context", "project-context", "repository-context"),
+            tools = emptyList(),
+            resources = emptyList(),
+            safetyNotes = listOf("MCP bridge disabled")
+        )
+        coEvery { mcpBridgeService.sync() } returns mcpBridgeService.currentManifest()
+        coEvery { mcpBridgeService.stop() } returns mcpBridgeService.currentManifest()
         viewModel = SettingsViewModel(
             getProjectsUseCase = getProjectsUseCase,
             llmConfigurationRepository = repository,
             agentDefinitionRepository = agentDefinitionRepository,
+            mcpServerConfigurationRepository = mcpServerConfigurationRepository,
+            mcpBridgeService = mcpBridgeService,
             saveAgentDefinitionUseCase = mockk<SaveAgentDefinitionUseCase>(relaxed = true),
             deleteAgentDefinitionUseCase = mockk<DeleteAgentDefinitionUseCase>(relaxed = true),
             llmConnectionValidator = object : LlmConnectionValidator {
@@ -88,6 +122,8 @@ class SettingsViewModelTest {
             getProjectsUseCase = getProjectsUseCase,
             llmConfigurationRepository = repository,
             agentDefinitionRepository = agentDefinitionRepository,
+            mcpServerConfigurationRepository = mcpServerConfigurationRepository,
+            mcpBridgeService = mcpBridgeService,
             saveAgentDefinitionUseCase = mockk(relaxed = true),
             deleteAgentDefinitionUseCase = mockk(relaxed = true),
             llmConnectionValidator = object : LlmConnectionValidator {
@@ -108,6 +144,22 @@ class SettingsViewModelTest {
         assertTrue(repository.findAll().isEmpty())
         assertEquals("Endpoint unreachable", viewModel.uiState.llmError)
         assertFalse(viewModel.uiState.isLlmSaving)
+    }
+
+    @Test
+    fun `saveMcpConfiguration persists bridge settings and syncs service`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        viewModel.updateMcpEditorEnabled(true)
+        viewModel.updateMcpEditorPort("4011")
+        viewModel.saveMcpConfiguration()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.isMcpSaving)
+        assertEquals(4011, viewModel.uiState.mcpEditor.port)
+        assertTrue(viewModel.uiState.mcpFeedback?.contains("http://127.0.0.1:4011/mcp") == true)
+        coVerify { mcpServerConfigurationRepository.save(match { it.isEnabled && it.port == 4011 }) }
+        coVerify { mcpBridgeService.sync() }
     }
 
     @Test

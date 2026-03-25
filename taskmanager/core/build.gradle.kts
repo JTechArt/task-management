@@ -44,6 +44,9 @@ dependencies {
     api("io.ktor:ktor-client-cio-jvm:$ktorVersion")
     api("io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion")
     api("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktorVersion")
+    api("io.ktor:ktor-server-core-jvm:$ktorVersion")
+    api("io.ktor:ktor-server-netty-jvm:$ktorVersion")
+    api("io.ktor:ktor-server-content-negotiation-jvm:$ktorVersion")
 
     // Git
     api("org.eclipse.jgit:org.eclipse.jgit:$jgitVersion")
