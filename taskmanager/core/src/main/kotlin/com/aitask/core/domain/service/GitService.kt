@@ -58,5 +58,6 @@ interface GitService {
         url: String,
         authConfig: GitAuthConfig
     ): Result<RepositoryInfo>
-}
 
+    suspend fun getStagedChangesSummary(repositoryPath: String): Result<String>
+}

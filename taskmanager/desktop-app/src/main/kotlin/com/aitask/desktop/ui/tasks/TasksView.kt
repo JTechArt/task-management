@@ -284,6 +284,13 @@ fun TasksView(
                                 )
                             },
                             onClearTaskContentSuggestion = { viewModel.clearTaskContentSuggestion() },
+                            onGenerateGitAssistantSuggestion = { taskId, mode ->
+                                viewModel.generateGitAssistantSuggestion(taskId, mode)
+                            },
+                            onClearGitAssistantSuggestion = { viewModel.clearGitAssistantSuggestion() },
+                            onUseGitAssistantSuggestion = { taskId, mode, suggestion ->
+                                viewModel.markGitAssistantSuggestionUsed(taskId, mode, suggestion)
+                            },
                             availableIDEs = uiState.availableIDEs,
                             preferredIDEs = uiState.projectRepositories.flatMap { it.preferredIDEs }.distinct(),
                             isGeneratingWorkspace = uiState.isGeneratingWorkspace,
@@ -293,7 +300,12 @@ fun TasksView(
                             isGeneratingTaskContent = uiState.isGeneratingTaskContent,
                             taskContentGenerationError = uiState.taskContentGenerationError,
                             taskContentSuggestion = uiState.taskContentSuggestion,
-                            taskContentSuggestionTargetTaskId = uiState.taskContentGenerationTargetTaskId
+                            taskContentSuggestionTargetTaskId = uiState.taskContentGenerationTargetTaskId,
+                            isGeneratingGitAssistantSuggestion = uiState.isGeneratingGitAssistantSuggestion,
+                            gitAssistantSuggestionError = uiState.gitAssistantSuggestionError,
+                            gitAssistantSuggestion = uiState.gitAssistantSuggestion,
+                            gitAssistantSuggestionTargetTaskId = uiState.gitAssistantSuggestionTargetTaskId,
+                            gitAssistantSuggestionMode = uiState.gitAssistantSuggestionMode
                         )
                     }
                 }

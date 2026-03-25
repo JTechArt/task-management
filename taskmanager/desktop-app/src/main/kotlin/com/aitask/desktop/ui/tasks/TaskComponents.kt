@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.*
@@ -308,6 +310,9 @@ fun TaskDetailView(
     onCleanupWorkspace: ((Task) -> Unit)? = null,
     onGenerateTaskContentSuggestion: ((UUID, String, String?, TaskType, TaskContentGenerationMode, UUID?) -> Unit)? = null,
     onClearTaskContentSuggestion: (() -> Unit)? = null,
+    onGenerateGitAssistantSuggestion: ((UUID, GitAssistantSuggestionMode) -> Unit)? = null,
+    onClearGitAssistantSuggestion: (() -> Unit)? = null,
+    onUseGitAssistantSuggestion: ((UUID, GitAssistantSuggestionMode, String) -> Unit)? = null,
     availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
     preferredIDEs: List<IDEType> = emptyList(),
     isGeneratingWorkspace: Boolean = false,
@@ -318,6 +323,11 @@ fun TaskDetailView(
     taskContentGenerationError: String? = null,
     taskContentSuggestion: String? = null,
     taskContentSuggestionTargetTaskId: UUID? = null,
+    isGeneratingGitAssistantSuggestion: Boolean = false,
+    gitAssistantSuggestionError: String? = null,
+    gitAssistantSuggestion: String? = null,
+    gitAssistantSuggestionTargetTaskId: UUID? = null,
+    gitAssistantSuggestionMode: GitAssistantSuggestionMode? = null,
     modifier: Modifier = Modifier
 ) {
     var methodologyExpanded by remember { mutableStateOf(false) }
@@ -333,6 +343,8 @@ fun TaskDetailView(
     var descriptionDraft by remember(task.description) { mutableStateOf(task.description ?: "") }
     val scrollState = rememberScrollState()
     val taskContentSuggestionForCurrentTask = taskContentSuggestionTargetTaskId == task.id && taskContentSuggestion != null
+    val gitAssistantSuggestionForCurrentTask = gitAssistantSuggestionTargetTaskId == task.id && gitAssistantSuggestion != null
+    val clipboardManager = LocalClipboardManager.current
     LaunchedEffect(task.methodologyOverride) {
         selectedMethodologyOverride = task.methodologyOverride
     }
@@ -496,6 +508,95 @@ fun TaskDetailView(
                     ) {
                         Text("Revert")
                     }
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Git assistant",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Draft commit messages, PR descriptions, or comment text from the current task context.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            onGenerateGitAssistantSuggestion?.invoke(task.id, GitAssistantSuggestionMode.COMMIT_MESSAGE)
+                        },
+                        enabled = !isGeneratingGitAssistantSuggestion && onGenerateGitAssistantSuggestion != null
+                    ) {
+                        Text(if (isGeneratingGitAssistantSuggestion && gitAssistantSuggestionMode == GitAssistantSuggestionMode.COMMIT_MESSAGE) "Generating..." else "Commit message")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            onGenerateGitAssistantSuggestion?.invoke(task.id, GitAssistantSuggestionMode.PR_DESCRIPTION)
+                        },
+                        enabled = !isGeneratingGitAssistantSuggestion && onGenerateGitAssistantSuggestion != null
+                    ) {
+                        Text("PR description")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            onGenerateGitAssistantSuggestion?.invoke(task.id, GitAssistantSuggestionMode.COMMENT_DRAFT)
+                        },
+                        enabled = !isGeneratingGitAssistantSuggestion && onGenerateGitAssistantSuggestion != null
+                    ) {
+                        Text("Comment draft")
+                    }
+                }
+                if (gitAssistantSuggestionForCurrentTask) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "AI-generated ${gitAssistantSuggestionMode?.name?.lowercase()?.replace('_', ' ') ?: "suggestion"}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = gitAssistantSuggestion!!,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = {
+                                    clipboardManager.setText(AnnotatedString(gitAssistantSuggestion!!))
+                                    onUseGitAssistantSuggestion?.invoke(
+                                        task.id,
+                                        gitAssistantSuggestionMode ?: GitAssistantSuggestionMode.COMMIT_MESSAGE,
+                                        gitAssistantSuggestion!!
+                                    )
+                                }) {
+                                    Text("Use suggestion")
+                                }
+                                OutlinedButton(onClick = { onClearGitAssistantSuggestion?.invoke() }) {
+                                    Text("Discard")
+                                }
+                            }
+                        }
+                    }
+                }
+                if (gitAssistantSuggestionError != null && gitAssistantSuggestionTargetTaskId == task.id) {
+                    Text(
+                        text = gitAssistantSuggestionError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }

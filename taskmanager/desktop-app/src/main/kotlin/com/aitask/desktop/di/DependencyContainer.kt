@@ -5,6 +5,7 @@ import com.aitask.core.domain.repository.*
 import com.aitask.core.domain.service.GitService
 import com.aitask.core.domain.service.HealthCheckService
 import com.aitask.core.domain.service.IDEService
+import com.aitask.core.domain.service.GitAssistantSuggestionService
 import com.aitask.core.domain.service.LlmConnectionValidator
 import com.aitask.core.domain.service.TaskContentGenerationService
 import com.aitask.core.domain.service.RuleApplicationService
@@ -24,6 +25,7 @@ import com.aitask.core.domain.validation.TaskValidator
 import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
+import com.aitask.core.infrastructure.llm.DefaultGitAssistantSuggestionService
 import com.aitask.core.infrastructure.llm.DefaultLlmConnectionValidator
 import com.aitask.core.infrastructure.llm.DefaultTaskContentGenerationService
 import com.aitask.core.infrastructure.plugin.DefaultPluginPrerequisiteProbe
@@ -168,6 +170,10 @@ object DependencyContainer {
 
     val taskContentGenerationService: TaskContentGenerationService by lazy {
         DefaultTaskContentGenerationService()
+    }
+
+    val gitAssistantSuggestionService: GitAssistantSuggestionService by lazy {
+        DefaultGitAssistantSuggestionService()
     }
 
     val pluginManagementService: PluginManagementService by lazy {
@@ -351,6 +357,17 @@ object DependencyContainer {
             projectRepository,
             llmConfigurationRepository,
             taskContentGenerationService
+        )
+    }
+
+    val generateGitAssistantSuggestionUseCase: GenerateGitAssistantSuggestionUseCase by lazy {
+        GenerateGitAssistantSuggestionUseCase(
+            taskRepository,
+            projectRepository,
+            repositoryRepository,
+            llmConfigurationRepository,
+            gitService,
+            gitAssistantSuggestionService
         )
     }
 

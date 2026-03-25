@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.aitask.core.domain.model.*
+import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.SlackNotificationService
@@ -27,10 +28,12 @@ class TasksViewModel(
     private val cleanupWorkspaceUseCase: CleanupWorkspaceUseCase = DependencyContainer.cleanupWorkspaceUseCase,
     private val launchIDEUseCase: LaunchIDEUseCase = DependencyContainer.launchIDEUseCase,
     private val generateTaskContentUseCase: GenerateTaskContentUseCase = DependencyContainer.generateTaskContentUseCase,
+    private val generateGitAssistantSuggestionUseCase: GenerateGitAssistantSuggestionUseCase = DependencyContainer.generateGitAssistantSuggestionUseCase,
     private val ideService: IDEService = DependencyContainer.ideService,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
     private val projectRepository: com.aitask.core.domain.repository.ProjectRepository = DependencyContainer.projectRepository,
     private val slackNotificationService: com.aitask.core.domain.service.SlackNotificationService = DependencyContainer.slackNotificationService,
+    private val activityRepository: ActivityRepository = DependencyContainer.activityRepository,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     var uiState by mutableStateOf(TasksUiState())
@@ -473,6 +476,83 @@ class TasksViewModel(
         }
     }
 
+    fun generateGitAssistantSuggestion(
+        taskId: UUID,
+        mode: GitAssistantSuggestionMode
+    ) {
+        uiState = uiState.copy(
+            isGeneratingGitAssistantSuggestion = true,
+            gitAssistantSuggestionError = null,
+            gitAssistantSuggestion = null,
+            gitAssistantSuggestionTargetTaskId = taskId,
+            gitAssistantSuggestionMode = mode
+        )
+        scope.launch {
+            val result = generateGitAssistantSuggestionUseCase(
+                GenerateGitAssistantSuggestionRequest(
+                    taskId = taskId,
+                    mode = mode
+                )
+            )
+            result.fold(
+                onSuccess = { suggestion ->
+                    uiState = uiState.copy(
+                        isGeneratingGitAssistantSuggestion = false,
+                        gitAssistantSuggestion = suggestion.generatedText,
+                        gitAssistantSuggestionError = null
+                    )
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isGeneratingGitAssistantSuggestion = false,
+                        gitAssistantSuggestionError = error.message ?: "Failed to generate git suggestion"
+                    )
+                }
+            )
+        }
+    }
+
+    fun clearGitAssistantSuggestion() {
+        uiState = uiState.copy(
+            gitAssistantSuggestion = null,
+            gitAssistantSuggestionError = null,
+            gitAssistantSuggestionTargetTaskId = null,
+            gitAssistantSuggestionMode = null,
+            isGeneratingGitAssistantSuggestion = false
+        )
+    }
+
+    fun markGitAssistantSuggestionUsed(
+        taskId: UUID,
+        mode: GitAssistantSuggestionMode,
+        suggestion: String
+    ) {
+        scope.launch {
+            val task = uiState.tasks.find { it.id == taskId } ?: return@launch
+            runCatching {
+                activityRepository.create(
+                    Activity(
+                        id = UUID.randomUUID(),
+                        type = ActivityType.LLM_SUGGESTION_USED,
+                        entityType = "task",
+                        entityId = task.id,
+                        description = "Used AI-generated ${mode.name.lowercase().replace('_', ' ')} suggestion for task: ${task.title}",
+                        metadata = mapOf(
+                            "mode" to mode.name,
+                            "taskTitle" to task.title,
+                            "suggestionLength" to suggestion.length.toString(),
+                            "branchName" to (task.branchName ?: "")
+                        ).filterValues { it.isNotBlank() },
+                        createdAt = java.time.Instant.now(),
+                        status = ActivityStatus.SUCCESS,
+                        projectId = task.projectId
+                    )
+                )
+            }
+            clearGitAssistantSuggestion()
+        }
+    }
+
     fun clearTaskContentSuggestion() {
         uiState = uiState.copy(
             taskContentSuggestion = null,
@@ -604,5 +684,10 @@ data class TasksUiState(
     val taskContentGenerationError: String? = null,
     val taskContentSuggestion: String? = null,
     val taskContentGenerationTargetTaskId: UUID? = null,
-    val taskContentGenerationMode: TaskContentGenerationMode? = null
+    val taskContentGenerationMode: TaskContentGenerationMode? = null,
+    val isGeneratingGitAssistantSuggestion: Boolean = false,
+    val gitAssistantSuggestionError: String? = null,
+    val gitAssistantSuggestion: String? = null,
+    val gitAssistantSuggestionTargetTaskId: UUID? = null,
+    val gitAssistantSuggestionMode: GitAssistantSuggestionMode? = null
 )
