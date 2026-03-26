@@ -10,6 +10,7 @@ import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.McpBridgeService
 import com.aitask.core.domain.service.AgentExecutionService
 import com.aitask.core.domain.service.GeppaConnectionValidator
+import com.aitask.core.domain.service.GeppaPromptOptimizationService
 import com.aitask.core.domain.service.GitAssistantSuggestionService
 import com.aitask.core.domain.service.LlmConnectionValidator
 import com.aitask.core.domain.service.TaskContentGenerationService
@@ -32,6 +33,7 @@ import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
 import com.aitask.core.infrastructure.llm.DefaultAgentExecutionService
 import com.aitask.core.infrastructure.llm.DefaultGeppaConnectionValidator
+import com.aitask.core.infrastructure.llm.DefaultGeppaPromptOptimizationService
 import com.aitask.core.infrastructure.llm.DefaultGitAssistantSuggestionService
 import com.aitask.core.infrastructure.llm.DefaultLlmConnectionValidator
 import com.aitask.core.infrastructure.llm.DefaultTaskContentGenerationService
@@ -196,12 +198,16 @@ object DependencyContainer {
         DefaultGeppaConnectionValidator()
     }
 
+    val geppaPromptOptimizationService: GeppaPromptOptimizationService by lazy {
+        DefaultGeppaPromptOptimizationService(geppaConfigurationRepository)
+    }
+
     val taskContentGenerationService: TaskContentGenerationService by lazy {
-        DefaultTaskContentGenerationService()
+        DefaultTaskContentGenerationService(geppaPromptOptimizationService)
     }
 
     val gitAssistantSuggestionService: GitAssistantSuggestionService by lazy {
-        DefaultGitAssistantSuggestionService()
+        DefaultGitAssistantSuggestionService(geppaPromptOptimizationService)
     }
 
     val agentExecutionService: AgentExecutionService by lazy {
@@ -317,7 +323,8 @@ object DependencyContainer {
             agentDefinitionRepository,
             llmConfigurationRepository,
             agentExecutionService,
-            activityRepository
+            activityRepository,
+            geppaPromptOptimizationService
         )
     }
     

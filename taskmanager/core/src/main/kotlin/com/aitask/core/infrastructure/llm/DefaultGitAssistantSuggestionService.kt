@@ -4,6 +4,7 @@ import com.aitask.core.domain.model.GitAssistantSuggestionMode
 import com.aitask.core.domain.model.GitAssistantSuggestionRequest
 import com.aitask.core.domain.model.GitAssistantSuggestionResult
 import com.aitask.core.domain.model.LlmConfiguration
+import com.aitask.core.domain.service.GeppaPromptOptimizationService
 import com.aitask.core.domain.service.GitAssistantSuggestionService
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -24,6 +25,7 @@ import kotlinx.serialization.json.Json
 import java.net.URI
 
 class DefaultGitAssistantSuggestionService(
+    private val geppaPromptOptimizationService: GeppaPromptOptimizationService? = null,
     private val httpClient: HttpClient = HttpClient(CIO) {
         expectSuccess = false
         install(HttpTimeout) {
@@ -42,7 +44,8 @@ class DefaultGitAssistantSuggestionService(
         apiKey: String?
     ): Result<GitAssistantSuggestionResult> = withContext(Dispatchers.IO) {
         runCatching {
-            val prompt = buildPrompt(request)
+            val rawPrompt = buildPrompt(request)
+            val prompt = geppaPromptOptimizationService?.optimizeIfEnabled(rawPrompt, "git_suggestion") ?: rawPrompt
             val candidates = endpointCandidates(configuration.endpointUrl)
             var lastError: String? = null
 

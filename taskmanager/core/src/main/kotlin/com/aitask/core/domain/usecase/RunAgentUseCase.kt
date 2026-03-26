@@ -3,6 +3,7 @@ package com.aitask.core.domain.usecase
 import com.aitask.core.domain.model.*
 import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.AgentDefinitionRepository
+import com.aitask.core.domain.service.GeppaPromptOptimizationService
 import com.aitask.core.domain.repository.LlmConfigurationRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
@@ -32,7 +33,8 @@ class RunAgentUseCase(
     private val agentDefinitionRepository: AgentDefinitionRepository,
     private val llmConfigurationRepository: LlmConfigurationRepository,
     private val agentExecutionService: AgentExecutionService,
-    private val activityRepository: ActivityRepository
+    private val activityRepository: ActivityRepository,
+    private val geppaPromptOptimizationService: GeppaPromptOptimizationService? = null
 ) {
     suspend operator fun invoke(request: RunAgentRequest): Result<RunAgentResult> {
         val task = taskRepository.findById(request.taskId)
@@ -49,7 +51,9 @@ class RunAgentUseCase(
             ?: llmConfigurationRepository.findDefault()
             ?: return Result.failure(IllegalStateException("No local LLM profile configured"))
         val apiKey = if (configuration.hasApiKey) llmConfigurationRepository.findApiKey(configuration.id) else null
-        val prompt = renderPrompt(agent, task, project, repositories)
+        val renderedPrompt = renderPrompt(agent, task, project, repositories)
+        val prompt = geppaPromptOptimizationService?.optimizeIfEnabled(renderedPrompt, "agent_execution")
+            ?: renderedPrompt
 
         val result = agentExecutionService.execute(
             prompt = prompt,
@@ -57,6 +61,7 @@ class RunAgentUseCase(
             apiKey = apiKey
         )
 
+        val geppaApplied = geppaPromptOptimizationService != null && prompt != renderedPrompt
         result.onSuccess { execution ->
             logAgentActivity(
                 agent = agent,
@@ -64,7 +69,8 @@ class RunAgentUseCase(
                 project = project,
                 status = ActivityStatus.SUCCESS,
                 output = execution.generatedText,
-                configuration = configuration
+                configuration = configuration,
+                geppaOptimized = geppaApplied
             )
         }.onFailure { error ->
             logAgentActivity(
@@ -73,7 +79,8 @@ class RunAgentUseCase(
                 project = project,
                 status = ActivityStatus.FAILED,
                 output = error.message ?: error.javaClass.simpleName,
-                configuration = configuration
+                configuration = configuration,
+                geppaOptimized = geppaApplied
             )
         }
 
@@ -121,7 +128,8 @@ class RunAgentUseCase(
         project: Project,
         status: ActivityStatus,
         output: String,
-        configuration: LlmConfiguration
+        configuration: LlmConfiguration,
+        geppaOptimized: Boolean = false
     ) {
         runCatching {
             activityRepository.create(
@@ -137,7 +145,8 @@ class RunAgentUseCase(
                         "trigger" to agent.trigger.name,
                         "configurationName" to configuration.name,
                         "modelIdentifier" to configuration.modelIdentifier,
-                        "outputLength" to output.length.toString()
+                        "outputLength" to output.length.toString(),
+                        "geppaOptimized" to geppaOptimized.toString()
                     ),
                     createdAt = Instant.now(),
                     status = status,

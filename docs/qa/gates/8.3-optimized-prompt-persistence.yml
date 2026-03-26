@@ -1,0 +1,37 @@
+schema: 1
+story: "8.3"
+story_title: "GEPPA Integration with AI Features"
+gate: PASS
+status_reason: "DefaultGeppaPromptOptimizationService applies POST /optimize when GEPPA is enabled; task generation, git suggestions, and agent execution call optimizeIfEnabled with fallbacks; activity metadata records geppaOptimized for agents; logs avoid prompt bodies. :core:test passes."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-26T18:00:00Z"
+waiver: { active: false }
+top_issues: []
+evidence:
+  tests_reviewed: 8
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Optimization logs use context labels and lengths, not raw prompts; HTTPS-capable client for GEPPA POST."
+  performance:
+    status: PASS
+    notes: "HTTP timeouts on GEPPA client; extra round-trip only when enabled."
+  reliability:
+    status: PASS
+    notes: "Non-2xx, exceptions, and blank optimized_prompt fall back to original prompt."
+  maintainability:
+    status: PASS
+    notes: "Dedicated Geppa service tests plus RunAgentUseCase GEPPA test; existing task/git HTTP tests use default null optimizer (backward compatible)."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Optional: integration tests that mock GeppaPromptOptimizationService for task/git services to assert optimize-then-LLM order"
+      - "AC3 is satisfied by Story 8.2 content in agent template plus runtime GEPPA; optional future savedPromptId on AgentDefinition if product wants explicit linkage"
+quality_score: 88
+expires: "2026-04-09T00:00:00Z"

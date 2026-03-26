@@ -4,6 +4,7 @@ import com.aitask.core.domain.model.LlmConfiguration
 import com.aitask.core.domain.model.TaskContentGenerationMode
 import com.aitask.core.domain.model.TaskContentGenerationRequest
 import com.aitask.core.domain.model.TaskContentGenerationResult
+import com.aitask.core.domain.service.GeppaPromptOptimizationService
 import com.aitask.core.domain.service.TaskContentGenerationService
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -24,6 +25,7 @@ import kotlinx.serialization.json.Json
 import java.net.URI
 
 class DefaultTaskContentGenerationService(
+    private val geppaPromptOptimizationService: GeppaPromptOptimizationService? = null,
     private val httpClient: HttpClient = HttpClient(CIO) {
         expectSuccess = false
         install(HttpTimeout) {
@@ -42,7 +44,8 @@ class DefaultTaskContentGenerationService(
         apiKey: String?
     ): Result<TaskContentGenerationResult> = withContext(Dispatchers.IO) {
         runCatching {
-            val prompt = buildPrompt(request)
+            val rawPrompt = buildPrompt(request)
+            val prompt = geppaPromptOptimizationService?.optimizeIfEnabled(rawPrompt, "task_generation") ?: rawPrompt
             val candidates = endpointCandidates(configuration.endpointUrl)
             var lastError: String? = null
 
