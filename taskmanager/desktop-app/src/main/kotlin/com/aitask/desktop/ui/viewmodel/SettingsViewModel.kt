@@ -13,11 +13,16 @@ import com.aitask.core.domain.model.McpServerConfiguration
 import com.aitask.core.domain.model.McpServerConfigurationRequest
 import com.aitask.core.domain.model.LlmConfiguration
 import com.aitask.core.domain.model.LlmConfigurationRequest
+import com.aitask.core.domain.model.SavedPrompt
+import com.aitask.core.domain.model.SavedPromptRequest
 import com.aitask.core.domain.repository.AgentDefinitionRepository
 import com.aitask.core.domain.repository.GeppaConfigurationRepository
 import com.aitask.core.domain.repository.McpServerConfigurationRepository
 import com.aitask.core.domain.repository.LlmConfigurationRepository
+import com.aitask.core.domain.repository.SavedPromptRepository
 import com.aitask.core.domain.usecase.DeleteAgentDefinitionUseCase
+import com.aitask.core.domain.usecase.DeleteSavedPromptUseCase
+import com.aitask.core.domain.usecase.SaveSavedPromptUseCase
 import com.aitask.core.domain.service.GeppaConnectionValidator
 import com.aitask.core.domain.service.LlmConnectionValidator
 import com.aitask.core.domain.service.McpBridgeService
@@ -52,6 +57,9 @@ class SettingsViewModel(
     private val llmConnectionValidator: LlmConnectionValidator = DependencyContainer.llmConnectionValidator,
     private val geppaConfigurationRepository: GeppaConfigurationRepository = DependencyContainer.geppaConfigurationRepository,
     private val geppaConnectionValidator: GeppaConnectionValidator = DependencyContainer.geppaConnectionValidator,
+    private val savedPromptRepository: SavedPromptRepository = DependencyContainer.savedPromptRepository,
+    private val saveSavedPromptUseCase: SaveSavedPromptUseCase = DependencyContainer.saveSavedPromptUseCase,
+    private val deleteSavedPromptUseCase: DeleteSavedPromptUseCase = DependencyContainer.deleteSavedPromptUseCase,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
     var uiState by mutableStateOf(SettingsUiState())
@@ -63,6 +71,7 @@ class SettingsViewModel(
         loadAgentDefinitions()
         loadMcpConfiguration()
         loadGeppaConfiguration()
+        loadSavedPrompts()
     }
 
     fun loadProjects() {
@@ -258,6 +267,132 @@ class SettingsViewModel(
         )
     }
 
+    fun loadSavedPrompts() {
+        scope.launch {
+            uiState = uiState.copy(isSavedPromptLoading = true, savedPromptError = null)
+            try {
+                val prompts = savedPromptRepository.findAll()
+                uiState = uiState.copy(
+                    isSavedPromptLoading = false,
+                    savedPrompts = prompts
+                )
+            } catch (error: Exception) {
+                uiState = uiState.copy(
+                    isSavedPromptLoading = false,
+                    savedPromptError = error.message ?: "Failed to load saved prompts"
+                )
+            }
+        }
+    }
+
+    fun startNewSavedPrompt() {
+        uiState = uiState.copy(
+            savedPromptEditor = SavedPromptEditorState(),
+            savedPromptError = null,
+            savedPromptFeedback = null
+        )
+    }
+
+    fun editSavedPrompt(prompt: SavedPrompt) {
+        uiState = uiState.copy(
+            savedPromptEditor = SavedPromptEditorState(
+                id = prompt.id,
+                name = prompt.name,
+                content = prompt.content,
+                category = prompt.category.orEmpty(),
+                scope = prompt.scope,
+                projectId = prompt.projectId
+            ),
+            savedPromptError = null,
+            savedPromptFeedback = null
+        )
+    }
+
+    fun updateSavedPromptEditorName(name: String) = updateSavedPromptEditor { it.copy(name = name) }
+
+    fun updateSavedPromptEditorContent(content: String) = updateSavedPromptEditor { it.copy(content = content) }
+
+    fun updateSavedPromptEditorCategory(category: String) = updateSavedPromptEditor { it.copy(category = category) }
+
+    fun updateSavedPromptEditorScope(scope: AgentScope) = updateSavedPromptEditor {
+        it.copy(scope = scope, projectId = if (scope == AgentScope.GLOBAL) null else it.projectId)
+    }
+
+    fun updateSavedPromptEditorProjectId(projectId: UUID?) = updateSavedPromptEditor { it.copy(projectId = projectId) }
+
+    fun saveSavedPrompt() {
+        val editor = uiState.savedPromptEditor
+        val validationError = validateSavedPromptEditorLocally(editor)
+        if (validationError != null) {
+            uiState = uiState.copy(savedPromptError = validationError)
+            return
+        }
+        scope.launch {
+            uiState = uiState.copy(isSavedPromptSaving = true, savedPromptError = null, savedPromptFeedback = null)
+            val result = saveSavedPromptUseCase(
+                SavedPromptRequest(
+                    id = editor.id,
+                    name = editor.name,
+                    content = editor.content,
+                    category = editor.category.takeIf { it.isNotBlank() },
+                    scope = editor.scope,
+                    projectId = editor.projectId
+                )
+            )
+            result.fold(
+                onSuccess = {
+                    uiState = uiState.copy(
+                        isSavedPromptSaving = false,
+                        savedPromptFeedback = if (editor.id == null) "Prompt saved" else "Prompt updated",
+                        savedPromptEditor = SavedPromptEditorState()
+                    )
+                    loadSavedPrompts()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isSavedPromptSaving = false,
+                        savedPromptError = error.message ?: "Failed to save prompt"
+                    )
+                }
+            )
+        }
+    }
+
+    fun deleteSavedPrompt(id: UUID) {
+        scope.launch {
+            uiState = uiState.copy(savedPromptError = null, savedPromptFeedback = null)
+            val result = deleteSavedPromptUseCase(id)
+            if (result.getOrDefault(false)) {
+                if (uiState.savedPromptEditor.id == id) {
+                    startNewSavedPrompt()
+                }
+                loadSavedPrompts()
+                uiState = uiState.copy(savedPromptFeedback = "Prompt deleted")
+            } else {
+                uiState = uiState.copy(savedPromptError = "Prompt not found")
+            }
+        }
+    }
+
+    fun clearSavedPromptFeedback() {
+        uiState = uiState.copy(savedPromptFeedback = null, savedPromptError = null)
+    }
+
+    private fun validateSavedPromptEditorLocally(editor: SavedPromptEditorState): String? = when {
+        editor.name.isBlank() -> "Enter a prompt name"
+        editor.content.isBlank() -> "Enter the prompt content"
+        editor.scope == AgentScope.PROJECT && editor.projectId == null -> "Choose a project for project-scoped prompts"
+        else -> null
+    }
+
+    private fun updateSavedPromptEditor(transform: (SavedPromptEditorState) -> SavedPromptEditorState) {
+        uiState = uiState.copy(
+            savedPromptEditor = transform(uiState.savedPromptEditor),
+            savedPromptError = null,
+            savedPromptFeedback = null
+        )
+    }
+
     fun startNewLlmConfiguration() {
         uiState = uiState.copy(
             llmEditor = LlmConfigurationEditorState(),
@@ -332,6 +467,8 @@ class SettingsViewModel(
     fun updateAgentEditorTrigger(trigger: AgentTrigger) = updateAgentEditor { it.copy(trigger = trigger) }
 
     fun updateAgentEditorEnabled(isEnabled: Boolean) = updateAgentEditor { it.copy(isEnabled = isEnabled) }
+
+    fun applyPromptFromLibrary(prompt: SavedPrompt) = updateAgentEditor { it.copy(promptTemplate = prompt.content) }
 
     fun updateMcpEditorEnabled(isEnabled: Boolean) = updateMcpEditor { it.copy(isEnabled = isEnabled) }
 
@@ -838,6 +975,15 @@ data class GeppaConfigurationEditorState(
     val endpointUrl: String = ""
 )
 
+data class SavedPromptEditorState(
+    val id: UUID? = null,
+    val name: String = "",
+    val content: String = "",
+    val category: String = "",
+    val scope: AgentScope = AgentScope.GLOBAL,
+    val projectId: UUID? = null
+)
+
 data class SettingsUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -879,5 +1025,11 @@ data class SettingsUiState(
     val isGeppaTesting: Boolean = false,
     val geppaError: String? = null,
     val geppaFeedback: String? = null,
-    val geppaEditor: GeppaConfigurationEditorState = GeppaConfigurationEditorState()
+    val geppaEditor: GeppaConfigurationEditorState = GeppaConfigurationEditorState(),
+    val isSavedPromptLoading: Boolean = false,
+    val isSavedPromptSaving: Boolean = false,
+    val savedPromptError: String? = null,
+    val savedPromptFeedback: String? = null,
+    val savedPrompts: List<SavedPrompt> = emptyList(),
+    val savedPromptEditor: SavedPromptEditorState = SavedPromptEditorState()
 )

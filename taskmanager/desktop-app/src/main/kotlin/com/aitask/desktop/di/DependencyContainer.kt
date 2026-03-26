@@ -2,6 +2,8 @@ package com.aitask.desktop.di
 
 import com.aitask.core.data.repository.*
 import com.aitask.core.domain.repository.*
+import com.aitask.core.domain.usecase.DeleteSavedPromptUseCase
+import com.aitask.core.domain.usecase.SaveSavedPromptUseCase
 import com.aitask.core.domain.service.GitService
 import com.aitask.core.domain.service.HealthCheckService
 import com.aitask.core.domain.service.IDEService
@@ -186,6 +188,10 @@ object DependencyContainer {
         GeppaConfigurationRepositoryImpl()
     }
 
+    val savedPromptRepository: SavedPromptRepository by lazy {
+        SavedPromptRepositoryImpl()
+    }
+
     val geppaConnectionValidator: GeppaConnectionValidator by lazy {
         DefaultGeppaConnectionValidator()
     }
@@ -293,6 +299,14 @@ object DependencyContainer {
 
     val deleteAgentDefinitionUseCase: DeleteAgentDefinitionUseCase by lazy {
         DeleteAgentDefinitionUseCase(agentDefinitionRepository)
+    }
+
+    val saveSavedPromptUseCase: SaveSavedPromptUseCase by lazy {
+        SaveSavedPromptUseCase(savedPromptRepository)
+    }
+
+    val deleteSavedPromptUseCase: DeleteSavedPromptUseCase by lazy {
+        DeleteSavedPromptUseCase(savedPromptRepository)
     }
 
     val runAgentUseCase: RunAgentUseCase by lazy {

@@ -45,13 +45,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.aitask.core.domain.model.LlmConfiguration
 import com.aitask.core.domain.model.AgentDefinition
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.AgentTrigger
+import com.aitask.core.domain.model.LlmConfiguration
+import com.aitask.core.domain.model.SavedPrompt
 import com.aitask.core.domain.service.McpServerManifest
 import com.aitask.desktop.ui.viewmodel.GeppaConfigurationEditorState
+import com.aitask.desktop.ui.viewmodel.SavedPromptEditorState
 import com.aitask.desktop.ui.viewmodel.SettingsViewModel
+import java.util.UUID
 
 @Composable
 fun PlaceholderView(
@@ -164,6 +167,7 @@ fun SettingsView(
             onNameChange = { viewModel.updateAgentEditorName(it) },
             onDescriptionChange = { viewModel.updateAgentEditorDescription(it) },
             onPromptChange = { viewModel.updateAgentEditorPromptTemplate(it) },
+            onLoadFromSavedPrompt = { viewModel.applyPromptFromLibrary(it) },
             onLlmConfigurationChange = { viewModel.updateAgentEditorLlmConfiguration(it) },
             onScopeChange = { viewModel.updateAgentEditorScope(it) },
             onProjectChange = { viewModel.updateAgentEditorProjectId(it) },
@@ -189,6 +193,20 @@ fun SettingsView(
             onTest = { viewModel.testGeppaConnection() },
             onSave = { viewModel.saveGeppaConfiguration() },
             onClearMessage = { viewModel.clearGeppaFeedback() }
+        )
+
+        SavedPromptsCard(
+            uiState = uiState,
+            onNew = { viewModel.startNewSavedPrompt() },
+            onEdit = { viewModel.editSavedPrompt(it) },
+            onNameChange = { viewModel.updateSavedPromptEditorName(it) },
+            onContentChange = { viewModel.updateSavedPromptEditorContent(it) },
+            onCategoryChange = { viewModel.updateSavedPromptEditorCategory(it) },
+            onScopeChange = { viewModel.updateSavedPromptEditorScope(it) },
+            onProjectChange = { viewModel.updateSavedPromptEditorProjectId(it) },
+            onSave = { viewModel.saveSavedPrompt() },
+            onDelete = { viewModel.deleteSavedPrompt(it) },
+            onClearMessage = { viewModel.clearSavedPromptFeedback() }
         )
 
         Card(
@@ -547,6 +565,7 @@ private fun AgentDefinitionCard(
     onNameChange: (String) -> Unit,
     onDescriptionChange: (String) -> Unit,
     onPromptChange: (String) -> Unit,
+    onLoadFromSavedPrompt: (com.aitask.core.domain.model.SavedPrompt) -> Unit,
     onLlmConfigurationChange: (java.util.UUID?) -> Unit,
     onScopeChange: (AgentScope) -> Unit,
     onProjectChange: (java.util.UUID?) -> Unit,
@@ -560,6 +579,7 @@ private fun AgentDefinitionCard(
     var triggerExpanded by remember { mutableStateOf(false) }
     var llmExpanded by remember { mutableStateOf(false) }
     var projectExpanded by remember { mutableStateOf(false) }
+    var promptLibraryExpanded by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -610,6 +630,46 @@ private fun AgentDefinitionCard(
                     label = { Text("Description") },
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (uiState.savedPrompts.isNotEmpty()) {
+                    ExposedDropdownMenuBox(
+                        expanded = promptLibraryExpanded,
+                        onExpandedChange = { promptLibraryExpanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = "Load from saved prompts…",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Prompt library") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = promptLibraryExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = promptLibraryExpanded,
+                            onDismissRequest = { promptLibraryExpanded = false }
+                        ) {
+                            uiState.savedPrompts.forEach { prompt ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(prompt.name, fontWeight = FontWeight.Medium)
+                                            prompt.category?.let { cat ->
+                                                Text(
+                                                    cat,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        onLoadFromSavedPrompt(prompt)
+                                        promptLibraryExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
                 OutlinedTextField(
                     value = editor.promptTemplate,
                     onValueChange = onPromptChange,
@@ -1021,6 +1081,204 @@ private fun GeppaConfigurationCard(
                 }
                 if (uiState.isGeppaLoading) {
                     CircularProgressIndicator(modifier = Modifier.width(20.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedPromptsCard(
+    uiState: com.aitask.desktop.ui.viewmodel.SettingsUiState,
+    onNew: () -> Unit,
+    onEdit: (SavedPrompt) -> Unit,
+    onNameChange: (String) -> Unit,
+    onContentChange: (String) -> Unit,
+    onCategoryChange: (String) -> Unit,
+    onScopeChange: (AgentScope) -> Unit,
+    onProjectChange: (UUID?) -> Unit,
+    onSave: () -> Unit,
+    onDelete: (UUID) -> Unit,
+    onClearMessage: () -> Unit
+) {
+    val editor = uiState.savedPromptEditor
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        ),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Saved prompts",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Button(onClick = onNew) { Text("New prompt") }
+            }
+            Text(
+                text = "Save and reuse optimized prompts globally or per project.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            uiState.savedPromptFeedback?.let { feedback ->
+                Snackbar(
+                    modifier = Modifier.fillMaxWidth(),
+                    action = { TextButton(onClick = onClearMessage) { Text("Dismiss") } }
+                ) { Text(feedback) }
+            }
+
+            uiState.savedPromptError?.let { error ->
+                Text(text = error, color = MaterialTheme.colorScheme.error)
+            }
+
+            if (uiState.isSavedPromptLoading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
+            if (uiState.savedPrompts.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    uiState.savedPrompts.forEach { prompt ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = prompt.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                val scopeLabel = if (prompt.scope == AgentScope.GLOBAL) "Global" else "Project"
+                                val categoryLabel = prompt.category?.let { " · $it" } ?: ""
+                                Text(
+                                    text = "$scopeLabel$categoryLabel",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = { onEdit(prompt) }) { Text("Edit") }
+                                OutlinedButton(
+                                    onClick = { onDelete(prompt.id) },
+                                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    )
+                                ) { Text("Delete") }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = if (editor.id == null) "New prompt" else "Edit prompt",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    OutlinedTextField(
+                        value = editor.name,
+                        onValueChange = onNameChange,
+                        label = { Text("Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = editor.content,
+                        onValueChange = onContentChange,
+                        label = { Text("Prompt content") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 4,
+                        maxLines = 10
+                    )
+                    OutlinedTextField(
+                        value = editor.category,
+                        onValueChange = onCategoryChange,
+                        label = { Text("Category (optional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    var scopeExpanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = scopeExpanded,
+                        onExpandedChange = { scopeExpanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = editor.scope.name.lowercase().replaceFirstChar { it.uppercase() },
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Scope") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = scopeExpanded) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = scopeExpanded,
+                            onDismissRequest = { scopeExpanded = false }
+                        ) {
+                            AgentScope.entries.forEach { scope ->
+                                DropdownMenuItem(
+                                    text = { Text(scope.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                                    onClick = { onScopeChange(scope); scopeExpanded = false }
+                                )
+                            }
+                        }
+                    }
+                    if (editor.scope == AgentScope.PROJECT && uiState.projects.isNotEmpty()) {
+                        var projectExpanded by remember { mutableStateOf(false) }
+                        val selectedProject = uiState.projects.firstOrNull { it.id == editor.projectId }
+                        ExposedDropdownMenuBox(
+                            expanded = projectExpanded,
+                            onExpandedChange = { projectExpanded = it }
+                        ) {
+                            OutlinedTextField(
+                                value = selectedProject?.name ?: "Select project",
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Project") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = projectExpanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = projectExpanded,
+                                onDismissRequest = { projectExpanded = false }
+                            ) {
+                                uiState.projects.forEach { project ->
+                                    DropdownMenuItem(
+                                        text = { Text(project.name) },
+                                        onClick = { onProjectChange(project.id); projectExpanded = false }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Button(
+                        onClick = onSave,
+                        enabled = !uiState.isSavedPromptSaving
+                    ) {
+                        Text(if (uiState.isSavedPromptSaving) "Saving…" else "Save prompt")
+                    }
                 }
             }
         }

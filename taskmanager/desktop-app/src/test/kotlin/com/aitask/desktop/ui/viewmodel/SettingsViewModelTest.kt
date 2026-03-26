@@ -5,17 +5,22 @@ import com.aitask.core.domain.model.GeppaConnectionTestResult
 import com.aitask.core.domain.model.McpServerConfiguration
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.McpServerConfigurationRequest
+import com.aitask.core.domain.model.SavedPrompt
+import com.aitask.core.domain.model.SavedPromptRequest
 import com.aitask.core.domain.repository.AgentDefinitionRepository
 import com.aitask.core.domain.repository.GeppaConfigurationRepository
 import com.aitask.core.domain.repository.McpServerConfigurationRepository
+import com.aitask.core.domain.repository.SavedPromptRepository
 import com.aitask.core.domain.model.LlmConnectionTestResult
 import com.aitask.core.domain.service.GeppaConnectionValidator
 import com.aitask.core.domain.service.McpServerManifest
 import com.aitask.core.domain.service.McpBridgeService
 import com.aitask.core.domain.service.LlmConnectionValidator
 import com.aitask.core.domain.usecase.DeleteAgentDefinitionUseCase
+import com.aitask.core.domain.usecase.DeleteSavedPromptUseCase
 import com.aitask.core.domain.usecase.GetProjectsUseCase
 import com.aitask.core.domain.usecase.SaveAgentDefinitionUseCase
+import com.aitask.core.domain.usecase.SaveSavedPromptUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -43,6 +48,9 @@ class SettingsViewModelTest {
     private lateinit var mcpBridgeService: McpBridgeService
     private lateinit var geppaConfigurationRepository: GeppaConfigurationRepository
     private lateinit var geppaConnectionValidator: GeppaConnectionValidator
+    private lateinit var savedPromptRepository: SavedPromptRepository
+    private lateinit var saveSavedPromptUseCase: SaveSavedPromptUseCase
+    private lateinit var deleteSavedPromptUseCase: DeleteSavedPromptUseCase
     private lateinit var viewModel: SettingsViewModel
 
     @BeforeEach
@@ -78,6 +86,10 @@ class SettingsViewModelTest {
         coEvery { mcpBridgeService.sync() } returns mcpBridgeService.currentManifest()
         coEvery { mcpBridgeService.stop() } returns mcpBridgeService.currentManifest()
         coEvery { geppaConfigurationRepository.find() } returns null
+        savedPromptRepository = mockk<SavedPromptRepository>()
+        coEvery { savedPromptRepository.findAll() } returns emptyList()
+        saveSavedPromptUseCase = mockk<SaveSavedPromptUseCase>(relaxed = true)
+        deleteSavedPromptUseCase = mockk<DeleteSavedPromptUseCase>(relaxed = true)
         viewModel = SettingsViewModel(
             getProjectsUseCase = getProjectsUseCase,
             llmConfigurationRepository = repository,
@@ -98,6 +110,9 @@ class SettingsViewModelTest {
             },
             geppaConfigurationRepository = geppaConfigurationRepository,
             geppaConnectionValidator = geppaConnectionValidator,
+            savedPromptRepository = savedPromptRepository,
+            saveSavedPromptUseCase = saveSavedPromptUseCase,
+            deleteSavedPromptUseCase = deleteSavedPromptUseCase,
             scope = CoroutineScope(testDispatcher)
         )
     }
@@ -142,6 +157,9 @@ class SettingsViewModelTest {
             },
             geppaConfigurationRepository = geppaConfigurationRepository,
             geppaConnectionValidator = geppaConnectionValidator,
+            savedPromptRepository = savedPromptRepository,
+            saveSavedPromptUseCase = saveSavedPromptUseCase,
+            deleteSavedPromptUseCase = deleteSavedPromptUseCase,
             scope = CoroutineScope(testDispatcher)
         )
         advanceUntilIdle()
@@ -299,5 +317,109 @@ class SettingsViewModelTest {
         val refreshed = repository.findAll()
         assertTrue(refreshed.first { it.name == "Second" }.isDefault)
         assertFalse(refreshed.first { it.name == "First" }.isDefault)
+    }
+
+    @Test
+    fun `saveSavedPrompt persists a new global prompt and shows feedback`() = runTest(testDispatcher) {
+        val savedPrompt = SavedPrompt(
+            id = java.util.UUID.randomUUID(),
+            name = "My Prompt",
+            content = "Summarize {{taskTitle}}",
+            category = "Summarization",
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            createdAt = java.time.Instant.now(),
+            updatedAt = java.time.Instant.now()
+        )
+        coEvery { saveSavedPromptUseCase(any<SavedPromptRequest>()) } returns Result.success(savedPrompt)
+        coEvery { savedPromptRepository.findAll() } returnsMany listOf(emptyList(), listOf(savedPrompt))
+        advanceUntilIdle()
+
+        viewModel.updateSavedPromptEditorName("My Prompt")
+        viewModel.updateSavedPromptEditorContent("Summarize {{taskTitle}}")
+        viewModel.updateSavedPromptEditorCategory("Summarization")
+        viewModel.saveSavedPrompt()
+        advanceUntilIdle()
+
+        assertEquals("Prompt saved", viewModel.uiState.savedPromptFeedback)
+        assertFalse(viewModel.uiState.isSavedPromptSaving)
+        assertNull(viewModel.uiState.savedPromptEditor.id)
+    }
+
+    @Test
+    fun `saveSavedPrompt rejects blank name`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        viewModel.updateSavedPromptEditorContent("Some content")
+        viewModel.saveSavedPrompt()
+
+        assertEquals("Enter a prompt name", viewModel.uiState.savedPromptError)
+        assertFalse(viewModel.uiState.isSavedPromptSaving)
+    }
+
+    @Test
+    fun `saveSavedPrompt rejects blank content`() = runTest(testDispatcher) {
+        advanceUntilIdle()
+
+        viewModel.updateSavedPromptEditorName("My Prompt")
+        viewModel.saveSavedPrompt()
+
+        assertEquals("Enter the prompt content", viewModel.uiState.savedPromptError)
+        assertFalse(viewModel.uiState.isSavedPromptSaving)
+    }
+
+    @Test
+    fun `editSavedPrompt populates editor fields`() = runTest(testDispatcher) {
+        val promptId = java.util.UUID.randomUUID()
+        val prompt = SavedPrompt(
+            id = promptId,
+            name = "Existing Prompt",
+            content = "Existing content",
+            category = "Category",
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            createdAt = java.time.Instant.now(),
+            updatedAt = java.time.Instant.now()
+        )
+        advanceUntilIdle()
+
+        viewModel.editSavedPrompt(prompt)
+
+        assertEquals(promptId, viewModel.uiState.savedPromptEditor.id)
+        assertEquals("Existing Prompt", viewModel.uiState.savedPromptEditor.name)
+        assertEquals("Existing content", viewModel.uiState.savedPromptEditor.content)
+        assertEquals("Category", viewModel.uiState.savedPromptEditor.category)
+    }
+
+    @Test
+    fun `deleteSavedPrompt removes prompt and shows feedback`() = runTest(testDispatcher) {
+        val promptId = java.util.UUID.randomUUID()
+        coEvery { deleteSavedPromptUseCase(promptId) } returns Result.success(true)
+        coEvery { savedPromptRepository.findAll() } returnsMany listOf(emptyList(), emptyList())
+        advanceUntilIdle()
+
+        viewModel.deleteSavedPrompt(promptId)
+        advanceUntilIdle()
+
+        assertEquals("Prompt deleted", viewModel.uiState.savedPromptFeedback)
+    }
+
+    @Test
+    fun `applyPromptFromLibrary copies content into agent editor`() = runTest(testDispatcher) {
+        val prompt = SavedPrompt(
+            id = java.util.UUID.randomUUID(),
+            name = "Library Prompt",
+            content = "Summarize {{taskTitle}} for {{projectName}}",
+            category = null,
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            createdAt = java.time.Instant.now(),
+            updatedAt = java.time.Instant.now()
+        )
+        advanceUntilIdle()
+
+        viewModel.applyPromptFromLibrary(prompt)
+
+        assertEquals("Summarize {{taskTitle}} for {{projectName}}", viewModel.uiState.agentEditor.promptTemplate)
     }
 }

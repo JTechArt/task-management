@@ -1,0 +1,39 @@
+schema: 1
+story: "8.2"
+story_title: "Prompt Optimization and Persistence"
+gate: PASS
+status_reason: "All acceptance criteria now implemented. AC3 addressed via 'Load from saved prompts' dropdown in agent editor (applyPromptFromLibrary copies content into promptTemplate). Repository integration tests and ViewModel tests added."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-26T15:30:00Z"
+waiver: { active: false }
+top_issues: []
+evidence:
+  tests_reviewed: 16
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: "No secrets handling required; prompt content is user-provided text."
+  performance:
+    status: PASS
+    notes: "List loads via findAll; acceptable for settings."
+  reliability:
+    status: PASS
+    notes: "Persistence verified by SavedPromptRepositoryImplTest H2 integration tests."
+  maintainability:
+    status: PASS
+    notes: "SavedPromptRepositoryImplTest and SettingsViewModelTest cover save/edit/delete/validation/apply-from-library."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Consider showing project name in saved-prompt list for PROJECT scope (cosmetic)"
+    future:
+      - "Optional: direct GEPPA optimize-then-save API for one-click import from service"
+      - "Optional: save-time hint when prompt content resembles API keys or tokens"
+quality_score: 92
+expires: "2026-04-09T00:00:00Z"
