@@ -269,14 +269,23 @@ class TasksViewModel(
             taskApproachError = null,
             taskApproachTargetTaskId = null,
             taskApproachReviewState = TaskApproachReviewState.NONE,
-            isGeneratingTaskApproach = false
+            isGeneratingTaskApproach = false,
+            taskAutomationRuns = emptyList()
         )
 
         // Load repositories for the selected task's project
         if (task != null) {
             scope.launch {
                 val repositories = repositoryRepository.findByProject(task.projectId)
-                uiState = uiState.copy(projectRepositories = repositories)
+                val automationRuns = activityRepository.findFiltered(
+                    taskId = task.id,
+                    type = ActivityType.AGENT_EXECUTED,
+                    limit = 25
+                )
+                uiState = uiState.copy(
+                    projectRepositories = repositories,
+                    taskAutomationRuns = automationRuns
+                )
             }
             loadAvailableAgents(task.projectId, task, AgentTrigger.TASK_OPENED)
         } else {
@@ -673,6 +682,21 @@ class TasksViewModel(
                     )
                 }
             )
+            refreshTaskAutomationRuns(taskId)
+        }
+    }
+
+    private fun refreshTaskAutomationRuns(taskId: UUID) {
+        scope.launch {
+            val runs = activityRepository.findFiltered(
+                taskId = taskId,
+                type = ActivityType.AGENT_EXECUTED,
+                limit = 25
+            )
+            val selected = uiState.selectedTask
+            if (selected?.id == taskId) {
+                uiState = uiState.copy(taskAutomationRuns = runs)
+            }
         }
     }
 
@@ -975,5 +999,6 @@ data class TasksUiState(
     val taskApproachError: String? = null,
     val taskApproachDraft: TaskSolvingApproach? = null,
     val taskApproachTargetTaskId: UUID? = null,
-    val taskApproachReviewState: TaskApproachReviewState = TaskApproachReviewState.NONE
+    val taskApproachReviewState: TaskApproachReviewState = TaskApproachReviewState.NONE,
+    val taskAutomationRuns: List<Activity> = emptyList()
 )

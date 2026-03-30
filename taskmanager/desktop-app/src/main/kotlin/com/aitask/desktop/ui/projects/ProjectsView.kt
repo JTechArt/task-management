@@ -17,7 +17,8 @@ import com.aitask.desktop.ui.viewmodel.ProjectsViewModel
 @Composable
 fun ProjectsView(
     modifier: Modifier = Modifier,
-    viewModel: ProjectsViewModel = remember { ProjectsViewModel() }
+    viewModel: ProjectsViewModel = remember { ProjectsViewModel() },
+    onOpenAutomationHistoryForProject: (java.util.UUID) -> Unit = {}
 ) {
     val uiState = viewModel.uiState
     
@@ -215,7 +216,8 @@ fun ProjectsView(
                                     onDeleteSlackChannel = { viewModel.deleteSlackChannel(it) },
                                     onTestSlackMessage = { viewModel.sendSlackTestMessage(it) },
                                     isSendingSlackTest = uiState.isSendingSlackTest,
-                                    projectAgents = uiState.selectedProjectAgents
+                                    projectAgents = uiState.selectedProjectAgents,
+                                    onOpenAutomationHistory = onOpenAutomationHistoryForProject
                                 )
                             }
                         }

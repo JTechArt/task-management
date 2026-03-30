@@ -14,7 +14,9 @@ import com.aitask.core.config.EnvConfigLoader
 import com.aitask.core.logging.logStartup
 import com.aitask.desktop.di.DependencyContainer
 import com.aitask.desktop.ui.*
+import com.aitask.core.domain.model.ActivityType
 import com.aitask.desktop.ui.activity.ActivityView
+import com.aitask.desktop.ui.viewmodel.ActivityFilters
 import com.aitask.desktop.ui.dashboard.DashboardView
 import com.aitask.desktop.ui.integrations.IntegrationsView
 import com.aitask.desktop.ui.plugins.PluginManagementView
@@ -74,6 +76,7 @@ class AppLauncher(
 fun AppSurface(config: AppConfig, bootstrapResult: BootstrapResult) {
     var selectedNavItem by remember { mutableStateOf(NavigationItem.DASHBOARD) }
     var taskIdToSelectWhenShowingTasks by remember { mutableStateOf<java.util.UUID?>(null) }
+    var pendingActivityFilters by remember { mutableStateOf<ActivityFilters?>(null) }
 
     MaterialTheme(colorScheme = lightColorScheme()) {
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -95,17 +98,34 @@ fun AppSurface(config: AppConfig, bootstrapResult: BootstrapResult) {
                                 selectedNavItem = NavigationItem.TASKS
                             }
                         )
-                        NavigationItem.PROJECTS -> ProjectsView()
+                        NavigationItem.PROJECTS -> ProjectsView(
+                            onOpenAutomationHistoryForProject = { projectId ->
+                                pendingActivityFilters = ActivityFilters(
+                                    projectId = projectId,
+                                    type = ActivityType.AGENT_EXECUTED
+                                )
+                                selectedNavItem = NavigationItem.ACTIVITY
+                            }
+                        )
                         NavigationItem.ACTIVITY -> ActivityView(
                             databaseConnected = bootstrapResult.databaseInitialized,
                             onNavigateToTask = { taskId ->
                                 taskIdToSelectWhenShowingTasks = taskId
                                 selectedNavItem = NavigationItem.TASKS
-                            }
+                            },
+                            pendingFilters = pendingActivityFilters,
+                            onConsumePendingFilters = { pendingActivityFilters = null }
                         )
                         NavigationItem.TASKS -> TasksView(
                             taskIdToSelectOnMount = taskIdToSelectWhenShowingTasks,
-                            onMountedAfterSelection = { taskIdToSelectWhenShowingTasks = null }
+                            onMountedAfterSelection = { taskIdToSelectWhenShowingTasks = null },
+                            onOpenAutomationHistoryForTask = { taskId ->
+                                pendingActivityFilters = ActivityFilters(
+                                    taskId = taskId,
+                                    type = ActivityType.AGENT_EXECUTED
+                                )
+                                selectedNavItem = NavigationItem.ACTIVITY
+                            }
                         )
                         NavigationItem.RULES -> RulesView()
                         NavigationItem.INTEGRATIONS -> IntegrationsView()

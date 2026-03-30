@@ -9,6 +9,7 @@ import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.repository.RepositoryRepository
 import com.aitask.core.domain.repository.TaskRepository
 import com.aitask.core.domain.service.AgentExecutionService
+import com.aitask.core.domain.service.AutomationRunLogSanitizer
 import java.time.Instant
 import java.util.UUID
 
@@ -93,17 +94,24 @@ class RunAgentUseCase(
                 task = task,
                 project = project,
                 status = ActivityStatus.SUCCESS,
-                output = execution.generatedText,
+                approvedApproach = request.approvedApproach,
+                successOutputLength = execution.generatedText.length,
+                errorMessageForLog = null,
                 configuration = configuration,
                 geppaOptimized = geppaApplied
             )
         }.onFailure { error ->
+            val safeMessage: String = AutomationRunLogSanitizer.sanitizeErrorMessage(
+                error.message ?: error.javaClass.simpleName
+            )
             logAgentActivity(
                 agent = agent,
                 task = task,
                 project = project,
                 status = ActivityStatus.FAILED,
-                output = error.message ?: error.javaClass.simpleName,
+                approvedApproach = request.approvedApproach,
+                successOutputLength = null,
+                errorMessageForLog = safeMessage,
                 configuration = configuration,
                 geppaOptimized = geppaApplied
             )
@@ -182,36 +190,73 @@ class RunAgentUseCase(
         task: Task,
         project: Project,
         status: ActivityStatus,
-        output: String,
+        approvedApproach: TaskSolvingApproach?,
+        successOutputLength: Int?,
+        errorMessageForLog: String?,
         configuration: LlmConfiguration,
         geppaOptimized: Boolean = false
     ) {
         runCatching {
+            val planMetadata: Map<String, String> = buildPlanTraceMetadata(approvedApproach)
+            val baseMetadata: MutableMap<String, String> = mutableMapOf(
+                "agentName" to agent.name,
+                "agentId" to agent.id.toString(),
+                "taskTitle" to task.title,
+                "inputTaskId" to task.id.toString(),
+                "associatedTools" to agent.associatedTools.joinToString(",") { it.name },
+                "taskTypeFilter" to (agent.taskTypeFilter?.name ?: "ALL"),
+                "taskType" to task.taskType.name,
+                "scope" to agent.scope.name,
+                "trigger" to agent.trigger.name,
+                "configurationName" to configuration.name,
+                "modelIdentifier" to configuration.modelIdentifier,
+                "geppaOptimized" to geppaOptimized.toString(),
+                "resultStatus" to status.name
+            )
+            baseMetadata.putAll(planMetadata)
+            when (status) {
+                ActivityStatus.SUCCESS -> {
+                    baseMetadata["outputLength"] = successOutputLength?.toString() ?: "0"
+                }
+                ActivityStatus.FAILED -> {
+                    if (errorMessageForLog != null) {
+                        baseMetadata["errorMessage"] = errorMessageForLog
+                    }
+                }
+                ActivityStatus.IN_PROGRESS -> Unit
+            }
             activityRepository.create(
                 Activity(
                     id = UUID.randomUUID(),
                     type = ActivityType.AGENT_EXECUTED,
                     entityType = "task",
                     entityId = task.id,
-                    description = "Executed agent '${agent.name}' for task: ${task.title}",
-                    metadata = mapOf(
-                        "agentName" to agent.name,
-                        "associatedTools" to agent.associatedTools.joinToString(",") { it.name },
-                        "taskTypeFilter" to (agent.taskTypeFilter?.name ?: "ALL"),
-                        "taskType" to task.taskType.name,
-                        "scope" to agent.scope.name,
-                        "trigger" to agent.trigger.name,
-                        "configurationName" to configuration.name,
-                        "modelIdentifier" to configuration.modelIdentifier,
-                        "outputLength" to output.length.toString(),
-                        "geppaOptimized" to geppaOptimized.toString()
-                    ),
+                    description = "Automation run: agent '${agent.name}' on task '${task.title}' (${status.name})",
+                    metadata = baseMetadata,
                     createdAt = Instant.now(),
                     status = status,
                     projectId = project.id
                 )
             )
         }
+    }
+
+    private fun buildPlanTraceMetadata(approvedApproach: TaskSolvingApproach?): Map<String, String> {
+        if (approvedApproach == null) {
+            return mapOf(
+                "hasUserApprovedPlan" to "false",
+                "approachStepCount" to "0",
+                "approachSummary" to "",
+                "approachStepTitles" to ""
+            )
+        }
+        val titles: List<String> = approvedApproach.steps.map { it.title.trim() }.filter { it.isNotEmpty() }
+        return mapOf(
+            "hasUserApprovedPlan" to "true",
+            "approachStepCount" to approvedApproach.steps.size.toString(),
+            "approachSummary" to AutomationRunLogSanitizer.truncateApproachSummary(approvedApproach.summary),
+            "approachStepTitles" to AutomationRunLogSanitizer.joinStepTitles(titles)
+        )
     }
 }
 

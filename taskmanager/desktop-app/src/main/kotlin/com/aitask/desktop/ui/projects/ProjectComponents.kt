@@ -278,6 +278,7 @@ fun ProjectDetailView(
     onTestSlackMessage: (SlackChannelConfig) -> Unit = {},
     isSendingSlackTest: Boolean = false,
     projectAgents: List<AgentDefinition> = emptyList(),
+    onOpenAutomationHistory: (UUID) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember(selectedDetailTab) { mutableStateOf(selectedDetailTab) }
@@ -424,6 +425,9 @@ fun ProjectDetailView(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
         )
+        TextButton(onClick = { onOpenAutomationHistory(project.id) }) {
+            Text("View automation run history")
+        }
         if (projectAgents.isEmpty()) {
             Text(
                 text = "No automation agents are enabled for this project yet.",

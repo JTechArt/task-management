@@ -474,6 +474,8 @@ fun TaskDetailView(
     taskApproachDraft: TaskSolvingApproach? = null,
     taskApproachTargetTaskId: UUID? = null,
     taskApproachReviewState: TaskApproachReviewState = TaskApproachReviewState.NONE,
+    taskAutomationRuns: List<Activity> = emptyList(),
+    onOpenAutomationHistoryForTask: ((UUID) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var methodologyExpanded by remember { mutableStateOf(false) }
@@ -1022,6 +1024,49 @@ fun TaskDetailView(
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Automation run history",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Each run records the task, a short plan summary and step titles (not full prompts), and success or failure. Open Activity for filters and search.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                if (taskAutomationRuns.isEmpty()) {
+                    Text(
+                        text = "No automation runs recorded for this task yet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    taskAutomationRuns.forEach { run ->
+                        val statusLabel: String = run.status.name.replace('_', ' ')
+                        val planHint: String = run.metadata["approachSummary"]?.trim()?.take(100)?.takeIf { it.isNotEmpty() }
+                            ?.let { s -> " — $s" } ?: ""
+                        Text(
+                            text = "${formatDate(run.createdAt)} · $statusLabel$planHint",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                onOpenAutomationHistoryForTask?.let { open ->
+                    TextButton(onClick = { open(task.id) }) {
+                        Text("Open full history (Activity)")
+                    }
                 }
             }
         }

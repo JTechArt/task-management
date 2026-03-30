@@ -1,6 +1,7 @@
 package com.aitask.desktop.ui.activity
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.aitask.core.domain.model.Activity
 import com.aitask.core.domain.model.ActivityStatus
+import com.aitask.core.domain.model.ActivityType
+import com.aitask.desktop.ui.viewmodel.ActivityFilters
 import com.aitask.desktop.ui.viewmodel.ActivityViewModel
 import java.time.Instant
 
@@ -22,10 +25,17 @@ import java.time.Instant
 fun ActivityView(
     databaseConnected: Boolean = true,
     onNavigateToTask: (java.util.UUID) -> Unit = {},
+    pendingFilters: ActivityFilters? = null,
+    onConsumePendingFilters: (() -> Unit)? = null,
     viewModel: ActivityViewModel = remember { ActivityViewModel() }
 ) {
     LaunchedEffect(databaseConnected) {
         if (databaseConnected) viewModel.loadActivities()
+    }
+    LaunchedEffect(pendingFilters) {
+        val f = pendingFilters ?: return@LaunchedEffect
+        viewModel.applyFilters(f)
+        onConsumePendingFilters?.invoke()
     }
     val uiState = viewModel.uiState
     Column(
@@ -39,7 +49,7 @@ fun ActivityView(
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Review recent events: task creation, workspace preparation, IDE launch, Git preparation, and rule application.",
+            text = "Includes automation runs (agent executions), task and workspace events. Filter by project, task, event type, status, date, or search text.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.padding(top = 4.dp)
@@ -49,11 +59,19 @@ fun ActivityView(
             selectedProjectId = uiState.filters.projectId,
             selectedTaskId = uiState.filters.taskId,
             selectedType = uiState.filters.type,
+            selectedStatus = uiState.filters.status,
+            dateFrom = uiState.filters.dateFrom,
+            dateTo = uiState.filters.dateTo,
+            searchQuery = uiState.filters.searchQuery,
             projects = uiState.projects,
             tasks = uiState.tasks,
             onProjectFilterChange = { viewModel.setProjectFilter(it) },
             onTaskFilterChange = { viewModel.setTaskFilter(it) },
             onTypeFilterChange = { viewModel.setTypeFilter(it) },
+            onStatusFilterChange = { viewModel.setStatusFilter(it) },
+            onDateFromChange = { viewModel.setDateFrom(it) },
+            onDateToChange = { viewModel.setDateTo(it) },
+            onSearchQueryChange = { viewModel.setSearchQuery(it) },
             onClearFilters = { viewModel.clearFilters() }
         )
         Spacer(Modifier.height(16.dp))
@@ -83,7 +101,7 @@ fun ActivityView(
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(uiState.activities) { activity ->
-                    ActivityRow(activity = activity)
+                    ActivityRow(activity = activity, onNavigateToTask = onNavigateToTask)
                 }
             }
         }
@@ -107,12 +125,20 @@ fun ActivityView(
 private fun ActivityFiltersSection(
     selectedProjectId: java.util.UUID?,
     selectedTaskId: java.util.UUID?,
-    selectedType: com.aitask.core.domain.model.ActivityType?,
+    selectedType: ActivityType?,
+    selectedStatus: ActivityStatus?,
+    dateFrom: String,
+    dateTo: String,
+    searchQuery: String,
     projects: List<com.aitask.core.domain.model.Project>,
     tasks: List<com.aitask.core.domain.model.Task>,
     onProjectFilterChange: (java.util.UUID?) -> Unit,
     onTaskFilterChange: (java.util.UUID?) -> Unit,
-    onTypeFilterChange: (com.aitask.core.domain.model.ActivityType?) -> Unit,
+    onTypeFilterChange: (ActivityType?) -> Unit,
+    onStatusFilterChange: (ActivityStatus?) -> Unit,
+    onDateFromChange: (String) -> Unit,
+    onDateToChange: (String) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
     onClearFilters: () -> Unit
 ) {
     Card(
@@ -252,7 +278,7 @@ private fun ActivityFiltersSection(
                                     expanded = false
                                 }
                             )
-                            com.aitask.core.domain.model.ActivityType.entries.forEach { type ->
+                            ActivityType.entries.forEach { type ->
                                 DropdownMenuItem(
                                     text = { Text(type.name.replace('_', ' ')) },
                                     onClick = {
@@ -268,12 +294,89 @@ private fun ActivityFiltersSection(
                     Text("Clear filters")
                 }
             }
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedCard(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    var expanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedStatus?.name?.replace('_', ' ') ?: "All statuses",
+                            onValueChange = {},
+                            readOnly = true,
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
+                            label = { Text("Status") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("All statuses") },
+                                onClick = {
+                                    onStatusFilterChange(null)
+                                    expanded = false
+                                }
+                            )
+                            ActivityStatus.entries.forEach { st ->
+                                DropdownMenuItem(
+                                    text = { Text(st.name.replace('_', ' ')) },
+                                    onClick = {
+                                        onStatusFilterChange(st)
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = dateFrom,
+                    onValueChange = onDateFromChange,
+                    label = { Text("From date") },
+                    placeholder = { Text("yyyy-MM-dd") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = dateTo,
+                    onValueChange = onDateToChange,
+                    label = { Text("To date") },
+                    placeholder = { Text("yyyy-MM-dd") },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                label = { Text("Search description and details") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
         }
     }
 }
 
 @Composable
-private fun ActivityRow(activity: Activity) {
+private fun ActivityRow(
+    activity: Activity,
+    onNavigateToTask: (java.util.UUID) -> Unit
+) {
+    var expanded by remember(activity.id) { mutableStateOf(false) }
     val statusColor = when (activity.status) {
         ActivityStatus.SUCCESS -> Color(0xFF2E7D32)
         ActivityStatus.FAILED -> Color(0xFFC62828)
@@ -290,53 +393,114 @@ private fun ActivityRow(activity: Activity) {
         ActivityStatus.IN_PROGRESS -> statusColor.copy(alpha = 0.3f)
     }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = activity.type == ActivityType.AGENT_EXECUTED) { expanded = !expanded },
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(8.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        color = statusColor.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = activity.status.name.take(1).uppercase(),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = statusColor
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = activity.description,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = activity.type.name.replace('_', ' '),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+                Text(
+                    text = formatRelativeTime(activity.createdAt),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+            if (expanded && activity.type == ActivityType.AGENT_EXECUTED) {
+                Spacer(Modifier.height(12.dp))
+                AutomationRunMetadataSection(activity = activity, onNavigateToTask = onNavigateToTask)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AutomationRunMetadataSection(
+    activity: Activity,
+    onNavigateToTask: (java.util.UUID) -> Unit
+) {
+    val meta: Map<String, String> = activity.metadata
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    color = statusColor.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = activity.status.name.take(1).uppercase(),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = statusColor
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = activity.description,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = activity.type.name.replace('_', ' '),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                }
+            meta["taskTitle"]?.let {
+                Text(
+                    text = "Task: $it",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f)
+                )
             }
+            TextButton(onClick = { onNavigateToTask(activity.entityId) }) {
+                Text("Open task")
+            }
+        }
+        meta["hasUserApprovedPlan"]?.let {
+            Text("User-approved plan: $it", style = MaterialTheme.typography.bodySmall)
+        }
+        meta["approachSummary"]?.takeIf { it.isNotBlank() }?.let {
+            Text("Plan summary: $it", style = MaterialTheme.typography.bodySmall)
+        }
+        meta["approachStepTitles"]?.takeIf { it.isNotBlank() }?.let {
+            Text("Steps: $it", style = MaterialTheme.typography.bodySmall)
+        }
+        meta["resultStatus"]?.let {
+            Text("Result: $it", style = MaterialTheme.typography.bodySmall)
+        }
+        meta["errorMessage"]?.let {
             Text(
-                text = formatRelativeTime(activity.createdAt),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                text = "Error: $it",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
             )
+        }
+        meta["outputLength"]?.let {
+            Text("Output length (chars): $it", style = MaterialTheme.typography.bodySmall)
+        }
+        meta["modelIdentifier"]?.let {
+            Text("Model: $it", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

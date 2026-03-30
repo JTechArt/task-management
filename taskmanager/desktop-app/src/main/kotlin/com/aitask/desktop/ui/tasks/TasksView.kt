@@ -22,7 +22,8 @@ fun TasksView(
     modifier: Modifier = Modifier,
     viewModel: TasksViewModel = remember { TasksViewModel() },
     taskIdToSelectOnMount: UUID? = null,
-    onMountedAfterSelection: (() -> Unit)? = null
+    onMountedAfterSelection: (() -> Unit)? = null,
+    onOpenAutomationHistoryForTask: ((UUID) -> Unit)? = null
 ) {
     val uiState = viewModel.uiState
 
@@ -393,7 +394,9 @@ fun TasksView(
                             taskApproachError = uiState.taskApproachError,
                             taskApproachDraft = uiState.taskApproachDraft,
                             taskApproachTargetTaskId = uiState.taskApproachTargetTaskId,
-                            taskApproachReviewState = uiState.taskApproachReviewState
+                            taskApproachReviewState = uiState.taskApproachReviewState,
+                            taskAutomationRuns = uiState.taskAutomationRuns,
+                            onOpenAutomationHistoryForTask = onOpenAutomationHistoryForTask
                         )
                     }
                 }

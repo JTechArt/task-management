@@ -57,6 +57,9 @@ class ActivityViewModelTest {
                 projectId = null,
                 taskId = null,
                 type = null,
+                status = null,
+                createdAfterInclusive = null,
+                createdBeforeExclusive = null,
                 limit = 100
             )
         } returns activities
@@ -80,6 +83,9 @@ class ActivityViewModelTest {
                 projectId = projectId,
                 taskId = null,
                 type = null,
+                status = null,
+                createdAfterInclusive = null,
+                createdBeforeExclusive = null,
                 limit = 100
             )
         } returns activities
@@ -98,6 +104,9 @@ class ActivityViewModelTest {
                 projectId = null,
                 taskId = null,
                 type = ActivityType.IDE_LAUNCHED,
+                status = null,
+                createdAfterInclusive = null,
+                createdBeforeExclusive = null,
                 limit = 100
             )
         } returns emptyList()
@@ -116,6 +125,9 @@ class ActivityViewModelTest {
                 projectId = projectId,
                 taskId = null,
                 type = null,
+                status = null,
+                createdAfterInclusive = null,
+                createdBeforeExclusive = null,
                 limit = 100
             )
         } returns emptyList()
@@ -126,6 +138,9 @@ class ActivityViewModelTest {
                 projectId = null,
                 taskId = null,
                 type = null,
+                status = null,
+                createdAfterInclusive = null,
+                createdBeforeExclusive = null,
                 limit = 100
             )
         } returns emptyList()
@@ -134,13 +149,18 @@ class ActivityViewModelTest {
         assertNull(viewModel.uiState.filters.projectId)
         assertNull(viewModel.uiState.filters.taskId)
         assertNull(viewModel.uiState.filters.type)
+        assertNull(viewModel.uiState.filters.status)
+        assertEquals("", viewModel.uiState.filters.dateFrom)
+        assertEquals("", viewModel.uiState.filters.searchQuery)
     }
 
     @Test
     fun `loadActivities sets error when repository throws`() = runTest(testDispatcher) {
         coEvery { projectRepository.findAllActive() } returns emptyList()
         coEvery { taskRepository.findAll() } returns emptyList()
-        coEvery { activityRepository.findFiltered(any(), any(), any(), any()) } throws RuntimeException("DB error")
+        coEvery {
+            activityRepository.findFiltered(any(), any(), any(), any(), any(), any(), any())
+        } throws RuntimeException("DB error")
         viewModel.loadActivities()
         advanceUntilIdle()
         assertEquals("DB error", viewModel.uiState.error)

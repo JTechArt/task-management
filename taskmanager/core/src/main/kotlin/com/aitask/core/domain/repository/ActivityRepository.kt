@@ -1,7 +1,9 @@
 package com.aitask.core.domain.repository
 
 import com.aitask.core.domain.model.Activity
+import com.aitask.core.domain.model.ActivityStatus
 import com.aitask.core.domain.model.ActivityType
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -34,12 +36,17 @@ interface ActivityRepository {
     suspend fun findRecent(limit: Int = 50): List<Activity>
     
     /**
-     * Find activities with optional filters (project, task, type). Results in chronological order, most recent first.
+     * Find activities with optional filters (project, task, type, status, date range).
+     * [createdAfterInclusive] and [createdBeforeExclusive] filter on [Activity.createdAt] (inclusive start, exclusive end).
+     * Results in chronological order, most recent first.
      */
     suspend fun findFiltered(
-        projectId: java.util.UUID? = null,
-        taskId: java.util.UUID? = null,
+        projectId: UUID? = null,
+        taskId: UUID? = null,
         type: ActivityType? = null,
+        status: ActivityStatus? = null,
+        createdAfterInclusive: Instant? = null,
+        createdBeforeExclusive: Instant? = null,
         limit: Int = 100
     ): List<Activity>
     
