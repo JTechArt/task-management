@@ -356,6 +356,11 @@ fun TasksView(
                             },
                             onClearAgentRunResult = { viewModel.clearAgentRunResult() },
                             onSelectAgent = { viewModel.selectAgent(it) },
+                            onGenerateTaskApproach = { taskId -> viewModel.generateTaskApproach(taskId) },
+                            onUpdateTaskApproachSummary = { viewModel.updateTaskApproachSummary(it) },
+                            onUpdateTaskApproachStep = { index, step -> viewModel.updateTaskApproachStep(index, step) },
+                            onApproveTaskApproach = { viewModel.approveTaskApproach() },
+                            onRejectTaskApproach = { viewModel.rejectTaskApproach() },
                             availableIDEs = uiState.availableIDEs,
                             preferredIDEs = uiState.projectRepositories.flatMap { it.preferredIDEs }.distinct(),
                             availableAgents = uiState.availableAgents,
@@ -378,7 +383,12 @@ fun TasksView(
                             isRunningAgent = uiState.isRunningAgent,
                             agentRunError = uiState.agentRunError,
                             agentRunResult = uiState.agentRunResult,
-                            agentRunTargetTaskId = uiState.agentRunTargetTaskId
+                            agentRunTargetTaskId = uiState.agentRunTargetTaskId,
+                            isGeneratingTaskApproach = uiState.isGeneratingTaskApproach,
+                            taskApproachError = uiState.taskApproachError,
+                            taskApproachDraft = uiState.taskApproachDraft,
+                            taskApproachTargetTaskId = uiState.taskApproachTargetTaskId,
+                            taskApproachReviewState = uiState.taskApproachReviewState
                         )
                     }
                 }

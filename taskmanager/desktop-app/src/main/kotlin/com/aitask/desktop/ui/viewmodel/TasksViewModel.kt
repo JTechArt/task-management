@@ -38,6 +38,7 @@ class TasksViewModel(
     private val generateGitAssistantSuggestionUseCase: GenerateGitAssistantSuggestionUseCase = DependencyContainer.generateGitAssistantSuggestionUseCase,
     private val getAgentDefinitionsUseCase: GetAgentDefinitionsUseCase = DependencyContainer.getAgentDefinitionsUseCase,
     private val runAgentUseCase: RunAgentUseCase = DependencyContainer.runAgentUseCase,
+    private val generateTaskApproachUseCase: GenerateTaskApproachUseCase = DependencyContainer.generateTaskApproachUseCase,
     private val ideService: IDEService = DependencyContainer.ideService,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
     private val projectRepository: com.aitask.core.domain.repository.ProjectRepository = DependencyContainer.projectRepository,
@@ -261,7 +262,15 @@ class TasksViewModel(
     }
     
     fun selectTask(task: Task?) {
-        uiState = uiState.copy(selectedTask = task, error = null)
+        uiState = uiState.copy(
+            selectedTask = task,
+            error = null,
+            taskApproachDraft = null,
+            taskApproachError = null,
+            taskApproachTargetTaskId = null,
+            taskApproachReviewState = TaskApproachReviewState.NONE,
+            isGeneratingTaskApproach = false
+        )
 
         // Load repositories for the selected task's project
         if (task != null) {
@@ -657,6 +666,67 @@ class TasksViewModel(
         )
     }
 
+    fun generateTaskApproach(taskId: UUID) {
+        uiState = uiState.copy(
+            isGeneratingTaskApproach = true,
+            taskApproachError = null,
+            taskApproachTargetTaskId = taskId,
+            taskApproachReviewState = TaskApproachReviewState.NONE
+        )
+        scope.launch {
+            val result = generateTaskApproachUseCase(
+                GenerateTaskApproachRequest(taskId = taskId, agentId = uiState.selectedAgentId)
+            )
+            result.fold(
+                onSuccess = { output ->
+                    uiState = uiState.copy(
+                        isGeneratingTaskApproach = false,
+                        taskApproachDraft = output.approach,
+                        taskApproachReviewState = TaskApproachReviewState.PENDING_REVIEW,
+                        taskApproachError = null
+                    )
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isGeneratingTaskApproach = false,
+                        taskApproachError = error.message ?: "Failed to generate solving approach"
+                    )
+                }
+            )
+        }
+    }
+
+    fun updateTaskApproachSummary(summary: String) {
+        val draft = uiState.taskApproachDraft ?: return
+        uiState = uiState.copy(taskApproachDraft = draft.copy(summary = summary))
+    }
+
+    fun updateTaskApproachStep(index: Int, step: TaskApproachStep) {
+        val draft = uiState.taskApproachDraft ?: return
+        val steps = draft.steps.toMutableList()
+        if (index !in steps.indices) {
+            return
+        }
+        steps[index] = step
+        uiState = uiState.copy(taskApproachDraft = draft.copy(steps = steps))
+    }
+
+    fun approveTaskApproach() {
+        if (uiState.taskApproachDraft == null) {
+            return
+        }
+        uiState = uiState.copy(taskApproachReviewState = TaskApproachReviewState.APPROVED)
+    }
+
+    fun rejectTaskApproach() {
+        uiState = uiState.copy(
+            taskApproachDraft = null,
+            taskApproachReviewState = TaskApproachReviewState.REJECTED,
+            taskApproachError = null,
+            taskApproachTargetTaskId = null
+        )
+    }
+
     fun markGitAssistantSuggestionUsed(
         taskId: UUID,
         mode: GitAssistantSuggestionMode,
@@ -848,5 +918,10 @@ data class TasksUiState(
     val isRunningAgent: Boolean = false,
     val agentRunError: String? = null,
     val agentRunResult: String? = null,
-    val agentRunTargetTaskId: UUID? = null
+    val agentRunTargetTaskId: UUID? = null,
+    val isGeneratingTaskApproach: Boolean = false,
+    val taskApproachError: String? = null,
+    val taskApproachDraft: TaskSolvingApproach? = null,
+    val taskApproachTargetTaskId: UUID? = null,
+    val taskApproachReviewState: TaskApproachReviewState = TaskApproachReviewState.NONE
 )

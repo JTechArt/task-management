@@ -438,6 +438,11 @@ fun TaskDetailView(
     onRunAgent: ((UUID, UUID) -> Unit)? = null,
     onClearAgentRunResult: (() -> Unit)? = null,
     onSelectAgent: ((UUID?) -> Unit)? = null,
+    onGenerateTaskApproach: ((UUID) -> Unit)? = null,
+    onUpdateTaskApproachSummary: ((String) -> Unit)? = null,
+    onUpdateTaskApproachStep: ((Int, TaskApproachStep) -> Unit)? = null,
+    onApproveTaskApproach: (() -> Unit)? = null,
+    onRejectTaskApproach: (() -> Unit)? = null,
     availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
     preferredIDEs: List<IDEType> = emptyList(),
     availableAgents: List<AgentDefinition> = emptyList(),
@@ -461,6 +466,11 @@ fun TaskDetailView(
     agentRunError: String? = null,
     agentRunResult: String? = null,
     agentRunTargetTaskId: UUID? = null,
+    isGeneratingTaskApproach: Boolean = false,
+    taskApproachError: String? = null,
+    taskApproachDraft: TaskSolvingApproach? = null,
+    taskApproachTargetTaskId: UUID? = null,
+    taskApproachReviewState: TaskApproachReviewState = TaskApproachReviewState.NONE,
     modifier: Modifier = Modifier
 ) {
     var methodologyExpanded by remember { mutableStateOf(false) }
@@ -478,6 +488,7 @@ fun TaskDetailView(
     val taskContentSuggestionForCurrentTask = taskContentSuggestionTargetTaskId == task.id && taskContentSuggestion != null
     val gitAssistantSuggestionForCurrentTask = gitAssistantSuggestionTargetTaskId == task.id && gitAssistantSuggestion != null
     val agentRunResultForCurrentTask = agentRunTargetTaskId == task.id && agentRunResult != null
+    val taskApproachForCurrentTask = taskApproachTargetTaskId == task.id && taskApproachDraft != null
     val clipboardManager = LocalClipboardManager.current
     LaunchedEffect(task.methodologyOverride) {
         selectedMethodologyOverride = task.methodologyOverride
@@ -728,6 +739,147 @@ fun TaskDetailView(
                 if (gitAssistantSuggestionError != null && gitAssistantSuggestionTargetTaskId == task.id) {
                     Text(
                         text = gitAssistantSuggestionError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Solving approach",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Generate a structured plan (steps, tools, prompts) using your local LLM with GEPPA prompt optimization when enabled. " +
+                        "Uses the agent selected below for tool associations when one matches this project and task type.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { onGenerateTaskApproach?.invoke(task.id) },
+                        enabled = !isGeneratingTaskApproach && onGenerateTaskApproach != null
+                    ) {
+                        Text(if (isGeneratingTaskApproach) "Generating..." else "Generate approach")
+                    }
+                    if (taskApproachForCurrentTask) {
+                        OutlinedButton(
+                            onClick = { onGenerateTaskApproach?.invoke(task.id) },
+                            enabled = !isGeneratingTaskApproach && onGenerateTaskApproach != null
+                        ) {
+                            Text("Regenerate")
+                        }
+                    }
+                }
+                if (taskApproachForCurrentTask && taskApproachDraft != null) {
+                    val draft = taskApproachDraft
+                    if (taskApproachReviewState == TaskApproachReviewState.APPROVED) {
+                        AssistChip(
+                            onClick = {},
+                            enabled = false,
+                            label = { Text("Approved for next execution") }
+                        )
+                    }
+                    OutlinedTextField(
+                        value = draft.summary,
+                        onValueChange = { onUpdateTaskApproachSummary?.invoke(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4,
+                        label = { Text("Summary") },
+                        enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED
+                    )
+                    draft.steps.forEachIndexed { index, step ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "Step ${index + 1}",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                OutlinedTextField(
+                                    value = step.title,
+                                    onValueChange = { text ->
+                                        onUpdateTaskApproachStep?.invoke(index, step.copy(title = text))
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    label = { Text("Title") },
+                                    enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED
+                                )
+                                OutlinedTextField(
+                                    value = step.detail,
+                                    onValueChange = { text ->
+                                        onUpdateTaskApproachStep?.invoke(index, step.copy(detail = text))
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    minLines = 2,
+                                    maxLines = 6,
+                                    label = { Text("Detail") },
+                                    enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED
+                                )
+                                Text(
+                                    text = "Suggested tools: " + if (step.suggestedTools.isEmpty()) {
+                                        "(none)"
+                                    } else {
+                                        step.suggestedTools.joinToString(", ") { k ->
+                                            when (k) {
+                                                AgentToolKind.LOCAL_LLM -> "Local LLM"
+                                                AgentToolKind.CODEX -> "Codex"
+                                                AgentToolKind.CLAUDE -> "Claude"
+                                            }
+                                        }
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                                )
+                                OutlinedTextField(
+                                    value = step.prompt ?: "",
+                                    onValueChange = { text ->
+                                        onUpdateTaskApproachStep?.invoke(index, step.copy(prompt = text.takeIf { it.isNotBlank() }))
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    minLines = 2,
+                                    maxLines = 6,
+                                    label = { Text("Prompt / checklist") },
+                                    enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED
+                                )
+                            }
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { onApproveTaskApproach?.invoke() },
+                            enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED && onApproveTaskApproach != null
+                        ) {
+                            Text("Approve")
+                        }
+                        OutlinedButton(
+                            onClick = { onRejectTaskApproach?.invoke() },
+                            enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED && onRejectTaskApproach != null
+                        ) {
+                            Text("Reject")
+                        }
+                    }
+                }
+                if (taskApproachError != null && taskApproachTargetTaskId == task.id) {
+                    Text(
+                        text = taskApproachError,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall
                     )

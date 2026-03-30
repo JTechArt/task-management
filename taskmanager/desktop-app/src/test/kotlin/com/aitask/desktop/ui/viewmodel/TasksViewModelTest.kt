@@ -112,6 +112,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = slackNotificationService,
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -234,6 +235,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -345,6 +347,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -432,6 +435,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -527,6 +531,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -583,6 +588,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -647,6 +653,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -735,6 +742,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -776,6 +784,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -858,6 +867,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -899,6 +909,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()

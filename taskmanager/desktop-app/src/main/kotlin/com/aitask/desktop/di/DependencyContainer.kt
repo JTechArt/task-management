@@ -16,6 +16,7 @@ import com.aitask.core.domain.service.GeppaConnectionValidator
 import com.aitask.core.domain.service.GeppaPromptOptimizationService
 import com.aitask.core.domain.service.GitAssistantSuggestionService
 import com.aitask.core.domain.service.LlmConnectionValidator
+import com.aitask.core.domain.service.TaskApproachGenerationService
 import com.aitask.core.domain.service.TaskContentGenerationService
 import com.aitask.core.domain.service.RuleApplicationService
 import com.aitask.core.domain.service.EncryptionService
@@ -42,6 +43,7 @@ import com.aitask.core.infrastructure.llm.DefaultGeppaConnectionValidator
 import com.aitask.core.infrastructure.llm.DefaultGeppaPromptOptimizationService
 import com.aitask.core.infrastructure.llm.DefaultGitAssistantSuggestionService
 import com.aitask.core.infrastructure.llm.DefaultLlmConnectionValidator
+import com.aitask.core.infrastructure.llm.DefaultTaskApproachGenerationService
 import com.aitask.core.infrastructure.llm.DefaultTaskContentGenerationService
 import com.aitask.core.infrastructure.mcp.DefaultMcpBridgeService
 import com.aitask.core.infrastructure.plugin.DefaultPluginPrerequisiteProbe
@@ -230,6 +232,10 @@ object DependencyContainer {
 
     val taskContentGenerationService: TaskContentGenerationService by lazy {
         DefaultTaskContentGenerationService(geppaPromptOptimizationService)
+    }
+
+    val taskApproachGenerationService: TaskApproachGenerationService by lazy {
+        DefaultTaskApproachGenerationService(geppaPromptOptimizationService)
     }
 
     val gitAssistantSuggestionService: GitAssistantSuggestionService by lazy {
@@ -490,6 +496,17 @@ object DependencyContainer {
             projectRepository,
             llmConfigurationRepository,
             taskContentGenerationService
+        )
+    }
+
+    val generateTaskApproachUseCase: GenerateTaskApproachUseCase by lazy {
+        GenerateTaskApproachUseCase(
+            taskRepository,
+            projectRepository,
+            repositoryRepository,
+            agentDefinitionRepository,
+            llmConfigurationRepository,
+            taskApproachGenerationService
         )
     }
 
