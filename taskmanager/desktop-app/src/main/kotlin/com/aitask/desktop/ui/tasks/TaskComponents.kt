@@ -221,6 +221,126 @@ fun TaskFilters(
 }
 
 @Composable
+fun UnifiedAiToolsSection(
+    taskId: UUID,
+    onRunCodex: ((UUID) -> Unit)?,
+    onRunClaude: ((UUID) -> Unit)?,
+    isLaunchingCodex: Boolean,
+    isLaunchingClaude: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val hasCodex: Boolean = onRunCodex != null
+    val hasClaude: Boolean = onRunClaude != null
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "AI tools",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        if (!hasCodex && !hasClaude) {
+            Text(
+                text = "No AI tools are configured. Enable Codex CLI and/or Claude in Settings → AI Studio to launch from this task.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        } else {
+            Text(
+                text = "Pre-run scripts from the project run before launch when configured. Each tool writes TASK_CONTEXT.md and runs on its own—you can use another tool from this screen without navigating away.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+            )
+            when {
+                hasCodex && hasClaude -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { onRunCodex?.invoke(taskId) },
+                            enabled = !isLaunchingCodex,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            AiToolLaunchButtonContent(
+                                isLoading = isLaunchingCodex,
+                                labelLoading = "Starting Codex…",
+                                labelIdle = "Run with Codex"
+                            )
+                        }
+                        Button(
+                            onClick = { onRunClaude?.invoke(taskId) },
+                            enabled = !isLaunchingClaude,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            AiToolLaunchButtonContent(
+                                isLoading = isLaunchingClaude,
+                                labelLoading = "Running Claude…",
+                                labelIdle = "Run with Claude"
+                            )
+                        }
+                    }
+                }
+                hasCodex -> {
+                    Button(
+                        onClick = { onRunCodex?.invoke(taskId) },
+                        enabled = !isLaunchingCodex,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        AiToolLaunchButtonContent(
+                            isLoading = isLaunchingCodex,
+                            labelLoading = "Starting Codex…",
+                            labelIdle = "Run with Codex"
+                        )
+                    }
+                    Text(
+                        text = "Opens Codex in a terminal with TASK_CONTEXT.md and AITASK_* environment variables.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                    )
+                }
+                else -> {
+                    Button(
+                        onClick = { onRunClaude?.invoke(taskId) },
+                        enabled = !isLaunchingClaude,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        AiToolLaunchButtonContent(
+                            isLoading = isLaunchingClaude,
+                            labelLoading = "Running Claude…",
+                            labelIdle = "Run with Claude"
+                        )
+                    }
+                    Text(
+                        text = "CLI mode uses a terminal; API mode sends task context to Anthropic in the background.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiToolLaunchButtonContent(
+    isLoading: Boolean,
+    labelLoading: String,
+    labelIdle: String
+) {
+    if (isLoading) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(16.dp),
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.onPrimary
+        )
+        Spacer(Modifier.width(8.dp))
+    }
+    Text(if (isLoading) labelLoading else labelIdle)
+}
+
+@Composable
 fun TaskListItem(
     task: Task,
     isSelected: Boolean,
@@ -307,6 +427,8 @@ fun TaskDetailView(
     onSaveDescription: (UUID, String?) -> Unit = { _, _ -> },
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
+    onRunCodex: ((UUID) -> Unit)? = null,
+    onRunClaude: ((UUID) -> Unit)? = null,
     onCleanupWorkspace: ((Task) -> Unit)? = null,
     onGenerateTaskContentSuggestion: ((UUID, String, String?, TaskType, TaskContentGenerationMode, UUID?) -> Unit)? = null,
     onClearTaskContentSuggestion: (() -> Unit)? = null,
@@ -323,6 +445,8 @@ fun TaskDetailView(
     isGeneratingWorkspace: Boolean = false,
     workspaceGenerationProgress: String? = null,
     isLaunchingIDE: Boolean = false,
+    isLaunchingCodex: Boolean = false,
+    isLaunchingClaude: Boolean = false,
     isCleaningUpWorkspace: Boolean = false,
     isGeneratingTaskContent: Boolean = false,
     taskContentGenerationError: String? = null,
@@ -960,6 +1084,15 @@ fun TaskDetailView(
                     }
                 }
             }
+
+            UnifiedAiToolsSection(
+                taskId = task.id,
+                onRunCodex = onRunCodex,
+                onRunClaude = onRunClaude,
+                isLaunchingCodex = isLaunchingCodex,
+                isLaunchingClaude = isLaunchingClaude,
+                modifier = Modifier.padding(top = 16.dp)
+            )
 
             if (task.isCompleted && task.workspacePath != null && task.workspaceCleanedAt == null && onCleanupWorkspace != null) {
                 Spacer(Modifier.height(16.dp))

@@ -1,0 +1,40 @@
+schema: 1
+story: "9.1"
+story_title: "Codex CLI Integration"
+gate: PASS
+status_reason: "LaunchCodexUseCaseTest plus Settings/Tasks ViewModel Codex tests cover prior TEST-001; :core:test and :desktop-app:test pass. ACs have automated backing at unit level."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-30T22:00:00Z"
+waiver: { active: false }
+top_issues: []
+evidence:
+  tests_reviewed: 15
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Encrypted API key; no key material in test assertions beyond mocked strings; CLI path validation unchanged."
+  performance:
+    status: PASS
+    notes: "No change; subprocess timeouts remain."
+  reliability:
+    status: PASS
+    notes: "Failure paths covered in LaunchCodexUseCaseTest; end-user terminal quirks remain OS-specific (acceptable for story scope)."
+  maintainability:
+    status: PASS
+    notes: "Core use case and ViewModel paths now have unit tests."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
+  highest:
+    id: "OPS-001"
+    score: 2
+    title: "OS-specific terminal behavior remains manual-smoke territory"
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Optional: DesktopCodexCliService contract tests on CI matrix OSes"
+quality_score: 92
+expires: "2026-04-13T00:00:00Z"

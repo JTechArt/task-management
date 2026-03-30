@@ -25,6 +25,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -45,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.aitask.core.domain.model.ClaudeIntegrationMode
 import com.aitask.core.domain.model.AgentDefinition
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.AgentTrigger
@@ -193,6 +195,28 @@ fun SettingsView(
             onTest = { viewModel.testGeppaConnection() },
             onSave = { viewModel.saveGeppaConfiguration() },
             onClearMessage = { viewModel.clearGeppaFeedback() }
+        )
+
+        CodexConfigurationCard(
+            uiState = uiState,
+            onEnabledChange = { viewModel.updateCodexEditorEnabled(it) },
+            onCliPathChange = { viewModel.updateCodexEditorCliPath(it) },
+            onApiKeyChange = { viewModel.updateCodexEditorApiKey(it) },
+            onTest = { viewModel.testCodexCli() },
+            onSave = { viewModel.saveCodexConfiguration() },
+            onClearMessage = { viewModel.clearCodexFeedback() }
+        )
+
+        ClaudeConfigurationCard(
+            uiState = uiState,
+            onEnabledChange = { viewModel.updateClaudeEditorEnabled(it) },
+            onIntegrationModeChange = { viewModel.updateClaudeEditorIntegrationMode(it) },
+            onCliPathChange = { viewModel.updateClaudeEditorCliPath(it) },
+            onApiBaseUrlChange = { viewModel.updateClaudeEditorApiBaseUrl(it) },
+            onApiKeyChange = { viewModel.updateClaudeEditorApiKey(it) },
+            onTest = { viewModel.testClaudeIntegration() },
+            onSave = { viewModel.saveClaudeConfiguration() },
+            onClearMessage = { viewModel.clearClaudeFeedback() }
         )
 
         SavedPromptsCard(
@@ -1080,6 +1104,260 @@ private fun GeppaConfigurationCard(
                     Text(if (uiState.isGeppaSaving) "Saving…" else "Save")
                 }
                 if (uiState.isGeppaLoading) {
+                    CircularProgressIndicator(modifier = Modifier.width(20.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CodexConfigurationCard(
+    uiState: com.aitask.desktop.ui.viewmodel.SettingsUiState,
+    onEnabledChange: (Boolean) -> Unit,
+    onCliPathChange: (String) -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    onTest: () -> Unit,
+    onSave: () -> Unit,
+    onClearMessage: () -> Unit
+) {
+    val editor = uiState.codexEditor
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Codex CLI",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Configure the OpenAI Codex CLI path and optional API key. Leave the path empty to use codex on your PATH. Task context is written to TASK_CONTEXT.md and passed via environment variables when you run Codex from a task.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            uiState.codexFeedback?.let { feedback ->
+                Snackbar(
+                    modifier = Modifier.fillMaxWidth(),
+                    action = { TextButton(onClick = onClearMessage) { Text("Dismiss") } }
+                ) { Text(feedback) }
+            }
+            uiState.codexError?.let { error ->
+                Text(text = error, color = MaterialTheme.colorScheme.error)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = editor.isEnabled,
+                    onCheckedChange = onEnabledChange
+                )
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Enable Codex CLI integration",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "When enabled, tasks with a workspace can launch Codex in a terminal with task context.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            OutlinedTextField(
+                value = editor.cliPath,
+                onValueChange = onCliPathChange,
+                label = { Text("Codex executable path") },
+                placeholder = { Text("Empty = resolve codex from PATH") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = editor.isEnabled
+            )
+            OutlinedTextField(
+                value = editor.apiKey,
+                onValueChange = onApiKeyChange,
+                label = { Text("OpenAI API key (optional)") },
+                placeholder = { Text("Leave blank to keep stored key unchanged") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                enabled = editor.isEnabled
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onTest,
+                    enabled = editor.isEnabled && !uiState.isCodexSaving && !uiState.isCodexTesting
+                ) {
+                    Text(if (uiState.isCodexTesting) "Testing…" else "Test Codex CLI")
+                }
+                Button(
+                    onClick = onSave,
+                    enabled = !uiState.isCodexSaving && !uiState.isCodexTesting
+                ) {
+                    Text(if (uiState.isCodexSaving) "Saving…" else "Save")
+                }
+                if (uiState.isCodexLoading) {
+                    CircularProgressIndicator(modifier = Modifier.width(20.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClaudeConfigurationCard(
+    uiState: com.aitask.desktop.ui.viewmodel.SettingsUiState,
+    onEnabledChange: (Boolean) -> Unit,
+    onIntegrationModeChange: (ClaudeIntegrationMode) -> Unit,
+    onCliPathChange: (String) -> Unit,
+    onApiBaseUrlChange: (String) -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    onTest: () -> Unit,
+    onSave: () -> Unit,
+    onClearMessage: () -> Unit
+) {
+    val editor = uiState.claudeEditor
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Claude",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Use Claude via CLI (terminal in the task workspace) or Anthropic API (HTTPS). Task context is written to TASK_CONTEXT.md; CLI mode also sets AITASK_* and ANTHROPIC_API_KEY when an API key is stored.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            uiState.claudeFeedback?.let { feedback ->
+                Snackbar(
+                    modifier = Modifier.fillMaxWidth(),
+                    action = { TextButton(onClick = onClearMessage) { Text("Dismiss") } }
+                ) { Text(feedback) }
+            }
+            uiState.claudeError?.let { error ->
+                Text(text = error, color = MaterialTheme.colorScheme.error)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = editor.isEnabled,
+                    onCheckedChange = onEnabledChange
+                )
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Enable Claude integration",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "When enabled, tasks with a workspace can run Claude with full task context.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Mode:", style = MaterialTheme.typography.labelLarge)
+                FilterChip(
+                    selected = editor.integrationMode == ClaudeIntegrationMode.CLI,
+                    onClick = { onIntegrationModeChange(ClaudeIntegrationMode.CLI) },
+                    label = { Text("CLI") },
+                    enabled = editor.isEnabled
+                )
+                FilterChip(
+                    selected = editor.integrationMode == ClaudeIntegrationMode.API,
+                    onClick = { onIntegrationModeChange(ClaudeIntegrationMode.API) },
+                    label = { Text("API") },
+                    enabled = editor.isEnabled
+                )
+            }
+            if (editor.integrationMode == ClaudeIntegrationMode.CLI) {
+                OutlinedTextField(
+                    value = editor.cliPath,
+                    onValueChange = onCliPathChange,
+                    label = { Text("Claude executable path") },
+                    placeholder = { Text("Empty = resolve claude from PATH") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = editor.isEnabled
+                )
+                OutlinedTextField(
+                    value = editor.apiKey,
+                    onValueChange = onApiKeyChange,
+                    label = { Text("Anthropic API key (optional, for ANTHROPIC_API_KEY in terminal)") },
+                    placeholder = { Text("Leave blank to keep stored key unchanged") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    enabled = editor.isEnabled
+                )
+            } else {
+                OutlinedTextField(
+                    value = editor.apiBaseUrl,
+                    onValueChange = onApiBaseUrlChange,
+                    label = { Text("API base URL (optional)") },
+                    placeholder = { Text("Empty = https://api.anthropic.com") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = editor.isEnabled
+                )
+                OutlinedTextField(
+                    value = editor.apiKey,
+                    onValueChange = onApiKeyChange,
+                    label = { Text("Anthropic API key") },
+                    placeholder = { Text("Required for API mode; leave blank to keep stored key") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    enabled = editor.isEnabled
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onTest,
+                    enabled = editor.isEnabled && !uiState.isClaudeSaving && !uiState.isClaudeTesting
+                ) {
+                    Text(if (uiState.isClaudeTesting) "Testing…" else "Test")
+                }
+                Button(
+                    onClick = onSave,
+                    enabled = !uiState.isClaudeSaving && !uiState.isClaudeTesting
+                ) {
+                    Text(if (uiState.isClaudeSaving) "Saving…" else "Save")
+                }
+                if (uiState.isClaudeLoading) {
                     CircularProgressIndicator(modifier = Modifier.width(20.dp))
                 }
             }

@@ -1,0 +1,36 @@
+schema: 1
+story: "9.3"
+story_title: "Unified AI Tool Launch Experience"
+gate: PASS
+status_reason: "UnifiedAiToolsSection groups Codex/Claude with shared heading, layout rules, and Settings hint; TasksView wiring unchanged; ./gradlew test passes."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-30T23:30:00Z"
+waiver: { active: false }
+top_issues: []
+evidence:
+  tests_reviewed: 0
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: "No new sensitive surface; callbacks unchanged."
+  performance:
+    status: PASS
+    notes: "Composable-only; layout is lightweight."
+  reliability:
+    status: PASS
+    notes: "Pre-run remains in launch use cases (9.1/9.2)."
+  maintainability:
+    status: PASS
+    notes: "Single composable; optional future Compose UI tests for three layout states."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Optional: screenshot or Compose UI tests for both-enabled / single / neither-configured states"
+quality_score: 88
+expires: "2026-04-13T00:00:00Z"
