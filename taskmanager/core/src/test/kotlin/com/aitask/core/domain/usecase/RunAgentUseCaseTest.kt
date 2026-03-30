@@ -85,6 +85,8 @@ class RunAgentUseCaseTest {
             description = "Draft action plans",
             promptTemplate = "Plan {{taskTitle}} for {{projectName}} using {{repositoryNames}}",
             llmConfigurationId = configId,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
             scope = AgentScope.GLOBAL,
             projectId = null,
             trigger = AgentTrigger.MANUAL,
@@ -129,6 +131,116 @@ class RunAgentUseCaseTest {
         assertTrue(result.isSuccess)
         assertEquals("Plan drafted", result.getOrThrow().generatedText)
         coVerify(exactly = 1) { activityRepository.create(match { it.type == ActivityType.AGENT_EXECUTED }) }
+    }
+
+    @Test
+    fun `invoke fails when agent is not associated with Local LLM`() = runTest {
+        val taskRepository = mockk<TaskRepository>()
+        val projectRepository = mockk<ProjectRepository>()
+        val repositoryRepository = mockk<RepositoryRepository>()
+        val agentDefinitionRepository = mockk<AgentDefinitionRepository>()
+        val llmConfigurationRepository = mockk<LlmConfigurationRepository>()
+        val agentExecutionService = mockk<AgentExecutionService>()
+        val activityRepository = mockk<ActivityRepository>()
+        val useCase = RunAgentUseCase(
+            taskRepository,
+            projectRepository,
+            repositoryRepository,
+            agentDefinitionRepository,
+            llmConfigurationRepository,
+            agentExecutionService,
+            activityRepository
+        )
+        val projectId = UUID.randomUUID()
+        val taskId = UUID.randomUUID()
+        val agentId = UUID.randomUUID()
+        val task = Task(
+            id = taskId,
+            title = "Task",
+            description = null,
+            taskType = TaskType.FEATURE,
+            status = TaskStatus.IN_PROGRESS,
+            projectId = projectId,
+            workspacePath = "/w",
+            branchName = "b",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+            completedAt = null
+        )
+        val agent = AgentDefinition(
+            id = agentId,
+            name = "Codex only",
+            description = null,
+            promptTemplate = "Hi",
+            llmConfigurationId = null,
+            associatedTools = setOf(AgentToolKind.CODEX),
+            taskTypeFilter = null,
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            trigger = AgentTrigger.MANUAL,
+            isEnabled = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { agentDefinitionRepository.findById(agentId) } returns agent
+        val result = useCase(RunAgentRequest(taskId, agentId))
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `invoke fails when task type does not match agent filter`() = runTest {
+        val taskRepository = mockk<TaskRepository>()
+        val projectRepository = mockk<ProjectRepository>()
+        val repositoryRepository = mockk<RepositoryRepository>()
+        val agentDefinitionRepository = mockk<AgentDefinitionRepository>()
+        val llmConfigurationRepository = mockk<LlmConfigurationRepository>()
+        val agentExecutionService = mockk<AgentExecutionService>()
+        val activityRepository = mockk<ActivityRepository>()
+        val useCase = RunAgentUseCase(
+            taskRepository,
+            projectRepository,
+            repositoryRepository,
+            agentDefinitionRepository,
+            llmConfigurationRepository,
+            agentExecutionService,
+            activityRepository
+        )
+        val projectId = UUID.randomUUID()
+        val taskId = UUID.randomUUID()
+        val agentId = UUID.randomUUID()
+        val task = Task(
+            id = taskId,
+            title = "Task",
+            description = null,
+            taskType = TaskType.FEATURE,
+            status = TaskStatus.IN_PROGRESS,
+            projectId = projectId,
+            workspacePath = "/w",
+            branchName = "b",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+            completedAt = null
+        )
+        val agent = AgentDefinition(
+            id = agentId,
+            name = "Bug agent",
+            description = null,
+            promptTemplate = "Hi",
+            llmConfigurationId = null,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = TaskType.BUG_FIX,
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            trigger = AgentTrigger.MANUAL,
+            isEnabled = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { agentDefinitionRepository.findById(agentId) } returns agent
+        val result = useCase(RunAgentRequest(taskId, agentId))
+        assertTrue(result.isFailure)
     }
 
     @Test
@@ -186,6 +298,8 @@ class RunAgentUseCaseTest {
             description = "Draft action plans",
             promptTemplate = "Plan {{taskTitle}} for {{projectName}}",
             llmConfigurationId = configId,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
             scope = AgentScope.GLOBAL,
             projectId = null,
             trigger = AgentTrigger.MANUAL,

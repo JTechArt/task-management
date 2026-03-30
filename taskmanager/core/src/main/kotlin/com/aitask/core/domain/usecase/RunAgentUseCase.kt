@@ -44,6 +44,20 @@ class RunAgentUseCase(
         if (!agent.isEnabled) {
             return Result.failure(IllegalStateException("Agent is disabled"))
         }
+        if (!agent.associatedTools.contains(AgentToolKind.LOCAL_LLM)) {
+            return Result.failure(
+                IllegalStateException(
+                    "This agent is not associated with Local LLM; the current executor only runs local LLM agents"
+                )
+            )
+        }
+        if (agent.taskTypeFilter != null && agent.taskTypeFilter != task.taskType) {
+            return Result.failure(
+                IllegalStateException(
+                    "This agent is scoped to ${agent.taskTypeFilter.name.replace('_', ' ')} tasks only"
+                )
+            )
+        }
         val project = projectRepository.findById(task.projectId)
             ?: return Result.failure(IllegalStateException("Project not found"))
         val repositories = repositoryRepository.findByProject(project.id)
@@ -141,6 +155,9 @@ class RunAgentUseCase(
                     description = "Executed agent '${agent.name}' for task: ${task.title}",
                     metadata = mapOf(
                         "agentName" to agent.name,
+                        "associatedTools" to agent.associatedTools.joinToString(",") { it.name },
+                        "taskTypeFilter" to (agent.taskTypeFilter?.name ?: "ALL"),
+                        "taskType" to task.taskType.name,
                         "scope" to agent.scope.name,
                         "trigger" to agent.trigger.name,
                         "configurationName" to configuration.name,

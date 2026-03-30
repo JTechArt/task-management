@@ -70,7 +70,7 @@ class TasksViewModelTest {
             )
         )
         coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(emptyList())
-        coEvery { getAgentDefinitionsUseCase.invoke(any()) } returns Result.success(emptyList())
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(emptyList())
         coEvery { codexConfigurationRepository.find() } returns null
         coEvery { claudeConfigurationRepository.find() } returns null
         coEvery { generateTaskContentUseCase.invoke(any()) } returns Result.success(
@@ -283,6 +283,8 @@ class TasksViewModelTest {
             description = null,
             promptTemplate = "Plan {{taskTitle}}",
             llmConfigurationId = null,
+            associatedTools = setOf(com.aitask.core.domain.model.AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
             scope = AgentScope.GLOBAL,
             projectId = null,
             trigger = AgentTrigger.MANUAL,
@@ -309,7 +311,7 @@ class TasksViewModelTest {
             )
         )
         coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(listOf(task))
-        coEvery { getAgentDefinitionsUseCase.invoke(any()) } returns Result.success(listOf(agent))
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(listOf(agent))
         coEvery { runAgentUseCase.invoke(any()) } returns Result.success(
             RunAgentResult(
                 agentId = agent.id,
@@ -377,6 +379,8 @@ class TasksViewModelTest {
             description = null,
             promptTemplate = "Plan {{taskTitle}}",
             llmConfigurationId = null,
+            associatedTools = setOf(com.aitask.core.domain.model.AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
             scope = AgentScope.GLOBAL,
             projectId = null,
             trigger = AgentTrigger.MANUAL,
@@ -403,7 +407,7 @@ class TasksViewModelTest {
             )
         )
         coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(listOf(task))
-        coEvery { getAgentDefinitionsUseCase.invoke(any()) } returns Result.success(listOf(agent))
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(listOf(agent))
         coEvery { runAgentUseCase.invoke(any()) } returns Result.failure(IllegalStateException("Agent failed"))
 
         viewModel = TasksViewModel(
@@ -461,6 +465,8 @@ class TasksViewModelTest {
             description = null,
             promptTemplate = "Review {{taskTitle}}",
             llmConfigurationId = null,
+            associatedTools = setOf(com.aitask.core.domain.model.AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
             scope = AgentScope.GLOBAL,
             projectId = null,
             trigger = AgentTrigger.TASK_OPENED,
@@ -487,7 +493,7 @@ class TasksViewModelTest {
             )
         )
         coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(listOf(task))
-        coEvery { getAgentDefinitionsUseCase.invoke(any()) } returns Result.success(listOf(agent))
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(listOf(agent))
         coEvery { runAgentUseCase.invoke(any()) } returns Result.success(
             RunAgentResult(
                 agentId = agent.id,

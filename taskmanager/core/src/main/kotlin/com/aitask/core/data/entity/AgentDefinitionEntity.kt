@@ -8,6 +8,8 @@ import org.jetbrains.exposed.sql.javatime.timestamp
 object AgentDefinitions : UUIDTable("agent_definitions") {
     val name = varchar("name", 200)
     val description = text("description").nullable()
+    val associatedTools = varchar("associated_tools", 500).nullable()
+    val taskTypeFilter = varchar("task_type_filter", 50).nullable()
     val promptTemplate = text("prompt_template")
     val llmConfigurationId = reference("llm_configuration_id", LlmConfigurations, onDelete = ReferenceOption.SET_NULL).nullable()
     val scope = varchar("scope", 50)

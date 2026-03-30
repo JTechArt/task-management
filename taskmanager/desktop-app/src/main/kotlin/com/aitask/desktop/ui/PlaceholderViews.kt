@@ -48,9 +48,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.aitask.core.domain.model.ClaudeIntegrationMode
 import com.aitask.core.domain.model.AgentDefinition
+import com.aitask.core.domain.model.AgentToolKind
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.AgentTrigger
 import com.aitask.core.domain.model.LlmConfiguration
+import com.aitask.core.domain.model.TaskType
 import com.aitask.core.domain.model.SavedPrompt
 import com.aitask.core.domain.service.McpServerManifest
 import com.aitask.desktop.ui.viewmodel.GeppaConfigurationEditorState
@@ -171,6 +173,8 @@ fun SettingsView(
             onPromptChange = { viewModel.updateAgentEditorPromptTemplate(it) },
             onLoadFromSavedPrompt = { viewModel.applyPromptFromLibrary(it) },
             onLlmConfigurationChange = { viewModel.updateAgentEditorLlmConfiguration(it) },
+            onToggleAgentTool = { viewModel.toggleAgentEditorTool(it) },
+            onTaskTypeFilterChange = { viewModel.updateAgentEditorTaskTypeFilter(it) },
             onScopeChange = { viewModel.updateAgentEditorScope(it) },
             onProjectChange = { viewModel.updateAgentEditorProjectId(it) },
             onTriggerChange = { viewModel.updateAgentEditorTrigger(it) },
@@ -591,6 +595,8 @@ private fun AgentDefinitionCard(
     onPromptChange: (String) -> Unit,
     onLoadFromSavedPrompt: (com.aitask.core.domain.model.SavedPrompt) -> Unit,
     onLlmConfigurationChange: (java.util.UUID?) -> Unit,
+    onToggleAgentTool: (AgentToolKind) -> Unit,
+    onTaskTypeFilterChange: (TaskType?) -> Unit,
     onScopeChange: (AgentScope) -> Unit,
     onProjectChange: (java.util.UUID?) -> Unit,
     onTriggerChange: (AgentTrigger) -> Unit,
@@ -603,6 +609,7 @@ private fun AgentDefinitionCard(
     var triggerExpanded by remember { mutableStateOf(false) }
     var llmExpanded by remember { mutableStateOf(false) }
     var projectExpanded by remember { mutableStateOf(false) }
+    var taskTypeFilterExpanded by remember { mutableStateOf(false) }
     var promptLibraryExpanded by remember { mutableStateOf(false) }
 
     Card(
@@ -626,7 +633,7 @@ private fun AgentDefinitionCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Create reusable LLM-powered agents with prompt templates and project scope.",
+                        text = "Create reusable agents with prompt templates, tool associations, and project scope.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -702,6 +709,74 @@ private fun AgentDefinitionCard(
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 4
                 )
+                Text(
+                    text = "AI tools",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "Associate this agent with one or more backends. Local LLM is required for the in-app runner.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    AgentToolKind.entries.forEach { kind ->
+                        val label = when (kind) {
+                            AgentToolKind.LOCAL_LLM -> "Local LLM"
+                            AgentToolKind.CODEX -> "Codex"
+                            AgentToolKind.CLAUDE -> "Claude"
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = editor.associatedTools.contains(kind),
+                                onCheckedChange = { onToggleAgentTool(kind) }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(label, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                ExposedDropdownMenuBox(
+                    expanded = taskTypeFilterExpanded,
+                    onExpandedChange = { taskTypeFilterExpanded = it },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = editor.taskTypeFilter?.name?.replace('_', ' ') ?: "All task types",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Task type filter") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = taskTypeFilterExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        supportingText = {
+                            Text(
+                                "Limit this agent to one task type, or leave as all types.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    )
+                    ExposedDropdownMenu(
+                        expanded = taskTypeFilterExpanded,
+                        onDismissRequest = { taskTypeFilterExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("All task types") },
+                            onClick = {
+                                onTaskTypeFilterChange(null)
+                                taskTypeFilterExpanded = false
+                            }
+                        )
+                        TaskType.entries.forEach { taskType ->
+                            DropdownMenuItem(
+                                text = { Text(taskType.name.replace('_', ' ')) },
+                                onClick = {
+                                    onTaskTypeFilterChange(taskType)
+                                    taskTypeFilterExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     ExposedDropdownMenuBox(
                         expanded = llmExpanded,
@@ -862,7 +937,17 @@ private fun AgentDefinitionCard(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(definition.name, fontWeight = FontWeight.Bold)
                                         Text(
-                                            text = "${definition.scope.name} • ${definition.trigger.name}",
+                                            text = "${definition.scope.name} • ${definition.trigger.name} • ${
+                                                definition.taskTypeFilter?.name?.replace('_', ' ') ?: "All task types"
+                                            } • ${
+                                                definition.associatedTools.joinToString(", ") { kind ->
+                                                    when (kind) {
+                                                        AgentToolKind.LOCAL_LLM -> "Local LLM"
+                                                        AgentToolKind.CODEX -> "Codex"
+                                                        AgentToolKind.CLAUDE -> "Claude"
+                                                    }
+                                                }
+                                            }",
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }

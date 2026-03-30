@@ -8,7 +8,7 @@
 
 ## Status
 
-Draft
+Approved
 
 ## Acceptance Criteria
 

@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.aitask.core.domain.model.AgentDefinition
+import com.aitask.core.domain.model.AgentToolKind
 import com.aitask.core.domain.model.EnvironmentCheckTemplateId
 import com.aitask.core.domain.model.EnvironmentCheckTemplateRegistry
 import com.aitask.core.domain.model.BmadTool
@@ -275,6 +277,7 @@ fun ProjectDetailView(
     onDeleteSlackChannel: (SlackChannelConfig) -> Unit = {},
     onTestSlackMessage: (SlackChannelConfig) -> Unit = {},
     isSendingSlackTest: Boolean = false,
+    projectAgents: List<AgentDefinition> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember(selectedDetailTab) { mutableStateOf(selectedDetailTab) }
@@ -409,6 +412,57 @@ fun ProjectDetailView(
         }
         project.team?.let { team ->
             DetailRow("Team", team)
+        }
+        Divider()
+        Text(
+            text = "Automation",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Agents available for this project (global agents plus agents scoped to this project). Create and edit agents in Settings.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
+        if (projectAgents.isEmpty()) {
+            Text(
+                text = "No automation agents are enabled for this project yet.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                projectAgents.forEach { agent ->
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(agent.name, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                text = "${agent.trigger.name} • ${
+                                    agent.taskTypeFilter?.name?.replace('_', ' ') ?: "All task types"
+                                } • ${
+                                    agent.associatedTools.joinToString(", ") { kind ->
+                                        when (kind) {
+                                            AgentToolKind.LOCAL_LLM -> "Local LLM"
+                                            AgentToolKind.CODEX -> "Codex"
+                                            AgentToolKind.CLAUDE -> "Claude"
+                                        }
+                                    }
+                                }",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
         }
         Divider()
         TabRow(

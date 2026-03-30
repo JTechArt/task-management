@@ -214,7 +214,8 @@ fun ProjectsView(
                                     onEditSlackChannel = { viewModel.showEditSlackChannelDialog(it) },
                                     onDeleteSlackChannel = { viewModel.deleteSlackChannel(it) },
                                     onTestSlackMessage = { viewModel.sendSlackTestMessage(it) },
-                                    isSendingSlackTest = uiState.isSendingSlackTest
+                                    isSendingSlackTest = uiState.isSendingSlackTest,
+                                    projectAgents = uiState.selectedProjectAgents
                                 )
                             }
                         }

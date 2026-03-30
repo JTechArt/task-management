@@ -6,7 +6,9 @@ import androidx.compose.runtime.setValue
 import com.aitask.core.domain.model.AgentDefinition
 import com.aitask.core.domain.model.AgentDefinitionRequest
 import com.aitask.core.domain.model.AgentScope
+import com.aitask.core.domain.model.AgentToolKind
 import com.aitask.core.domain.model.AgentTrigger
+import com.aitask.core.domain.model.TaskType
 import com.aitask.core.domain.model.ClaudeConfigurationRequest
 import com.aitask.core.domain.model.ClaudeIntegrationMode
 import com.aitask.core.domain.model.CodexConfigurationRequest
@@ -776,6 +778,8 @@ class SettingsViewModel(
                 description = definition.description.orEmpty(),
                 promptTemplate = definition.promptTemplate,
                 llmConfigurationId = definition.llmConfigurationId,
+                associatedTools = definition.associatedTools,
+                taskTypeFilter = definition.taskTypeFilter,
                 scope = definition.scope,
                 projectId = definition.projectId,
                 trigger = definition.trigger,
@@ -803,6 +807,18 @@ class SettingsViewModel(
     fun updateAgentEditorPromptTemplate(promptTemplate: String) = updateAgentEditor { it.copy(promptTemplate = promptTemplate) }
 
     fun updateAgentEditorLlmConfiguration(id: UUID?) = updateAgentEditor { it.copy(llmConfigurationId = id) }
+
+    fun updateAgentEditorTaskTypeFilter(taskType: TaskType?) = updateAgentEditor { it.copy(taskTypeFilter = taskType) }
+
+    fun toggleAgentEditorTool(kind: AgentToolKind) = updateAgentEditor { editor ->
+        val next = editor.associatedTools.toMutableSet()
+        if (next.contains(kind)) {
+            next.remove(kind)
+        } else {
+            next.add(kind)
+        }
+        editor.copy(associatedTools = next)
+    }
 
     fun updateAgentEditorScope(scope: AgentScope) = updateAgentEditor { it.copy(scope = scope, projectId = if (scope == AgentScope.GLOBAL) null else it.projectId) }
 
@@ -901,6 +917,8 @@ class SettingsViewModel(
                     description = editor.description.takeIf { it.isNotBlank() },
                     promptTemplate = editor.promptTemplate,
                     llmConfigurationId = editor.llmConfigurationId,
+                    associatedTools = editor.associatedTools,
+                    taskTypeFilter = editor.taskTypeFilter,
                     scope = editor.scope,
                     projectId = editor.projectId,
                     trigger = editor.trigger,
@@ -1038,6 +1056,7 @@ class SettingsViewModel(
     private fun validateAgentEditorLocally(editor: AgentDefinitionEditorState): String? = when {
         editor.name.isBlank() -> "Enter an agent name"
         editor.promptTemplate.isBlank() -> "Enter a prompt template"
+        editor.associatedTools.isEmpty() -> "Select at least one AI tool (Local LLM, Codex, or Claude)"
         editor.scope == AgentScope.PROJECT && editor.projectId == null -> "Choose a project for project-scoped agents"
         else -> null
     }
@@ -1301,6 +1320,12 @@ data class AgentDefinitionEditorState(
     val description: String = "",
     val promptTemplate: String = "",
     val llmConfigurationId: UUID? = null,
+    val associatedTools: Set<AgentToolKind> = setOf(
+        AgentToolKind.LOCAL_LLM,
+        AgentToolKind.CODEX,
+        AgentToolKind.CLAUDE
+    ),
+    val taskTypeFilter: TaskType? = null,
     val scope: AgentScope = AgentScope.GLOBAL,
     val projectId: UUID? = null,
     val trigger: AgentTrigger = AgentTrigger.MANUAL,

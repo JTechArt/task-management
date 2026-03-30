@@ -604,7 +604,7 @@ class TasksViewModel(
 
     fun loadAvailableAgents(projectId: UUID? = null, taskForAutoRun: Task? = null, trigger: AgentTrigger? = null) {
         scope.launch {
-            val result = getAgentDefinitionsUseCase(projectId)
+            val result = getAgentDefinitionsUseCase(projectId, taskForAutoRun?.taskType)
             result.fold(
                 onSuccess = { agents ->
                     uiState = uiState.copy(
