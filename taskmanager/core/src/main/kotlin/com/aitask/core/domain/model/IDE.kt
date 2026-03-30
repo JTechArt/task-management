@@ -20,7 +20,8 @@ data class TaskContext(
     val description: String?,
     val projectName: String,
     val branchName: String?,
-    val activeBmadTools: List<String> = emptyList()
+    val activeBmadTools: List<String> = emptyList(),
+    val repositoryPath: String? = null
 )
 
 /**

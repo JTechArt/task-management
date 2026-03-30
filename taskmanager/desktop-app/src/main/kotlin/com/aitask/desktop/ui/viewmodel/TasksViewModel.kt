@@ -28,6 +28,9 @@ class TasksViewModel(
     private val generateWorkspaceUseCase: GenerateWorkspaceUseCase = DependencyContainer.generateWorkspaceUseCase,
     private val cleanupWorkspaceUseCase: CleanupWorkspaceUseCase = DependencyContainer.cleanupWorkspaceUseCase,
     private val launchIDEUseCase: LaunchIDEUseCase = DependencyContainer.launchIDEUseCase,
+    private val launchCodexUseCase: LaunchCodexUseCase = DependencyContainer.launchCodexUseCase,
+    private val codexConfigurationRepository: com.aitask.core.domain.repository.CodexConfigurationRepository =
+        DependencyContainer.codexConfigurationRepository,
     private val generateTaskContentUseCase: GenerateTaskContentUseCase = DependencyContainer.generateTaskContentUseCase,
     private val generateGitAssistantSuggestionUseCase: GenerateGitAssistantSuggestionUseCase = DependencyContainer.generateGitAssistantSuggestionUseCase,
     private val getAgentDefinitionsUseCase: GetAgentDefinitionsUseCase = DependencyContainer.getAgentDefinitionsUseCase,
@@ -46,6 +49,7 @@ class TasksViewModel(
         loadProjects()
         loadTasks()
         loadAvailableAgents()
+        refreshCodexIntegration()
     }
     
     private fun loadProjects() {
@@ -439,6 +443,39 @@ class TasksViewModel(
         }
     }
 
+    fun refreshCodexIntegration() {
+        scope.launch {
+            try {
+                val configuration = codexConfigurationRepository.find()
+                uiState = uiState.copy(isCodexIntegrationEnabled = configuration?.isEnabled == true)
+            } catch (_: Exception) {
+                uiState = uiState.copy(isCodexIntegrationEnabled = false)
+            }
+        }
+    }
+
+    fun runCodex(taskId: UUID) {
+        uiState = uiState.copy(isLaunchingCodex = true, error = null)
+        scope.launch {
+            val result = launchCodexUseCase(LaunchCodexRequest(taskId = taskId, updateTaskStatus = true))
+            result.fold(
+                onSuccess = {
+                    uiState = uiState.copy(
+                        isLaunchingCodex = false,
+                        codexLaunchSuccess = "Launched Codex CLI successfully"
+                    )
+                    loadTasks()
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isLaunchingCodex = false,
+                        error = error.message ?: "Failed to launch Codex CLI"
+                    )
+                }
+            )
+        }
+    }
+
     fun generateTaskContentSuggestion(
         projectId: UUID,
         title: String,
@@ -668,7 +705,8 @@ class TasksViewModel(
     fun clearSuccessMessages() {
         uiState = uiState.copy(
             workspaceGenerationSuccess = null,
-            ideLaunchSuccess = null
+            ideLaunchSuccess = null,
+            codexLaunchSuccess = null
         )
     }
 
@@ -741,6 +779,9 @@ data class TasksUiState(
     val workspaceGenerationSuccess: String? = null,
     val workspaceGenerationProgress: String? = null,
     val ideLaunchSuccess: String? = null,
+    val isCodexIntegrationEnabled: Boolean = false,
+    val isLaunchingCodex: Boolean = false,
+    val codexLaunchSuccess: String? = null,
     val availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
     val projectRepositories: List<Repository> = emptyList(),
     val showRepositorySelectionDialog: Boolean = false,

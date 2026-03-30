@@ -195,6 +195,16 @@ fun SettingsView(
             onClearMessage = { viewModel.clearGeppaFeedback() }
         )
 
+        CodexConfigurationCard(
+            uiState = uiState,
+            onEnabledChange = { viewModel.updateCodexEditorEnabled(it) },
+            onCliPathChange = { viewModel.updateCodexEditorCliPath(it) },
+            onApiKeyChange = { viewModel.updateCodexEditorApiKey(it) },
+            onTest = { viewModel.testCodexCli() },
+            onSave = { viewModel.saveCodexConfiguration() },
+            onClearMessage = { viewModel.clearCodexFeedback() }
+        )
+
         SavedPromptsCard(
             uiState = uiState,
             onNew = { viewModel.startNewSavedPrompt() },
@@ -1080,6 +1090,112 @@ private fun GeppaConfigurationCard(
                     Text(if (uiState.isGeppaSaving) "Saving…" else "Save")
                 }
                 if (uiState.isGeppaLoading) {
+                    CircularProgressIndicator(modifier = Modifier.width(20.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CodexConfigurationCard(
+    uiState: com.aitask.desktop.ui.viewmodel.SettingsUiState,
+    onEnabledChange: (Boolean) -> Unit,
+    onCliPathChange: (String) -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    onTest: () -> Unit,
+    onSave: () -> Unit,
+    onClearMessage: () -> Unit
+) {
+    val editor = uiState.codexEditor
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Codex CLI",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Configure the OpenAI Codex CLI path and optional API key. Leave the path empty to use codex on your PATH. Task context is written to TASK_CONTEXT.md and passed via environment variables when you run Codex from a task.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            uiState.codexFeedback?.let { feedback ->
+                Snackbar(
+                    modifier = Modifier.fillMaxWidth(),
+                    action = { TextButton(onClick = onClearMessage) { Text("Dismiss") } }
+                ) { Text(feedback) }
+            }
+            uiState.codexError?.let { error ->
+                Text(text = error, color = MaterialTheme.colorScheme.error)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = editor.isEnabled,
+                    onCheckedChange = onEnabledChange
+                )
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Enable Codex CLI integration",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "When enabled, tasks with a workspace can launch Codex in a terminal with task context.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            OutlinedTextField(
+                value = editor.cliPath,
+                onValueChange = onCliPathChange,
+                label = { Text("Codex executable path") },
+                placeholder = { Text("Empty = resolve codex from PATH") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = editor.isEnabled
+            )
+            OutlinedTextField(
+                value = editor.apiKey,
+                onValueChange = onApiKeyChange,
+                label = { Text("OpenAI API key (optional)") },
+                placeholder = { Text("Leave blank to keep stored key unchanged") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                enabled = editor.isEnabled
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onTest,
+                    enabled = editor.isEnabled && !uiState.isCodexSaving && !uiState.isCodexTesting
+                ) {
+                    Text(if (uiState.isCodexTesting) "Testing…" else "Test Codex CLI")
+                }
+                Button(
+                    onClick = onSave,
+                    enabled = !uiState.isCodexSaving && !uiState.isCodexTesting
+                ) {
+                    Text(if (uiState.isCodexSaving) "Saving…" else "Save")
+                }
+                if (uiState.isCodexLoading) {
                     CircularProgressIndicator(modifier = Modifier.width(20.dp))
                 }
             }

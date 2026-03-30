@@ -7,6 +7,7 @@ import com.aitask.core.domain.model.AgentDefinition
 import com.aitask.core.domain.model.AgentDefinitionRequest
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.AgentTrigger
+import com.aitask.core.domain.model.CodexConfigurationRequest
 import com.aitask.core.domain.model.GeppaConfiguration
 import com.aitask.core.domain.model.GeppaConfigurationRequest
 import com.aitask.core.domain.model.McpServerConfiguration
@@ -16,6 +17,7 @@ import com.aitask.core.domain.model.LlmConfigurationRequest
 import com.aitask.core.domain.model.SavedPrompt
 import com.aitask.core.domain.model.SavedPromptRequest
 import com.aitask.core.domain.repository.AgentDefinitionRepository
+import com.aitask.core.domain.repository.CodexConfigurationRepository
 import com.aitask.core.domain.repository.GeppaConfigurationRepository
 import com.aitask.core.domain.repository.McpServerConfigurationRepository
 import com.aitask.core.domain.repository.LlmConfigurationRepository
@@ -23,6 +25,7 @@ import com.aitask.core.domain.repository.SavedPromptRepository
 import com.aitask.core.domain.usecase.DeleteAgentDefinitionUseCase
 import com.aitask.core.domain.usecase.DeleteSavedPromptUseCase
 import com.aitask.core.domain.usecase.SaveSavedPromptUseCase
+import com.aitask.core.domain.service.CodexCliService
 import com.aitask.core.domain.service.GeppaConnectionValidator
 import com.aitask.core.domain.service.LlmConnectionValidator
 import com.aitask.core.domain.service.McpBridgeService
@@ -57,6 +60,8 @@ class SettingsViewModel(
     private val llmConnectionValidator: LlmConnectionValidator = DependencyContainer.llmConnectionValidator,
     private val geppaConfigurationRepository: GeppaConfigurationRepository = DependencyContainer.geppaConfigurationRepository,
     private val geppaConnectionValidator: GeppaConnectionValidator = DependencyContainer.geppaConnectionValidator,
+    private val codexConfigurationRepository: CodexConfigurationRepository = DependencyContainer.codexConfigurationRepository,
+    private val codexCliService: CodexCliService = DependencyContainer.codexCliService,
     private val savedPromptRepository: SavedPromptRepository = DependencyContainer.savedPromptRepository,
     private val saveSavedPromptUseCase: SaveSavedPromptUseCase = DependencyContainer.saveSavedPromptUseCase,
     private val deleteSavedPromptUseCase: DeleteSavedPromptUseCase = DependencyContainer.deleteSavedPromptUseCase,
@@ -71,6 +76,7 @@ class SettingsViewModel(
         loadAgentDefinitions()
         loadMcpConfiguration()
         loadGeppaConfiguration()
+        loadCodexConfiguration()
         loadSavedPrompts()
     }
 
@@ -236,6 +242,133 @@ class SettingsViewModel(
 
     fun clearGeppaFeedback() {
         uiState = uiState.copy(geppaFeedback = null, geppaError = null)
+    }
+
+    fun loadCodexConfiguration() {
+        scope.launch {
+            uiState = uiState.copy(isCodexLoading = true, codexError = null)
+            try {
+                val configuration = codexConfigurationRepository.find()
+                val editor = configuration?.let {
+                    CodexConfigurationEditorState(
+                        id = it.id,
+                        isEnabled = it.isEnabled,
+                        cliPath = it.cliPath,
+                        apiKey = ""
+                    )
+                } ?: CodexConfigurationEditorState()
+                uiState = uiState.copy(isCodexLoading = false, codexEditor = editor)
+            } catch (error: Exception) {
+                uiState = uiState.copy(
+                    isCodexLoading = false,
+                    codexError = error.message ?: "Failed to load Codex configuration"
+                )
+            }
+        }
+    }
+
+    fun updateCodexEditorEnabled(isEnabled: Boolean) = updateCodexEditor { it.copy(isEnabled = isEnabled) }
+
+    fun updateCodexEditorCliPath(cliPath: String) = updateCodexEditor { it.copy(cliPath = cliPath) }
+
+    fun updateCodexEditorApiKey(apiKey: String) = updateCodexEditor { it.copy(apiKey = apiKey) }
+
+    fun testCodexCli() {
+        val editor = uiState.codexEditor
+        scope.launch {
+            uiState = uiState.copy(isCodexTesting = true, codexError = null, codexFeedback = null)
+            val resolved = codexCliService.resolveExecutable(editor.cliPath.trim().takeIf { it.isNotEmpty() })
+            resolved.fold(
+                onSuccess = { path ->
+                    val validated = codexCliService.validateExecutable(path)
+                    validated.fold(
+                        onSuccess = {
+                            uiState = uiState.copy(
+                                isCodexTesting = false,
+                                codexFeedback = "Codex CLI is available at $path"
+                            )
+                        },
+                        onFailure = { error ->
+                            uiState = uiState.copy(
+                                isCodexTesting = false,
+                                codexError = error.message ?: "Codex CLI validation failed"
+                            )
+                        }
+                    )
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isCodexTesting = false,
+                        codexError = error.message ?: "Could not resolve Codex CLI"
+                    )
+                }
+            )
+        }
+    }
+
+    fun saveCodexConfiguration() {
+        val editor = uiState.codexEditor
+        scope.launch {
+            uiState = uiState.copy(isCodexSaving = true, codexError = null, codexFeedback = null)
+            if (editor.isEnabled) {
+                val resolved = codexCliService.resolveExecutable(editor.cliPath.trim().takeIf { it.isNotEmpty() })
+                if (resolved.isFailure) {
+                    uiState = uiState.copy(
+                        isCodexSaving = false,
+                        codexError = resolved.exceptionOrNull()?.message ?: "Could not resolve Codex CLI"
+                    )
+                    return@launch
+                }
+                val validated = codexCliService.validateExecutable(resolved.getOrThrow())
+                if (validated.isFailure) {
+                    uiState = uiState.copy(
+                        isCodexSaving = false,
+                        codexError = validated.exceptionOrNull()?.message ?: "Codex CLI validation failed"
+                    )
+                    return@launch
+                }
+            }
+            saveCodexToRepository(editor)
+        }
+    }
+
+    fun clearCodexFeedback() {
+        uiState = uiState.copy(codexFeedback = null, codexError = null)
+    }
+
+    private suspend fun saveCodexToRepository(editor: CodexConfigurationEditorState) {
+        try {
+            val saved = codexConfigurationRepository.save(
+                CodexConfigurationRequest(
+                    id = editor.id,
+                    isEnabled = editor.isEnabled,
+                    cliPath = editor.cliPath,
+                    apiKey = editor.apiKey.takeIf { it.isNotBlank() }
+                )
+            )
+            val feedback = when {
+                editor.isEnabled -> "Codex CLI settings saved"
+                else -> "Codex CLI integration disabled"
+            }
+            uiState = uiState.copy(
+                isCodexSaving = false,
+                codexFeedback = feedback,
+                codexEditor = editor.copy(id = saved.id, apiKey = "")
+            )
+        } catch (error: Exception) {
+            uiState = uiState.copy(
+                isCodexSaving = false,
+                codexError = error.message ?: "Failed to save Codex configuration"
+            )
+        }
+    }
+
+    private fun updateCodexEditor(transform: (CodexConfigurationEditorState) -> CodexConfigurationEditorState) {
+        uiState = uiState.copy(
+            codexEditor = transform(uiState.codexEditor),
+            codexError = null,
+            codexFeedback = null
+        )
     }
 
     private suspend fun saveGeppaToRepository(editor: GeppaConfigurationEditorState) {
@@ -969,6 +1102,13 @@ data class McpServerEditorState(
     val port: Int = 3333
 )
 
+data class CodexConfigurationEditorState(
+    val id: UUID? = null,
+    val isEnabled: Boolean = false,
+    val cliPath: String = "",
+    val apiKey: String = ""
+)
+
 data class GeppaConfigurationEditorState(
     val id: UUID? = null,
     val isEnabled: Boolean = false,
@@ -1026,6 +1166,12 @@ data class SettingsUiState(
     val geppaError: String? = null,
     val geppaFeedback: String? = null,
     val geppaEditor: GeppaConfigurationEditorState = GeppaConfigurationEditorState(),
+    val isCodexLoading: Boolean = false,
+    val isCodexSaving: Boolean = false,
+    val isCodexTesting: Boolean = false,
+    val codexError: String? = null,
+    val codexFeedback: String? = null,
+    val codexEditor: CodexConfigurationEditorState = CodexConfigurationEditorState(),
     val isSavedPromptLoading: Boolean = false,
     val isSavedPromptSaving: Boolean = false,
     val savedPromptError: String? = null,

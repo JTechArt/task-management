@@ -2,14 +2,12 @@ package com.aitask.desktop.ui.viewmodel
 
 import com.aitask.core.domain.model.*
 import com.aitask.core.domain.repository.ActivityRepository
+import com.aitask.core.domain.repository.CodexConfigurationRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.service.IDEService
 import com.aitask.core.domain.service.SlackNotificationService
 import com.aitask.core.domain.usecase.*
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.slot
-import io.mockk.mockk
+import io.mockk.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -42,6 +40,8 @@ class TasksViewModelTest {
         val generateWorkspaceUseCase = mockk<GenerateWorkspaceUseCase>()
         val cleanupWorkspaceUseCase = mockk<CleanupWorkspaceUseCase>()
         val launchIDEUseCase = mockk<LaunchIDEUseCase>()
+        val launchCodexUseCase = mockk<LaunchCodexUseCase>(relaxed = true)
+        val codexConfigurationRepository = mockk<CodexConfigurationRepository>(relaxed = true)
         val generateTaskContentUseCase = mockk<GenerateTaskContentUseCase>()
         val generateGitAssistantSuggestionUseCase = mockk<GenerateGitAssistantSuggestionUseCase>()
         getAgentDefinitionsUseCase = mockk()
@@ -68,6 +68,7 @@ class TasksViewModelTest {
         )
         coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(emptyList())
         coEvery { getAgentDefinitionsUseCase.invoke(any()) } returns Result.success(emptyList())
+        coEvery { codexConfigurationRepository.find() } returns null
         coEvery { generateTaskContentUseCase.invoke(any()) } returns Result.success(
             TaskContentGenerationResult(
                 generatedText = "Generated description",
@@ -94,6 +95,8 @@ class TasksViewModelTest {
             generateWorkspaceUseCase = generateWorkspaceUseCase,
             cleanupWorkspaceUseCase = cleanupWorkspaceUseCase,
             launchIDEUseCase = launchIDEUseCase,
+            launchCodexUseCase = launchCodexUseCase,
+            codexConfigurationRepository = codexConfigurationRepository,
             generateTaskContentUseCase = generateTaskContentUseCase,
             generateGitAssistantSuggestionUseCase = generateGitAssistantSuggestionUseCase,
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -212,6 +215,8 @@ class TasksViewModelTest {
             generateWorkspaceUseCase = mockk(relaxed = true),
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            codexConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = generateGitAssistantSuggestionUseCase,
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -317,6 +322,8 @@ class TasksViewModelTest {
             generateWorkspaceUseCase = mockk(relaxed = true),
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            codexConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -398,6 +405,8 @@ class TasksViewModelTest {
             generateWorkspaceUseCase = mockk(relaxed = true),
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            codexConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -487,6 +496,8 @@ class TasksViewModelTest {
             generateWorkspaceUseCase = mockk(relaxed = true),
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            codexConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -539,6 +550,8 @@ class TasksViewModelTest {
             generateWorkspaceUseCase = mockk(relaxed = true),
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            codexConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = failingUseCase,
             generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -599,6 +612,8 @@ class TasksViewModelTest {
             generateWorkspaceUseCase = mockk(relaxed = true),
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            codexConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = failingUseCase,
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -622,6 +637,124 @@ class TasksViewModelTest {
         assertFalse(viewModel.uiState.isGeneratingGitAssistantSuggestion)
         assertEquals("LLM unavailable", viewModel.uiState.gitAssistantSuggestionError)
         assertTrue(viewModel.uiState.gitAssistantSuggestion == null)
+    }
+
+    @Test
+    fun `runCodex sets success when use case succeeds`() = runTest(testDispatcher) {
+        val taskId = UUID.randomUUID()
+        val projectId = UUID.randomUUID()
+        val getTasksUseCase = mockk<GetTasksUseCase>()
+        val getProjectsUseCase = mockk<GetProjectsUseCase>()
+        val launchCodexUseCase = mockk<LaunchCodexUseCase>()
+        coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(
+            listOf(
+                Project(
+                    id = projectId,
+                    name = "Atlas",
+                    description = null,
+                    workspacePath = "/workspace",
+                    branchTemplate = "task-{taskId}",
+                    methodology = Methodology.NONE,
+                    createdAt = Instant.now(),
+                    updatedAt = Instant.now()
+                )
+            )
+        )
+        coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(emptyList())
+        coEvery { launchCodexUseCase(any()) } returns Result.success(
+            LaunchCodexResponse(
+                task = Task(
+                    id = taskId,
+                    title = "T",
+                    description = null,
+                    taskType = TaskType.FEATURE,
+                    status = TaskStatus.IN_PROGRESS,
+                    projectId = projectId,
+                    workspacePath = "/ws",
+                    branchName = null,
+                    createdAt = Instant.now(),
+                    updatedAt = Instant.now(),
+                    completedAt = null
+                ),
+                activity = Activity(
+                    id = UUID.randomUUID(),
+                    type = ActivityType.CODEX_LAUNCHED,
+                    entityType = "task",
+                    entityId = taskId,
+                    description = "ok",
+                    metadata = emptyMap(),
+                    createdAt = Instant.now(),
+                    status = ActivityStatus.SUCCESS,
+                    projectId = projectId
+                )
+            )
+        )
+        viewModel = TasksViewModel(
+            getTasksUseCase = getTasksUseCase,
+            createTaskUseCase = mockk(relaxed = true),
+            updateTaskUseCase = mockk(relaxed = true),
+            deleteTaskUseCase = mockk(relaxed = true),
+            getProjectsUseCase = getProjectsUseCase,
+            generateWorkspaceUseCase = mockk(relaxed = true),
+            cleanupWorkspaceUseCase = mockk(relaxed = true),
+            launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = launchCodexUseCase,
+            codexConfigurationRepository = mockk(relaxed = true),
+            generateTaskContentUseCase = mockk(relaxed = true),
+            generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
+            getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
+            runAgentUseCase = runAgentUseCase,
+            ideService = mockk(relaxed = true),
+            repositoryRepository = mockk(relaxed = true),
+            projectRepository = projectRepository,
+            slackNotificationService = mockk(relaxed = true),
+            activityRepository = activityRepository,
+            scope = CoroutineScope(testDispatcher)
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.runCodex(taskId)
+        advanceUntilIdle()
+        assertEquals("Launched Codex CLI successfully", viewModel.uiState.codexLaunchSuccess)
+        assertFalse(viewModel.uiState.isLaunchingCodex)
+        coVerify(atLeast = 1) { launchCodexUseCase(match { it.taskId == taskId }) }
+    }
+
+    @Test
+    fun `runCodex sets error when use case fails`() = runTest(testDispatcher) {
+        val taskId = UUID.randomUUID()
+        val getTasksUseCase = mockk<GetTasksUseCase>()
+        val getProjectsUseCase = mockk<GetProjectsUseCase>()
+        val launchCodexUseCase = mockk<LaunchCodexUseCase>()
+        coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(emptyList())
+        coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(emptyList())
+        coEvery { launchCodexUseCase(any()) } returns Result.failure(IllegalStateException("Codex disabled"))
+        viewModel = TasksViewModel(
+            getTasksUseCase = getTasksUseCase,
+            createTaskUseCase = mockk(relaxed = true),
+            updateTaskUseCase = mockk(relaxed = true),
+            deleteTaskUseCase = mockk(relaxed = true),
+            getProjectsUseCase = getProjectsUseCase,
+            generateWorkspaceUseCase = mockk(relaxed = true),
+            cleanupWorkspaceUseCase = mockk(relaxed = true),
+            launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = launchCodexUseCase,
+            codexConfigurationRepository = mockk(relaxed = true),
+            generateTaskContentUseCase = mockk(relaxed = true),
+            generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
+            getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
+            runAgentUseCase = runAgentUseCase,
+            ideService = mockk(relaxed = true),
+            repositoryRepository = mockk(relaxed = true),
+            projectRepository = projectRepository,
+            slackNotificationService = mockk(relaxed = true),
+            activityRepository = activityRepository,
+            scope = CoroutineScope(testDispatcher)
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.runCodex(taskId)
+        advanceUntilIdle()
+        assertEquals("Codex disabled", viewModel.uiState.error)
+        assertFalse(viewModel.uiState.isLaunchingCodex)
     }
 
     companion object {

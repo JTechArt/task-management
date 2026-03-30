@@ -307,6 +307,7 @@ fun TaskDetailView(
     onSaveDescription: (UUID, String?) -> Unit = { _, _ -> },
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
+    onRunCodex: ((UUID) -> Unit)? = null,
     onCleanupWorkspace: ((Task) -> Unit)? = null,
     onGenerateTaskContentSuggestion: ((UUID, String, String?, TaskType, TaskContentGenerationMode, UUID?) -> Unit)? = null,
     onClearTaskContentSuggestion: (() -> Unit)? = null,
@@ -323,6 +324,7 @@ fun TaskDetailView(
     isGeneratingWorkspace: Boolean = false,
     workspaceGenerationProgress: String? = null,
     isLaunchingIDE: Boolean = false,
+    isLaunchingCodex: Boolean = false,
     isCleaningUpWorkspace: Boolean = false,
     isGeneratingTaskContent: Boolean = false,
     taskContentGenerationError: String? = null,
@@ -958,6 +960,35 @@ fun TaskDetailView(
                             }
                         }
                     }
+                }
+            }
+
+            if (onRunCodex != null) {
+                Text(
+                    text = "Codex CLI",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+                Text(
+                    text = "Opens Codex in a terminal with TASK_CONTEXT.md and environment variables (AITASK_PROJECT_NAME, AITASK_REPOSITORY_PATH, AITASK_TASK_CONTEXT_FILE).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                )
+                Button(
+                    onClick = { onRunCodex(task.id) },
+                    enabled = !isLaunchingCodex,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isLaunchingCodex) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (isLaunchingCodex) "Starting Codex…" else "Run with Codex")
                 }
             }
 
