@@ -7,6 +7,8 @@ import com.aitask.core.domain.model.AgentDefinition
 import com.aitask.core.domain.model.AgentDefinitionRequest
 import com.aitask.core.domain.model.AgentScope
 import com.aitask.core.domain.model.AgentTrigger
+import com.aitask.core.domain.model.ClaudeConfigurationRequest
+import com.aitask.core.domain.model.ClaudeIntegrationMode
 import com.aitask.core.domain.model.CodexConfigurationRequest
 import com.aitask.core.domain.model.GeppaConfiguration
 import com.aitask.core.domain.model.GeppaConfigurationRequest
@@ -17,6 +19,7 @@ import com.aitask.core.domain.model.LlmConfigurationRequest
 import com.aitask.core.domain.model.SavedPrompt
 import com.aitask.core.domain.model.SavedPromptRequest
 import com.aitask.core.domain.repository.AgentDefinitionRepository
+import com.aitask.core.domain.repository.ClaudeConfigurationRepository
 import com.aitask.core.domain.repository.CodexConfigurationRepository
 import com.aitask.core.domain.repository.GeppaConfigurationRepository
 import com.aitask.core.domain.repository.McpServerConfigurationRepository
@@ -25,6 +28,8 @@ import com.aitask.core.domain.repository.SavedPromptRepository
 import com.aitask.core.domain.usecase.DeleteAgentDefinitionUseCase
 import com.aitask.core.domain.usecase.DeleteSavedPromptUseCase
 import com.aitask.core.domain.usecase.SaveSavedPromptUseCase
+import com.aitask.core.domain.service.ClaudeAnthropicApiService
+import com.aitask.core.domain.service.ClaudeCliService
 import com.aitask.core.domain.service.CodexCliService
 import com.aitask.core.domain.service.GeppaConnectionValidator
 import com.aitask.core.domain.service.LlmConnectionValidator
@@ -62,6 +67,9 @@ class SettingsViewModel(
     private val geppaConnectionValidator: GeppaConnectionValidator = DependencyContainer.geppaConnectionValidator,
     private val codexConfigurationRepository: CodexConfigurationRepository = DependencyContainer.codexConfigurationRepository,
     private val codexCliService: CodexCliService = DependencyContainer.codexCliService,
+    private val claudeConfigurationRepository: ClaudeConfigurationRepository = DependencyContainer.claudeConfigurationRepository,
+    private val claudeCliService: ClaudeCliService = DependencyContainer.claudeCliService,
+    private val claudeAnthropicApiService: ClaudeAnthropicApiService = DependencyContainer.claudeAnthropicApiService,
     private val savedPromptRepository: SavedPromptRepository = DependencyContainer.savedPromptRepository,
     private val saveSavedPromptUseCase: SaveSavedPromptUseCase = DependencyContainer.saveSavedPromptUseCase,
     private val deleteSavedPromptUseCase: DeleteSavedPromptUseCase = DependencyContainer.deleteSavedPromptUseCase,
@@ -77,6 +85,7 @@ class SettingsViewModel(
         loadMcpConfiguration()
         loadGeppaConfiguration()
         loadCodexConfiguration()
+        loadClaudeConfiguration()
         loadSavedPrompts()
     }
 
@@ -368,6 +377,208 @@ class SettingsViewModel(
             codexEditor = transform(uiState.codexEditor),
             codexError = null,
             codexFeedback = null
+        )
+    }
+
+    fun loadClaudeConfiguration() {
+        scope.launch {
+            uiState = uiState.copy(isClaudeLoading = true, claudeError = null)
+            try {
+                val configuration = claudeConfigurationRepository.find()
+                val editor = configuration?.let {
+                    ClaudeConfigurationEditorState(
+                        id = it.id,
+                        isEnabled = it.isEnabled,
+                        integrationMode = it.integrationMode,
+                        cliPath = it.cliPath,
+                        apiBaseUrl = it.apiBaseUrl.orEmpty(),
+                        apiKey = ""
+                    )
+                } ?: ClaudeConfigurationEditorState()
+                uiState = uiState.copy(isClaudeLoading = false, claudeEditor = editor)
+            } catch (error: Exception) {
+                uiState = uiState.copy(
+                    isClaudeLoading = false,
+                    claudeError = error.message ?: "Failed to load Claude configuration"
+                )
+            }
+        }
+    }
+
+    fun updateClaudeEditorEnabled(isEnabled: Boolean) = updateClaudeEditor { it.copy(isEnabled = isEnabled) }
+
+    fun updateClaudeEditorIntegrationMode(mode: ClaudeIntegrationMode) =
+        updateClaudeEditor { it.copy(integrationMode = mode) }
+
+    fun updateClaudeEditorCliPath(cliPath: String) = updateClaudeEditor { it.copy(cliPath = cliPath) }
+
+    fun updateClaudeEditorApiBaseUrl(apiBaseUrl: String) = updateClaudeEditor { it.copy(apiBaseUrl = apiBaseUrl) }
+
+    fun updateClaudeEditorApiKey(apiKey: String) = updateClaudeEditor { it.copy(apiKey = apiKey) }
+
+    fun testClaudeIntegration() {
+        val editor = uiState.claudeEditor
+        scope.launch {
+            uiState = uiState.copy(isClaudeTesting = true, claudeError = null, claudeFeedback = null)
+            if (!editor.isEnabled) {
+                uiState = uiState.copy(
+                    isClaudeTesting = false,
+                    claudeError = "Enable Claude integration before testing."
+                )
+                return@launch
+            }
+            when (editor.integrationMode) {
+                ClaudeIntegrationMode.CLI -> {
+                    val resolved = claudeCliService.resolveExecutable(editor.cliPath.trim().takeIf { it.isNotEmpty() })
+                    resolved.fold(
+                        onSuccess = { path ->
+                            val validated = claudeCliService.validateExecutable(path)
+                            validated.fold(
+                                onSuccess = {
+                                    uiState = uiState.copy(
+                                        isClaudeTesting = false,
+                                        claudeFeedback = "Claude CLI is available at $path"
+                                    )
+                                },
+                                onFailure = { error ->
+                                    uiState = uiState.copy(
+                                        isClaudeTesting = false,
+                                        claudeError = error.message ?: "Claude CLI validation failed"
+                                    )
+                                }
+                            )
+                        },
+                        onFailure = { error ->
+                            uiState = uiState.copy(
+                                isClaudeTesting = false,
+                                claudeError = error.message ?: "Could not resolve Claude CLI"
+                            )
+                        }
+                    )
+                }
+                ClaudeIntegrationMode.API -> {
+                    val key = editor.apiKey.trim().takeIf { it.isNotBlank() }
+                        ?: editor.id?.let { claudeConfigurationRepository.findApiKey(it) }
+                    if (key.isNullOrBlank()) {
+                        uiState = uiState.copy(
+                            isClaudeTesting = false,
+                            claudeError = "Anthropic API key is required for API mode."
+                        )
+                        return@launch
+                    }
+                    val base = editor.apiBaseUrl.trim()
+                    val validated = claudeAnthropicApiService.validateApiKey(key, base)
+                    validated.fold(
+                        onSuccess = {
+                            uiState = uiState.copy(
+                                isClaudeTesting = false,
+                                claudeFeedback = "Anthropic API key is valid."
+                            )
+                        },
+                        onFailure = { error ->
+                            uiState = uiState.copy(
+                                isClaudeTesting = false,
+                                claudeError = error.message ?: "Anthropic API validation failed"
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    fun saveClaudeConfiguration() {
+        val editor = uiState.claudeEditor
+        scope.launch {
+            uiState = uiState.copy(isClaudeSaving = true, claudeError = null, claudeFeedback = null)
+            if (!editor.isEnabled) {
+                saveClaudeToRepository(editor)
+                return@launch
+            }
+            when (editor.integrationMode) {
+                ClaudeIntegrationMode.CLI -> {
+                    val resolved = claudeCliService.resolveExecutable(editor.cliPath.trim().takeIf { it.isNotEmpty() })
+                    if (resolved.isFailure) {
+                        uiState = uiState.copy(
+                            isClaudeSaving = false,
+                            claudeError = resolved.exceptionOrNull()?.message ?: "Could not resolve Claude CLI"
+                        )
+                        return@launch
+                    }
+                    val validated = claudeCliService.validateExecutable(resolved.getOrThrow())
+                    if (validated.isFailure) {
+                        uiState = uiState.copy(
+                            isClaudeSaving = false,
+                            claudeError = validated.exceptionOrNull()?.message ?: "Claude CLI validation failed"
+                        )
+                        return@launch
+                    }
+                    saveClaudeToRepository(editor)
+                }
+                ClaudeIntegrationMode.API -> {
+                    val key = editor.apiKey.trim().takeIf { it.isNotBlank() }
+                        ?: editor.id?.let { claudeConfigurationRepository.findApiKey(it) }
+                    if (key.isNullOrBlank()) {
+                        uiState = uiState.copy(
+                            isClaudeSaving = false,
+                            claudeError = "Anthropic API key is required for API mode."
+                        )
+                        return@launch
+                    }
+                    val base = editor.apiBaseUrl.trim()
+                    val validated = claudeAnthropicApiService.validateApiKey(key, base)
+                    if (validated.isFailure) {
+                        uiState = uiState.copy(
+                            isClaudeSaving = false,
+                            claudeError = validated.exceptionOrNull()?.message ?: "Anthropic API validation failed"
+                        )
+                        return@launch
+                    }
+                    saveClaudeToRepository(editor)
+                }
+            }
+        }
+    }
+
+    fun clearClaudeFeedback() {
+        uiState = uiState.copy(claudeFeedback = null, claudeError = null)
+    }
+
+    private suspend fun saveClaudeToRepository(editor: ClaudeConfigurationEditorState) {
+        try {
+            val saved = claudeConfigurationRepository.save(
+                ClaudeConfigurationRequest(
+                    id = editor.id,
+                    isEnabled = editor.isEnabled,
+                    integrationMode = editor.integrationMode,
+                    cliPath = editor.cliPath,
+                    apiBaseUrl = editor.apiBaseUrl.trim().takeIf { it.isNotBlank() },
+                    apiKey = editor.apiKey.takeIf { it.isNotBlank() }
+                )
+            )
+            val feedback = when {
+                editor.isEnabled && editor.integrationMode == ClaudeIntegrationMode.CLI -> "Claude CLI settings saved"
+                editor.isEnabled && editor.integrationMode == ClaudeIntegrationMode.API -> "Claude API settings saved"
+                else -> "Claude integration disabled"
+            }
+            uiState = uiState.copy(
+                isClaudeSaving = false,
+                claudeFeedback = feedback,
+                claudeEditor = editor.copy(id = saved.id, apiKey = "")
+            )
+        } catch (error: Exception) {
+            uiState = uiState.copy(
+                isClaudeSaving = false,
+                claudeError = error.message ?: "Failed to save Claude configuration"
+            )
+        }
+    }
+
+    private fun updateClaudeEditor(transform: (ClaudeConfigurationEditorState) -> ClaudeConfigurationEditorState) {
+        uiState = uiState.copy(
+            claudeEditor = transform(uiState.claudeEditor),
+            claudeError = null,
+            claudeFeedback = null
         )
     }
 
@@ -1109,6 +1320,15 @@ data class CodexConfigurationEditorState(
     val apiKey: String = ""
 )
 
+data class ClaudeConfigurationEditorState(
+    val id: UUID? = null,
+    val isEnabled: Boolean = false,
+    val integrationMode: ClaudeIntegrationMode = ClaudeIntegrationMode.CLI,
+    val cliPath: String = "",
+    val apiBaseUrl: String = "",
+    val apiKey: String = ""
+)
+
 data class GeppaConfigurationEditorState(
     val id: UUID? = null,
     val isEnabled: Boolean = false,
@@ -1172,6 +1392,12 @@ data class SettingsUiState(
     val codexError: String? = null,
     val codexFeedback: String? = null,
     val codexEditor: CodexConfigurationEditorState = CodexConfigurationEditorState(),
+    val isClaudeLoading: Boolean = false,
+    val isClaudeSaving: Boolean = false,
+    val isClaudeTesting: Boolean = false,
+    val claudeError: String? = null,
+    val claudeFeedback: String? = null,
+    val claudeEditor: ClaudeConfigurationEditorState = ClaudeConfigurationEditorState(),
     val isSavedPromptLoading: Boolean = false,
     val isSavedPromptSaving: Boolean = false,
     val savedPromptError: String? = null,

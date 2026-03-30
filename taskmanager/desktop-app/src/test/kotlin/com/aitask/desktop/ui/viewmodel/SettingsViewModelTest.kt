@@ -1,6 +1,8 @@
 package com.aitask.desktop.ui.viewmodel
 
 import com.aitask.core.data.repository.InMemoryLlmConfigurationRepository
+import com.aitask.core.domain.model.ClaudeConfiguration
+import com.aitask.core.domain.model.ClaudeIntegrationMode
 import com.aitask.core.domain.model.CodexConfiguration
 import com.aitask.core.domain.model.GeppaConnectionTestResult
 import com.aitask.core.domain.model.McpServerConfiguration
@@ -9,11 +11,14 @@ import com.aitask.core.domain.model.McpServerConfigurationRequest
 import com.aitask.core.domain.model.SavedPrompt
 import com.aitask.core.domain.model.SavedPromptRequest
 import com.aitask.core.domain.repository.AgentDefinitionRepository
+import com.aitask.core.domain.repository.ClaudeConfigurationRepository
 import com.aitask.core.domain.repository.CodexConfigurationRepository
 import com.aitask.core.domain.repository.GeppaConfigurationRepository
 import com.aitask.core.domain.repository.McpServerConfigurationRepository
 import com.aitask.core.domain.repository.SavedPromptRepository
 import com.aitask.core.domain.model.LlmConnectionTestResult
+import com.aitask.core.domain.service.ClaudeAnthropicApiService
+import com.aitask.core.domain.service.ClaudeCliService
 import com.aitask.core.domain.service.CodexCliService
 import com.aitask.core.domain.service.GeppaConnectionValidator
 import com.aitask.core.domain.service.McpServerManifest
@@ -51,6 +56,9 @@ class SettingsViewModelTest {
     private lateinit var geppaConnectionValidator: GeppaConnectionValidator
     private lateinit var codexConfigurationRepository: CodexConfigurationRepository
     private lateinit var codexCliService: CodexCliService
+    private lateinit var claudeConfigurationRepository: ClaudeConfigurationRepository
+    private lateinit var claudeCliService: ClaudeCliService
+    private lateinit var claudeAnthropicApiService: ClaudeAnthropicApiService
     private lateinit var savedPromptRepository: SavedPromptRepository
     private lateinit var saveSavedPromptUseCase: SaveSavedPromptUseCase
     private lateinit var deleteSavedPromptUseCase: DeleteSavedPromptUseCase
@@ -67,6 +75,9 @@ class SettingsViewModelTest {
         geppaConnectionValidator = mockk()
         codexConfigurationRepository = mockk(relaxed = true)
         codexCliService = mockk(relaxed = true)
+        claudeConfigurationRepository = mockk(relaxed = true)
+        claudeCliService = mockk(relaxed = true)
+        claudeAnthropicApiService = mockk(relaxed = true)
         coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(emptyList())
         coEvery { agentDefinitionRepository.findAll() } returns emptyList()
         coEvery { mcpServerConfigurationRepository.find() } returns null
@@ -92,6 +103,7 @@ class SettingsViewModelTest {
         coEvery { mcpBridgeService.stop() } returns mcpBridgeService.currentManifest()
         coEvery { geppaConfigurationRepository.find() } returns null
         coEvery { codexConfigurationRepository.find() } returns null
+        coEvery { claudeConfigurationRepository.find() } returns null
         savedPromptRepository = mockk<SavedPromptRepository>()
         coEvery { savedPromptRepository.findAll() } returns emptyList()
         saveSavedPromptUseCase = mockk<SaveSavedPromptUseCase>(relaxed = true)
@@ -118,6 +130,9 @@ class SettingsViewModelTest {
             geppaConnectionValidator = geppaConnectionValidator,
             codexConfigurationRepository = codexConfigurationRepository,
             codexCliService = codexCliService,
+            claudeConfigurationRepository = claudeConfigurationRepository,
+            claudeCliService = claudeCliService,
+            claudeAnthropicApiService = claudeAnthropicApiService,
             savedPromptRepository = savedPromptRepository,
             saveSavedPromptUseCase = saveSavedPromptUseCase,
             deleteSavedPromptUseCase = deleteSavedPromptUseCase,
@@ -167,6 +182,9 @@ class SettingsViewModelTest {
             geppaConnectionValidator = geppaConnectionValidator,
             codexConfigurationRepository = codexConfigurationRepository,
             codexCliService = codexCliService,
+            claudeConfigurationRepository = claudeConfigurationRepository,
+            claudeCliService = claudeCliService,
+            claudeAnthropicApiService = claudeAnthropicApiService,
             savedPromptRepository = savedPromptRepository,
             saveSavedPromptUseCase = saveSavedPromptUseCase,
             deleteSavedPromptUseCase = deleteSavedPromptUseCase,
@@ -487,5 +505,47 @@ class SettingsViewModelTest {
         advanceUntilIdle()
         assertEquals("bad path", viewModel.uiState.codexError)
         coVerify(exactly = 0) { codexConfigurationRepository.save(any()) }
+    }
+
+    @Test
+    fun `testClaudeIntegration CLI shows feedback when cli resolves and validates`() = runTest(testDispatcher) {
+        coEvery { claudeCliService.resolveExecutable(any()) } returns Result.success("/opt/claude")
+        coEvery { claudeCliService.validateExecutable("/opt/claude") } returns Result.success(Unit)
+        advanceUntilIdle()
+        viewModel.updateClaudeEditorEnabled(true)
+        viewModel.updateClaudeEditorIntegrationMode(ClaudeIntegrationMode.CLI)
+        viewModel.testClaudeIntegration()
+        advanceUntilIdle()
+        assertEquals("Claude CLI is available at /opt/claude", viewModel.uiState.claudeFeedback)
+        assertFalse(viewModel.uiState.isClaudeTesting)
+    }
+
+    @Test
+    fun `saveClaudeConfiguration API mode validates and persists`() = runTest(testDispatcher) {
+        val id = java.util.UUID.randomUUID()
+        coEvery { claudeAnthropicApiService.validateApiKey(any(), any()) } returns Result.success(Unit)
+        coEvery { claudeConfigurationRepository.save(any()) } returns ClaudeConfiguration(
+            id = id,
+            isEnabled = true,
+            integrationMode = ClaudeIntegrationMode.API,
+            cliPath = "",
+            apiBaseUrl = null,
+            hasApiKey = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        advanceUntilIdle()
+        viewModel.updateClaudeEditorEnabled(true)
+        viewModel.updateClaudeEditorIntegrationMode(ClaudeIntegrationMode.API)
+        viewModel.updateClaudeEditorApiKey("sk-ant-test")
+        viewModel.saveClaudeConfiguration()
+        advanceUntilIdle()
+        assertEquals("Claude API settings saved", viewModel.uiState.claudeFeedback)
+        assertFalse(viewModel.uiState.isClaudeSaving)
+        coVerify(atLeast = 1) {
+            claudeConfigurationRepository.save(
+                match { it.isEnabled && it.integrationMode == ClaudeIntegrationMode.API }
+            )
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.aitask.desktop.ui.viewmodel
 
 import com.aitask.core.domain.model.*
 import com.aitask.core.domain.repository.ActivityRepository
+import com.aitask.core.domain.repository.ClaudeConfigurationRepository
 import com.aitask.core.domain.repository.CodexConfigurationRepository
 import com.aitask.core.domain.repository.ProjectRepository
 import com.aitask.core.domain.service.IDEService
@@ -41,7 +42,9 @@ class TasksViewModelTest {
         val cleanupWorkspaceUseCase = mockk<CleanupWorkspaceUseCase>()
         val launchIDEUseCase = mockk<LaunchIDEUseCase>()
         val launchCodexUseCase = mockk<LaunchCodexUseCase>(relaxed = true)
+        val launchClaudeUseCase = mockk<LaunchClaudeUseCase>(relaxed = true)
         val codexConfigurationRepository = mockk<CodexConfigurationRepository>(relaxed = true)
+        val claudeConfigurationRepository = mockk<ClaudeConfigurationRepository>(relaxed = true)
         val generateTaskContentUseCase = mockk<GenerateTaskContentUseCase>()
         val generateGitAssistantSuggestionUseCase = mockk<GenerateGitAssistantSuggestionUseCase>()
         getAgentDefinitionsUseCase = mockk()
@@ -69,6 +72,7 @@ class TasksViewModelTest {
         coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(emptyList())
         coEvery { getAgentDefinitionsUseCase.invoke(any()) } returns Result.success(emptyList())
         coEvery { codexConfigurationRepository.find() } returns null
+        coEvery { claudeConfigurationRepository.find() } returns null
         coEvery { generateTaskContentUseCase.invoke(any()) } returns Result.success(
             TaskContentGenerationResult(
                 generatedText = "Generated description",
@@ -96,7 +100,9 @@ class TasksViewModelTest {
             cleanupWorkspaceUseCase = cleanupWorkspaceUseCase,
             launchIDEUseCase = launchIDEUseCase,
             launchCodexUseCase = launchCodexUseCase,
+            launchClaudeUseCase = launchClaudeUseCase,
             codexConfigurationRepository = codexConfigurationRepository,
+            claudeConfigurationRepository = claudeConfigurationRepository,
             generateTaskContentUseCase = generateTaskContentUseCase,
             generateGitAssistantSuggestionUseCase = generateGitAssistantSuggestionUseCase,
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -216,7 +222,9 @@ class TasksViewModelTest {
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
             launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = mockk(relaxed = true),
             codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = generateGitAssistantSuggestionUseCase,
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -323,7 +331,9 @@ class TasksViewModelTest {
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
             launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = mockk(relaxed = true),
             codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -406,7 +416,9 @@ class TasksViewModelTest {
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
             launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = mockk(relaxed = true),
             codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -497,7 +509,9 @@ class TasksViewModelTest {
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
             launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = mockk(relaxed = true),
             codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -551,7 +565,9 @@ class TasksViewModelTest {
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
             launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = mockk(relaxed = true),
             codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = failingUseCase,
             generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -613,7 +629,9 @@ class TasksViewModelTest {
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
             launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = mockk(relaxed = true),
             codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = failingUseCase,
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -699,7 +717,9 @@ class TasksViewModelTest {
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
             launchCodexUseCase = launchCodexUseCase,
+            launchClaudeUseCase = mockk(relaxed = true),
             codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -738,7 +758,9 @@ class TasksViewModelTest {
             cleanupWorkspaceUseCase = mockk(relaxed = true),
             launchIDEUseCase = mockk(relaxed = true),
             launchCodexUseCase = launchCodexUseCase,
+            launchClaudeUseCase = mockk(relaxed = true),
             codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
             generateTaskContentUseCase = mockk(relaxed = true),
             generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
             getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
@@ -755,6 +777,129 @@ class TasksViewModelTest {
         advanceUntilIdle()
         assertEquals("Codex disabled", viewModel.uiState.error)
         assertFalse(viewModel.uiState.isLaunchingCodex)
+    }
+
+    @Test
+    fun `runClaude sets success when use case succeeds`() = runTest(testDispatcher) {
+        val taskId = UUID.randomUUID()
+        val projectId = UUID.randomUUID()
+        val getTasksUseCase = mockk<GetTasksUseCase>()
+        val getProjectsUseCase = mockk<GetProjectsUseCase>()
+        val launchClaudeUseCase = mockk<LaunchClaudeUseCase>()
+        coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(
+            listOf(
+                Project(
+                    id = projectId,
+                    name = "Atlas",
+                    description = null,
+                    workspacePath = "/workspace",
+                    branchTemplate = "task-{taskId}",
+                    methodology = Methodology.NONE,
+                    createdAt = Instant.now(),
+                    updatedAt = Instant.now()
+                )
+            )
+        )
+        coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(emptyList())
+        coEvery { launchClaudeUseCase(any()) } returns Result.success(
+            LaunchClaudeResponse(
+                task = Task(
+                    id = taskId,
+                    title = "T",
+                    description = null,
+                    taskType = TaskType.FEATURE,
+                    status = TaskStatus.IN_PROGRESS,
+                    projectId = projectId,
+                    workspacePath = "/ws",
+                    branchName = null,
+                    createdAt = Instant.now(),
+                    updatedAt = Instant.now(),
+                    completedAt = null
+                ),
+                activity = Activity(
+                    id = UUID.randomUUID(),
+                    type = ActivityType.CLAUDE_LAUNCHED,
+                    entityType = "task",
+                    entityId = taskId,
+                    description = "ok",
+                    metadata = emptyMap(),
+                    createdAt = Instant.now(),
+                    status = ActivityStatus.SUCCESS,
+                    projectId = projectId
+                ),
+                userMessage = "Claude API request completed successfully"
+            )
+        )
+        viewModel = TasksViewModel(
+            getTasksUseCase = getTasksUseCase,
+            createTaskUseCase = mockk(relaxed = true),
+            updateTaskUseCase = mockk(relaxed = true),
+            deleteTaskUseCase = mockk(relaxed = true),
+            getProjectsUseCase = getProjectsUseCase,
+            generateWorkspaceUseCase = mockk(relaxed = true),
+            cleanupWorkspaceUseCase = mockk(relaxed = true),
+            launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = launchClaudeUseCase,
+            codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
+            generateTaskContentUseCase = mockk(relaxed = true),
+            generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
+            getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
+            runAgentUseCase = runAgentUseCase,
+            ideService = mockk(relaxed = true),
+            repositoryRepository = mockk(relaxed = true),
+            projectRepository = projectRepository,
+            slackNotificationService = mockk(relaxed = true),
+            activityRepository = activityRepository,
+            scope = CoroutineScope(testDispatcher)
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.runClaude(taskId)
+        advanceUntilIdle()
+        assertEquals("Claude API request completed successfully", viewModel.uiState.claudeLaunchSuccess)
+        assertFalse(viewModel.uiState.isLaunchingClaude)
+        coVerify(atLeast = 1) { launchClaudeUseCase(match { it.taskId == taskId }) }
+    }
+
+    @Test
+    fun `runClaude sets error when use case fails`() = runTest(testDispatcher) {
+        val taskId = UUID.randomUUID()
+        val getTasksUseCase = mockk<GetTasksUseCase>()
+        val getProjectsUseCase = mockk<GetProjectsUseCase>()
+        val launchClaudeUseCase = mockk<LaunchClaudeUseCase>()
+        coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(emptyList())
+        coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(emptyList())
+        coEvery { launchClaudeUseCase(any()) } returns Result.failure(IllegalStateException("Claude disabled"))
+        viewModel = TasksViewModel(
+            getTasksUseCase = getTasksUseCase,
+            createTaskUseCase = mockk(relaxed = true),
+            updateTaskUseCase = mockk(relaxed = true),
+            deleteTaskUseCase = mockk(relaxed = true),
+            getProjectsUseCase = getProjectsUseCase,
+            generateWorkspaceUseCase = mockk(relaxed = true),
+            cleanupWorkspaceUseCase = mockk(relaxed = true),
+            launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = launchClaudeUseCase,
+            codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
+            generateTaskContentUseCase = mockk(relaxed = true),
+            generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
+            getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
+            runAgentUseCase = runAgentUseCase,
+            ideService = mockk(relaxed = true),
+            repositoryRepository = mockk(relaxed = true),
+            projectRepository = projectRepository,
+            slackNotificationService = mockk(relaxed = true),
+            activityRepository = activityRepository,
+            scope = CoroutineScope(testDispatcher)
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.runClaude(taskId)
+        advanceUntilIdle()
+        assertEquals("Claude disabled", viewModel.uiState.error)
+        assertFalse(viewModel.uiState.isLaunchingClaude)
     }
 
     companion object {

@@ -7,6 +7,8 @@ import com.aitask.core.domain.usecase.SaveSavedPromptUseCase
 import com.aitask.core.domain.service.GitService
 import com.aitask.core.domain.service.HealthCheckService
 import com.aitask.core.domain.service.IDEService
+import com.aitask.core.domain.service.ClaudeAnthropicApiService
+import com.aitask.core.domain.service.ClaudeCliService
 import com.aitask.core.domain.service.CodexCliService
 import com.aitask.core.domain.service.McpBridgeService
 import com.aitask.core.domain.service.AgentExecutionService
@@ -32,6 +34,8 @@ import com.aitask.core.domain.validation.TaskValidator
 import com.aitask.core.infrastructure.git.JGitService
 import com.aitask.core.infrastructure.health.HealthCheckServiceImpl
 import com.aitask.core.infrastructure.ide.DesktopIDEService
+import com.aitask.core.infrastructure.claude.DefaultClaudeAnthropicApiService
+import com.aitask.core.infrastructure.claude.DesktopClaudeCliService
 import com.aitask.core.infrastructure.codex.DesktopCodexCliService
 import com.aitask.core.infrastructure.llm.DefaultAgentExecutionService
 import com.aitask.core.infrastructure.llm.DefaultGeppaConnectionValidator
@@ -198,6 +202,18 @@ object DependencyContainer {
 
     val codexCliService: CodexCliService by lazy {
         DesktopCodexCliService()
+    }
+
+    val claudeConfigurationRepository: ClaudeConfigurationRepository by lazy {
+        ClaudeConfigurationRepositoryImpl(encryptionService)
+    }
+
+    val claudeCliService: ClaudeCliService by lazy {
+        DesktopClaudeCliService()
+    }
+
+    val claudeAnthropicApiService: ClaudeAnthropicApiService by lazy {
+        DefaultClaudeAnthropicApiService()
     }
 
     val savedPromptRepository: SavedPromptRepository by lazy {
@@ -393,6 +409,20 @@ object DependencyContainer {
             bmadConfigurationResolver,
             codexConfigurationRepository,
             codexCliService,
+            activityRepository
+        )
+    }
+
+    val launchClaudeUseCase: LaunchClaudeUseCase by lazy {
+        LaunchClaudeUseCase(
+            taskRepository,
+            projectRepository,
+            preRunScriptRepository,
+            preRunScriptService,
+            bmadConfigurationResolver,
+            claudeConfigurationRepository,
+            claudeCliService,
+            claudeAnthropicApiService,
             activityRepository
         )
     }

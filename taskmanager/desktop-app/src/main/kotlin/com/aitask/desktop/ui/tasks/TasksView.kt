@@ -26,10 +26,11 @@ fun TasksView(
 ) {
     val uiState = viewModel.uiState
 
-    // Load available IDEs and Codex integration flag on first composition
+    // Load available IDEs and AI tool integration flags on first composition
     LaunchedEffect(Unit) {
         viewModel.loadAvailableIDEs()
         viewModel.refreshCodexIntegration()
+        viewModel.refreshClaudeIntegration()
     }
 
     // Load project repositories when task is selected
@@ -216,6 +217,30 @@ fun TasksView(
                 }
             }
         }
+
+        uiState.claudeLaunchSuccess?.let { message ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = message,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = { viewModel.clearSuccessMessages() }) {
+                        Text("Dismiss")
+                    }
+                }
+            }
+        }
         
         // Loading state
         if (uiState.isLoading) {
@@ -302,6 +327,11 @@ fun TasksView(
                             } else {
                                 null
                             },
+                            onRunClaude = if (uiState.isClaudeIntegrationEnabled) {
+                                { taskId -> viewModel.runClaude(taskId) }
+                            } else {
+                                null
+                            },
                             onCleanupWorkspace = { task -> viewModel.showCleanupConfirmationDialog(task) },
                             onGenerateTaskContentSuggestion = { projectId, title, currentDescription, taskType, mode, targetTaskId ->
                                 viewModel.generateTaskContentSuggestion(
@@ -334,6 +364,7 @@ fun TasksView(
                             workspaceGenerationProgress = uiState.workspaceGenerationProgress,
                             isLaunchingIDE = uiState.isLaunchingIDE,
                             isLaunchingCodex = uiState.isLaunchingCodex,
+                            isLaunchingClaude = uiState.isLaunchingClaude,
                             isCleaningUpWorkspace = uiState.isCleaningUpWorkspace,
                             isGeneratingTaskContent = uiState.isGeneratingTaskContent,
                             taskContentGenerationError = uiState.taskContentGenerationError,

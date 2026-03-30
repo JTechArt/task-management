@@ -308,6 +308,7 @@ fun TaskDetailView(
     onGenerateWorkspace: ((UUID) -> Unit)? = null,
     onLaunchIDE: ((UUID, IDEType) -> Unit)? = null,
     onRunCodex: ((UUID) -> Unit)? = null,
+    onRunClaude: ((UUID) -> Unit)? = null,
     onCleanupWorkspace: ((Task) -> Unit)? = null,
     onGenerateTaskContentSuggestion: ((UUID, String, String?, TaskType, TaskContentGenerationMode, UUID?) -> Unit)? = null,
     onClearTaskContentSuggestion: (() -> Unit)? = null,
@@ -325,6 +326,7 @@ fun TaskDetailView(
     workspaceGenerationProgress: String? = null,
     isLaunchingIDE: Boolean = false,
     isLaunchingCodex: Boolean = false,
+    isLaunchingClaude: Boolean = false,
     isCleaningUpWorkspace: Boolean = false,
     isGeneratingTaskContent: Boolean = false,
     taskContentGenerationError: String? = null,
@@ -989,6 +991,35 @@ fun TaskDetailView(
                         Spacer(Modifier.width(8.dp))
                     }
                     Text(if (isLaunchingCodex) "Starting Codex…" else "Run with Codex")
+                }
+            }
+
+            if (onRunClaude != null) {
+                Text(
+                    text = "Claude",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+                Text(
+                    text = "CLI mode opens Claude in a terminal with TASK_CONTEXT.md and AITASK_* variables; API mode sends task context to Anthropic in the background.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                )
+                Button(
+                    onClick = { onRunClaude(task.id) },
+                    enabled = !isLaunchingClaude,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isLaunchingClaude) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (isLaunchingClaude) "Running Claude…" else "Run with Claude")
                 }
             }
 

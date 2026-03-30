@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS claude_configurations (
+    id UUID PRIMARY KEY,
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    integration_mode VARCHAR(16) NOT NULL DEFAULT 'CLI',
+    cli_path VARCHAR(2000) NOT NULL DEFAULT '',
+    api_base_url VARCHAR(2000) NULL,
+    api_key_encrypted TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
