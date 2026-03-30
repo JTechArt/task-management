@@ -359,6 +359,11 @@ fun TasksView(
                             onGenerateTaskApproach = { taskId -> viewModel.generateTaskApproach(taskId) },
                             onUpdateTaskApproachSummary = { viewModel.updateTaskApproachSummary(it) },
                             onUpdateTaskApproachStep = { index, step -> viewModel.updateTaskApproachStep(index, step) },
+                            onRemoveTaskApproachStep = { viewModel.removeTaskApproachStep(it) },
+                            onMoveTaskApproachStep = { index, delta -> viewModel.moveTaskApproachStep(index, delta) },
+                            onUpdateTaskApproachStepTools = { index, tools ->
+                                viewModel.updateTaskApproachStepTools(index, tools)
+                            },
                             onApproveTaskApproach = { viewModel.approveTaskApproach() },
                             onRejectTaskApproach = { viewModel.rejectTaskApproach() },
                             availableIDEs = uiState.availableIDEs,

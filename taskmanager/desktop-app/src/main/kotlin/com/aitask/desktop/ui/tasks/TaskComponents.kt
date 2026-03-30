@@ -441,6 +441,9 @@ fun TaskDetailView(
     onGenerateTaskApproach: ((UUID) -> Unit)? = null,
     onUpdateTaskApproachSummary: ((String) -> Unit)? = null,
     onUpdateTaskApproachStep: ((Int, TaskApproachStep) -> Unit)? = null,
+    onRemoveTaskApproachStep: ((Int) -> Unit)? = null,
+    onMoveTaskApproachStep: ((Int, Int) -> Unit)? = null,
+    onUpdateTaskApproachStepTools: ((Int, List<AgentToolKind>) -> Unit)? = null,
     onApproveTaskApproach: (() -> Unit)? = null,
     onRejectTaskApproach: (() -> Unit)? = null,
     availableIDEs: List<com.aitask.core.domain.model.InstalledIDE> = emptyList(),
@@ -489,6 +492,8 @@ fun TaskDetailView(
     val gitAssistantSuggestionForCurrentTask = gitAssistantSuggestionTargetTaskId == task.id && gitAssistantSuggestion != null
     val agentRunResultForCurrentTask = agentRunTargetTaskId == task.id && agentRunResult != null
     val taskApproachForCurrentTask = taskApproachTargetTaskId == task.id && taskApproachDraft != null
+    val taskApproachBlocksAgentRun =
+        taskApproachForCurrentTask && taskApproachReviewState == TaskApproachReviewState.PENDING_REVIEW
     val clipboardManager = LocalClipboardManager.current
     LaunchedEffect(task.methodologyOverride) {
         selectedMethodologyOverride = task.methodologyOverride
@@ -808,11 +813,42 @@ fun TaskDetailView(
                                 modifier = Modifier.padding(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(
-                                    text = "Step ${index + 1}",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Step ${index + 1}",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                                        IconButton(
+                                            onClick = { onMoveTaskApproachStep?.invoke(index, -1) },
+                                            enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED &&
+                                                index > 0 &&
+                                                onMoveTaskApproachStep != null
+                                        ) {
+                                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move step up")
+                                        }
+                                        IconButton(
+                                            onClick = { onMoveTaskApproachStep?.invoke(index, 1) },
+                                            enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED &&
+                                                index < draft.steps.lastIndex &&
+                                                onMoveTaskApproachStep != null
+                                        ) {
+                                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move step down")
+                                        }
+                                        TextButton(
+                                            onClick = { onRemoveTaskApproachStep?.invoke(index) },
+                                            enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED &&
+                                                onRemoveTaskApproachStep != null
+                                        ) {
+                                            Text("Remove")
+                                        }
+                                    }
+                                }
                                 OutlinedTextField(
                                     value = step.title,
                                     onValueChange = { text ->
@@ -834,20 +870,37 @@ fun TaskDetailView(
                                     enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED
                                 )
                                 Text(
-                                    text = "Suggested tools: " + if (step.suggestedTools.isEmpty()) {
-                                        "(none)"
-                                    } else {
-                                        step.suggestedTools.joinToString(", ") { k ->
-                                            when (k) {
-                                                AgentToolKind.LOCAL_LLM -> "Local LLM"
-                                                AgentToolKind.CODEX -> "Codex"
-                                                AgentToolKind.CLAUDE -> "Claude"
-                                            }
-                                        }
-                                    },
+                                    text = "Tools for this step",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                                    fontWeight = FontWeight.Medium
                                 )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    AgentToolKind.values().forEach { kind ->
+                                        val selected = step.suggestedTools.contains(kind)
+                                        val label = when (kind) {
+                                            AgentToolKind.LOCAL_LLM -> "Local LLM"
+                                            AgentToolKind.CODEX -> "Codex"
+                                            AgentToolKind.CLAUDE -> "Claude"
+                                        }
+                                        FilterChip(
+                                            selected = selected,
+                                            onClick = {
+                                                val next = if (selected) {
+                                                    step.suggestedTools.filter { it != kind }
+                                                } else {
+                                                    step.suggestedTools + kind
+                                                }
+                                                onUpdateTaskApproachStepTools?.invoke(index, next)
+                                            },
+                                            label = { Text(label) },
+                                            enabled = taskApproachReviewState != TaskApproachReviewState.APPROVED &&
+                                                onUpdateTaskApproachStepTools != null
+                                        )
+                                    }
+                                }
                                 OutlinedTextField(
                                     value = step.prompt ?: "",
                                     onValueChange = { text ->
@@ -931,13 +984,20 @@ fun TaskDetailView(
                         }
                     }
                 }
+                if (taskApproachBlocksAgentRun) {
+                    Text(
+                        text = "Approve or reject the solving approach above before running an agent.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = {
                             val chosen = selectedAgent ?: return@Button
                             onRunAgent?.invoke(task.id, chosen.id)
                         },
-                        enabled = !isRunningAgent && availableAgents.isNotEmpty() && onRunAgent != null
+                        enabled = !isRunningAgent && availableAgents.isNotEmpty() && onRunAgent != null && !taskApproachBlocksAgentRun
                     ) {
                         Text(if (isRunningAgent && agentRunTargetTaskId == task.id) "Running..." else "Run agent")
                     }

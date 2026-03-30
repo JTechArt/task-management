@@ -14,8 +14,19 @@ import java.util.UUID
 
 data class RunAgentRequest(
     val taskId: UUID,
-    val agentId: UUID
+    val agentId: UUID,
+    /**
+     * When set, the LLM prompt includes this user-approved (and possibly edited) solving approach.
+     * The desktop app passes this only after explicit approval in the task detail flow.
+     */
+    val approvedApproach: TaskSolvingApproach? = null
 )
+
+/**
+ * Executes automation against a task using the local LLM agent runner (same as [RunAgentUseCase]).
+ * See [RunAgentRequest.approvedApproach] for approval-gated execution of a generated plan.
+ */
+typealias ExecuteAutomationUseCase = RunAgentUseCase
 
 data class RunAgentResult(
     val agentId: UUID,
@@ -65,7 +76,7 @@ class RunAgentUseCase(
             ?: llmConfigurationRepository.findDefault()
             ?: return Result.failure(IllegalStateException("No local LLM profile configured"))
         val apiKey = if (configuration.hasApiKey) llmConfigurationRepository.findApiKey(configuration.id) else null
-        val renderedPrompt = renderPrompt(agent, task, project, repositories)
+        val renderedPrompt = renderPrompt(agent, task, project, repositories, request.approvedApproach)
         val prompt = geppaPromptOptimizationService?.optimizeIfEnabled(renderedPrompt, "agent_execution")
             ?: renderedPrompt
 
@@ -114,7 +125,8 @@ class RunAgentUseCase(
         agent: AgentDefinition,
         task: Task,
         project: Project,
-        repositories: List<Repository>
+        repositories: List<Repository>,
+        approvedApproach: TaskSolvingApproach?
     ): String {
         val repositoryNames = repositories.joinToString(", ") { it.name }
         val template = agent.promptTemplate.trim()
@@ -128,13 +140,42 @@ class RunAgentUseCase(
             appendLine("Repositories: {{repositoryNames}}")
         }
 
-        return mergedTemplate
+        val base = mergedTemplate
             .replace("{{taskTitle}}", task.title)
             .replace("{{taskDescription}}", task.description.orEmpty())
             .replace("{{projectName}}", project.name)
             .replace("{{branchName}}", task.branchName.orEmpty())
             .replace("{{repositoryNames}}", repositoryNames)
+        if (approvedApproach == null) {
+            return base
+        }
+        return buildString {
+            appendLine(base.trimEnd())
+            appendLine()
+            appendLine("--- User-approved solving approach ---")
+            appendLine(approvedApproach.summary.trim())
+            approvedApproach.steps.forEachIndexed { index, step ->
+                appendLine()
+                appendLine("Step ${index + 1}: ${step.title}")
+                if (step.detail.isNotBlank()) {
+                    appendLine(step.detail.trim())
+                }
+                val tools = step.suggestedTools.joinToString(", ") { formatToolKind(it) }
+                appendLine("Tools for this step: ${if (tools.isBlank()) "(none selected)" else tools}")
+                step.prompt?.trim()?.takeIf { it.isNotEmpty() }?.let { p ->
+                    appendLine("Prompt / checklist:")
+                    appendLine(p)
+                }
+            }
+        }
     }
+
+    private fun formatToolKind(kind: AgentToolKind): String =
+        when (kind) {
+            AgentToolKind.LOCAL_LLM -> "Local LLM"
+            AgentToolKind.CODEX -> "Codex"
+            AgentToolKind.CLAUDE -> "Claude"
+        }
 
     private suspend fun logAgentActivity(
         agent: AgentDefinition,

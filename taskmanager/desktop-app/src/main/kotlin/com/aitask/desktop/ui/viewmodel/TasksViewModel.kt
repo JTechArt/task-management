@@ -636,9 +636,28 @@ class TasksViewModel(
     }
 
     fun runAgent(taskId: UUID, agentId: UUID) {
-        uiState = uiState.copy(isRunningAgent = true, agentRunError = null, agentRunResult = null, agentRunTargetTaskId = taskId)
+        val snapshot = uiState
+        val draftForTask = snapshot.taskApproachTargetTaskId == taskId && snapshot.taskApproachDraft != null
+        if (draftForTask && snapshot.taskApproachReviewState == TaskApproachReviewState.PENDING_REVIEW) {
+            uiState = snapshot.copy(
+                isRunningAgent = false,
+                agentRunError = "Approve or reject the solving approach before running the agent.",
+                agentRunResult = null,
+                agentRunTargetTaskId = taskId
+            )
+            return
+        }
+        val approvedApproach: TaskSolvingApproach? =
+            if (draftForTask && snapshot.taskApproachReviewState == TaskApproachReviewState.APPROVED) {
+                snapshot.taskApproachDraft
+            } else {
+                null
+            }
+        uiState = snapshot.copy(isRunningAgent = true, agentRunError = null, agentRunResult = null, agentRunTargetTaskId = taskId)
         scope.launch {
-            val result = runAgentUseCase(RunAgentRequest(taskId = taskId, agentId = agentId))
+            val result = runAgentUseCase(
+                RunAgentRequest(taskId = taskId, agentId = agentId, approvedApproach = approvedApproach)
+            )
             result.fold(
                 onSuccess = { execution ->
                     uiState = uiState.copy(
@@ -708,6 +727,39 @@ class TasksViewModel(
             return
         }
         steps[index] = step
+        uiState = uiState.copy(taskApproachDraft = draft.copy(steps = steps))
+    }
+
+    fun removeTaskApproachStep(index: Int) {
+        val draft = uiState.taskApproachDraft ?: return
+        val steps = draft.steps.toMutableList()
+        if (index !in steps.indices) {
+            return
+        }
+        steps.removeAt(index)
+        uiState = uiState.copy(taskApproachDraft = draft.copy(steps = steps))
+    }
+
+    fun moveTaskApproachStep(index: Int, delta: Int) {
+        val draft = uiState.taskApproachDraft ?: return
+        val steps = draft.steps.toMutableList()
+        val newIndex = index + delta
+        if (index !in steps.indices || newIndex !in steps.indices) {
+            return
+        }
+        val tmp = steps[index]
+        steps[index] = steps[newIndex]
+        steps[newIndex] = tmp
+        uiState = uiState.copy(taskApproachDraft = draft.copy(steps = steps))
+    }
+
+    fun updateTaskApproachStepTools(index: Int, tools: List<AgentToolKind>) {
+        val draft = uiState.taskApproachDraft ?: return
+        val steps = draft.steps.toMutableList()
+        if (index !in steps.indices) {
+            return
+        }
+        steps[index] = steps[index].copy(suggestedTools = tools)
         uiState = uiState.copy(taskApproachDraft = draft.copy(steps = steps))
     }
 
