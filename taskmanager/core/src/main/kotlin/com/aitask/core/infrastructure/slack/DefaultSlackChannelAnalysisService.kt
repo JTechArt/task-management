@@ -11,6 +11,7 @@ import com.aitask.core.domain.plugin.SlackChannelAnalyzerPluginIds
 import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.repository.LlmConfigurationRepository
 import com.aitask.core.domain.service.PluginManagementService
+import com.aitask.core.domain.service.SlackAnalysisChannelProgress
 import com.aitask.core.domain.service.SlackAnalysisRunResult
 import com.aitask.core.domain.service.SlackAnalysisTrigger
 import com.aitask.core.domain.service.SlackChannelAnalysisService
@@ -24,6 +25,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
@@ -50,9 +52,11 @@ class DefaultSlackChannelAnalysisService(
 
     override suspend fun runIncrementalAnalysis(
         trigger: SlackAnalysisTrigger,
-        onProgress: (String) -> Unit
+        onProgress: (String) -> Unit,
+        onChannelProgress: (SlackAnalysisChannelProgress) -> Unit
     ): Result<SlackAnalysisRunResult> = mutex.withLock {
         try {
+            val runStartedAt: Instant = Instant.now()
             onProgress("Loading configuration…")
             val initialSnapshot: PluginConfigurationSnapshot = pluginManagementService.getConfiguration(
                 pluginId = SlackChannelAnalyzerPluginIds.PLUGIN_ID,
@@ -68,10 +72,13 @@ class DefaultSlackChannelAnalysisService(
                 return@withLock Result.failure(IllegalStateException("No analysis channels configured"))
             }
             val channelIds: List<String> = rawChannels.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            onChannelProgress(SlackAnalysisChannelProgress(channelBeingProcessed = null, pendingChannelIds = channelIds))
             val checkpoints: MutableMap<String, String> = parseCheckpoints(json = initialSnapshot.fields[SlackChannelAnalyzerPluginIds.FIELD_CHANNEL_CHECKPOINTS_JSON])
             val outcomes: MutableList<SlackChannelRunOutcome> = mutableListOf()
             var workingSnapshot: PluginConfigurationSnapshot = initialSnapshot
-            for (channelId: String in channelIds) {
+            for ((index: Int, channelId: String) in channelIds.withIndex()) {
+                val pending: List<String> = channelIds.drop(index + 1)
+                onChannelProgress(SlackAnalysisChannelProgress(channelBeingProcessed = channelId, pendingChannelIds = pending))
                 onProgress("Analyzing channel $channelId…")
                 val lastTs: String? = checkpoints[channelId]
                 val collectResult: Pair<List<SlackChannelMessage>, String?> = collectNewMessages(
@@ -135,7 +142,13 @@ class DefaultSlackChannelAnalysisService(
                 )
             }
             val summary: String = buildSummary(outcomes = outcomes)
-            recordRunActivity(trigger = trigger, outcomes = outcomes, summary = summary)
+            onChannelProgress(SlackAnalysisChannelProgress(channelBeingProcessed = null, pendingChannelIds = emptyList()))
+            recordRunActivity(
+                trigger = trigger,
+                outcomes = outcomes,
+                summary = summary,
+                runStartedAt = runStartedAt
+            )
             Result.success(SlackAnalysisRunResult(outcomes = outcomes, summaryMessage = summary))
         } catch (e: Exception) {
             Result.failure(e)
@@ -228,8 +241,13 @@ class DefaultSlackChannelAnalysisService(
     private suspend fun recordRunActivity(
         trigger: SlackAnalysisTrigger,
         outcomes: List<SlackChannelRunOutcome>,
-        summary: String
+        summary: String,
+        runStartedAt: Instant
     ) {
+        val processedCount: Int = outcomes.count { outcome: SlackChannelRunOutcome -> outcome is SlackChannelRunOutcome.Processed }
+        val skippedCount: Int = outcomes.count { outcome: SlackChannelRunOutcome -> outcome is SlackChannelRunOutcome.SkippedNoNewContent }
+        val failedCount: Int = outcomes.count { outcome: SlackChannelRunOutcome -> outcome is SlackChannelRunOutcome.Failed }
+        val durationMs: Long = Duration.between(runStartedAt, Instant.now()).toMillis().coerceAtLeast(0L)
         val failures: String = outcomes.filterIsInstance<SlackChannelRunOutcome.Failed>()
             .joinToString(separator = "; ") { failed: SlackChannelRunOutcome.Failed -> "${failed.channelId}: ${failed.diagnostic}" }
         val hasChannelFailure: Boolean = outcomes.any { outcome: SlackChannelRunOutcome -> outcome is SlackChannelRunOutcome.Failed }
@@ -258,6 +276,10 @@ class DefaultSlackChannelAnalysisService(
                 metadata = mapOf(
                     "trigger" to trigger.name,
                     "pluginId" to SlackChannelAnalyzerPluginIds.PLUGIN_ID,
+                    "processedCount" to processedCount.toString(),
+                    "skippedCount" to skippedCount.toString(),
+                    "failedCount" to failedCount.toString(),
+                    "durationMs" to durationMs.toString(),
                     "failures" to failures,
                     "summariesJson" to summariesStored,
                     "summaryDiagnostics" to summaryDiagnostics

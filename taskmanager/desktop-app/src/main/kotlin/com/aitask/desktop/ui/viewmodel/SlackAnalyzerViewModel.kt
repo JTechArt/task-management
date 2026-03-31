@@ -3,17 +3,32 @@ package com.aitask.desktop.ui.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.aitask.core.domain.model.Activity
+import com.aitask.core.domain.model.ActivityStatus
+import com.aitask.core.domain.model.ActivityType
 import com.aitask.core.domain.plugin.PluginConfigurationSnapshot
 import com.aitask.core.domain.plugin.PluginConfigurationValidationException
 import com.aitask.core.domain.plugin.mergePluginConfigurationFields
 import com.aitask.core.domain.plugin.splitPluginConfigurationFields
+import com.aitask.core.domain.repository.ActivityRepository
 import com.aitask.core.domain.service.PluginManagementService
+import com.aitask.core.domain.service.SlackAnalysisChannelProgress
 import com.aitask.core.domain.service.SlackAnalysisTrigger
 import com.aitask.core.domain.service.SlackChannelAnalysisService
 import com.aitask.desktop.di.DependencyContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+
+data class SlackRunHistoryFilters(
+    val dateFrom: String = "",
+    val dateTo: String = "",
+    val status: ActivityStatus? = null,
+    val trigger: SlackAnalysisTrigger? = null
+)
 
 data class SlackAnalyzerUiState(
     val isLoading: Boolean = false,
@@ -24,16 +39,23 @@ data class SlackAnalyzerUiState(
     val analysisRunInProgress: Boolean = false,
     val analysisProgressMessage: String? = null,
     val analysisLastSummary: String? = null,
-    val analysisLastError: String? = null
+    val analysisLastError: String? = null,
+    val analysisChannelProgress: SlackAnalysisChannelProgress? = null,
+    val runHistory: List<Activity> = emptyList(),
+    val runHistoryLoading: Boolean = false,
+    val runHistoryError: String? = null,
+    val runHistoryFilters: SlackRunHistoryFilters = SlackRunHistoryFilters()
 )
 
 class SlackAnalyzerViewModel(
     private val pluginManagementService: PluginManagementService = DependencyContainer.pluginManagementService,
     private val slackChannelAnalysisService: SlackChannelAnalysisService = DependencyContainer.slackChannelAnalysisService,
+    private val activityRepository: ActivityRepository = DependencyContainer.activityRepository,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default)
 ) {
     companion object {
         const val PLUGIN_ID: String = "plugin.slack-channel-analyzer"
+        private const val RUN_HISTORY_LIMIT = 200
     }
 
     var uiState by mutableStateOf(SlackAnalyzerUiState())
@@ -42,6 +64,7 @@ class SlackAnalyzerViewModel(
     fun load() {
         scope.launch {
             uiState = uiState.copy(isLoading = true, feedback = null, error = null)
+            loadRunHistory()
             try {
                 val plugins = pluginManagementService.catalog()
                 val plugin = plugins.firstOrNull { it.id == PLUGIN_ID }
@@ -85,6 +108,61 @@ class SlackAnalyzerViewModel(
                 )
             }
         }
+    }
+
+    fun loadRunHistory() {
+        scope.launch {
+            uiState = uiState.copy(runHistoryLoading = true, runHistoryError = null)
+            try {
+                val filters = uiState.runHistoryFilters
+                val zoneId: ZoneId = ZoneId.systemDefault()
+                val afterInclusive: Instant? = parseDate(filters.dateFrom)?.atStartOfDay(zoneId)?.toInstant()
+                val beforeExclusive: Instant? = parseDate(filters.dateTo)?.plusDays(1)?.atStartOfDay(zoneId)?.toInstant()
+                val loaded: List<Activity> = activityRepository.findFiltered(
+                    type = ActivityType.SLACK_ANALYSIS_RUN,
+                    status = filters.status,
+                    createdAfterInclusive = afterInclusive,
+                    createdBeforeExclusive = beforeExclusive,
+                    limit = RUN_HISTORY_LIMIT
+                )
+                val triggerFiltered: List<Activity> = if (filters.trigger == null) {
+                    loaded
+                } else {
+                    loaded.filter { act -> act.metadata["trigger"] == filters.trigger.name }
+                }
+                uiState = uiState.copy(runHistory = triggerFiltered, runHistoryLoading = false)
+            } catch (e: Exception) {
+                uiState = uiState.copy(
+                    runHistoryLoading = false,
+                    runHistoryError = e.message ?: "Failed to load Slack analysis run history"
+                )
+            }
+        }
+    }
+
+    fun setRunHistoryDateFrom(raw: String) {
+        uiState = uiState.copy(runHistoryFilters = uiState.runHistoryFilters.copy(dateFrom = raw))
+        loadRunHistory()
+    }
+
+    fun setRunHistoryDateTo(raw: String) {
+        uiState = uiState.copy(runHistoryFilters = uiState.runHistoryFilters.copy(dateTo = raw))
+        loadRunHistory()
+    }
+
+    fun setRunHistoryStatusFilter(status: ActivityStatus?) {
+        uiState = uiState.copy(runHistoryFilters = uiState.runHistoryFilters.copy(status = status))
+        loadRunHistory()
+    }
+
+    fun setRunHistoryTriggerFilter(trigger: SlackAnalysisTrigger?) {
+        uiState = uiState.copy(runHistoryFilters = uiState.runHistoryFilters.copy(trigger = trigger))
+        loadRunHistory()
+    }
+
+    fun clearRunHistoryFilters() {
+        uiState = uiState.copy(runHistoryFilters = SlackRunHistoryFilters())
+        loadRunHistory()
     }
 
     fun updateConfigurationField(fieldId: String, value: String) {
@@ -161,14 +239,19 @@ class SlackAnalyzerViewModel(
                 analysisRunInProgress = true,
                 analysisProgressMessage = "Starting…",
                 analysisLastError = null,
-                analysisLastSummary = null
+                analysisLastSummary = null,
+                analysisChannelProgress = null
             )
             val result = slackChannelAnalysisService.runIncrementalAnalysis(
                 trigger = SlackAnalysisTrigger.MANUAL,
                 onProgress = { message: String ->
                     uiState = uiState.copy(analysisProgressMessage = message)
+                },
+                onChannelProgress = { progress: SlackAnalysisChannelProgress ->
+                    uiState = uiState.copy(analysisChannelProgress = progress)
                 }
             )
+            uiState = uiState.copy(analysisChannelProgress = null)
             result.fold(
                 onSuccess = { runResult ->
                     uiState = uiState.copy(
@@ -186,6 +269,7 @@ class SlackAnalyzerViewModel(
                 }
             )
             refreshEditorAfterAnalysisRun()
+            loadRunHistory()
         }
     }
 
@@ -238,4 +322,12 @@ class SlackAnalyzerViewModel(
             secrets = secrets,
             schedule = schedule.takeIf { it.isNotBlank() }
         )
+}
+
+private fun parseDate(raw: String): LocalDate? {
+    val s: String = raw.trim()
+    if (s.isEmpty()) {
+        return null
+    }
+    return runCatching { LocalDate.parse(s) }.getOrNull()
 }

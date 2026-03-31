@@ -23,9 +23,18 @@ data class SlackAnalysisRunResult(
     val summaryMessage: String
 )
 
+/**
+ * Emitted while a run is in progress so the UI can show which channel is active and which are queued.
+ */
+data class SlackAnalysisChannelProgress(
+    val channelBeingProcessed: String?,
+    val pendingChannelIds: List<String>
+)
+
 interface SlackChannelAnalysisService {
     suspend fun runIncrementalAnalysis(
         trigger: SlackAnalysisTrigger,
-        onProgress: (String) -> Unit
+        onProgress: (String) -> Unit,
+        onChannelProgress: (SlackAnalysisChannelProgress) -> Unit = {}
     ): Result<SlackAnalysisRunResult>
 }

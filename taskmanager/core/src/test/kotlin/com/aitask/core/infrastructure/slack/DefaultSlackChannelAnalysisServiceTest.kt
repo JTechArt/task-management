@@ -2,6 +2,7 @@ package com.aitask.core.infrastructure.slack
 
 import com.aitask.core.data.repository.InMemoryActivityRepository
 import com.aitask.core.data.repository.InMemoryLlmConfigurationRepository
+import com.aitask.core.domain.model.Activity
 import com.aitask.core.domain.model.ActivityStatus
 import com.aitask.core.domain.model.ActivityType
 import com.aitask.core.domain.model.SlackChannelMessage
@@ -16,6 +17,7 @@ import com.aitask.core.infrastructure.plugin.InMemoryPluginManagementService
 import com.aitask.core.infrastructure.plugin.SlackConversationHistoryPage
 import com.aitask.core.infrastructure.plugin.SlackConversationHistoryResult
 import com.aitask.core.infrastructure.plugin.SlackWebApiClient
+import com.aitask.core.domain.service.SlackAnalysisChannelProgress
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -119,13 +121,13 @@ class DefaultSlackChannelAnalysisServiceTest {
             llmConfigurationRepository = InMemoryLlmConfigurationRepository(),
             slackSummaryGenerationService = DefaultSlackSummaryGenerationService()
         )
-        val first = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL) { }
+        val first = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL, onProgress = { })
         assertTrue(first.isSuccess)
         val firstOutcome = first.getOrNull()!!.outcomes.single() as SlackChannelRunOutcome.Processed
         assertEquals(2, firstOutcome.messageCount)
         assertEquals(1, firstOutcome.summaries.size)
         assertTrue(firstOutcome.summaries.single().degradedSingleTopicFallback)
-        val second = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL) { }
+        val second = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL, onProgress = { })
         assertTrue(second.isSuccess)
         assertTrue(second.getOrNull()!!.outcomes.single() is SlackChannelRunOutcome.SkippedNoNewContent)
     }
@@ -169,7 +171,7 @@ class DefaultSlackChannelAnalysisServiceTest {
             llmConfigurationRepository = InMemoryLlmConfigurationRepository(),
             slackSummaryGenerationService = DefaultSlackSummaryGenerationService()
         )
-        val result = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL) { }
+        val result = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL, onProgress = { })
         assertTrue(result.isSuccess)
         val outcomes = result.getOrNull()!!.outcomes
         assertEquals(2, outcomes.size)
@@ -217,7 +219,7 @@ class DefaultSlackChannelAnalysisServiceTest {
             llmConfigurationRepository = InMemoryLlmConfigurationRepository(),
             slackSummaryGenerationService = DefaultSlackSummaryGenerationService()
         )
-        val result = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL) { }
+        val result = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL, onProgress = { })
         assertTrue(result.isSuccess)
         val failedOutcome = result.getOrNull()!!.outcomes.single() as SlackChannelRunOutcome.Failed
         assertTrue(failedOutcome.diagnostic.contains("Failed to save checkpoint"))
@@ -255,9 +257,100 @@ class DefaultSlackChannelAnalysisServiceTest {
             llmConfigurationRepository = InMemoryLlmConfigurationRepository(),
             slackSummaryGenerationService = DefaultSlackSummaryGenerationService()
         )
-        service.runIncrementalAnalysis(SlackAnalysisTrigger.SCHEDULED) { }
+        service.runIncrementalAnalysis(SlackAnalysisTrigger.SCHEDULED, onProgress = { })
         val logged = activityRepository.findByType(ActivityType.SLACK_ANALYSIS_RUN)
         assertEquals(1, logged.size)
         assertEquals(ActivityStatus.SUCCESS, logged.single().status)
+    }
+
+    @Test
+    fun `records per channel counts duration and trigger in activity metadata`() = runTest {
+        val activityRepository = InMemoryActivityRepository()
+        val pluginManagementService = InMemoryPluginManagementService(activityRepository = activityRepository)
+        seedValidSlackConfig(pluginManagementService)
+        val client = FakeSlackHistoryClient(
+            responsesByChannel = mapOf(
+                "C1" to listOf(
+                    SlackConversationHistoryResult.Ok(
+                        SlackConversationHistoryPage(
+                            messages = listOf(SlackChannelMessage(ts = "1.0", text = "hello")),
+                            hasMore = false,
+                            nextCursor = null
+                        )
+                    )
+                )
+            )
+        )
+        val service = DefaultSlackChannelAnalysisService(
+            pluginManagementService = pluginManagementService,
+            activityRepository = activityRepository,
+            slackWebApiClient = client,
+            llmConfigurationRepository = InMemoryLlmConfigurationRepository(),
+            slackSummaryGenerationService = DefaultSlackSummaryGenerationService()
+        )
+        service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL, onProgress = { })
+        val logged: Activity = activityRepository.findByType(ActivityType.SLACK_ANALYSIS_RUN).single()
+        assertEquals("MANUAL", logged.metadata["trigger"])
+        assertEquals("1", logged.metadata["processedCount"])
+        assertEquals("0", logged.metadata["skippedCount"])
+        assertEquals("0", logged.metadata["failedCount"])
+        val durationMs: Long = logged.metadata["durationMs"]!!.toLong()
+        assertTrue(durationMs >= 0L)
+    }
+
+    @Test
+    fun `emits channel progress while running`() = runTest {
+        val activityRepository = InMemoryActivityRepository()
+        val pluginManagementService = InMemoryPluginManagementService(activityRepository = activityRepository)
+        pluginManagementService.saveConfiguration(
+            PluginConfigurationSnapshot(
+                pluginId = SlackChannelAnalyzerPluginIds.PLUGIN_ID,
+                scope = PluginConfigurationScope.APP,
+                fields = mapOf(
+                    "analysis_channels" to "C1, C2",
+                    "schedule_mode" to "manual_only"
+                ),
+                secrets = mapOf(SlackChannelAnalyzerPluginIds.SECRET_SLACK_BOT_TOKEN to "xoxb-test"),
+                validationStatus = PluginConfigurationValidationStatus.VALID
+            )
+        )
+        val client = FakeSlackHistoryClient(
+            responsesByChannel = mapOf(
+                "C1" to listOf(
+                    SlackConversationHistoryResult.Ok(
+                        SlackConversationHistoryPage(
+                            messages = emptyList(),
+                            hasMore = false,
+                            nextCursor = null
+                        )
+                    )
+                ),
+                "C2" to listOf(
+                    SlackConversationHistoryResult.Ok(
+                        SlackConversationHistoryPage(
+                            messages = emptyList(),
+                            hasMore = false,
+                            nextCursor = null
+                        )
+                    )
+                )
+            )
+        )
+        val service = DefaultSlackChannelAnalysisService(
+            pluginManagementService = pluginManagementService,
+            activityRepository = activityRepository,
+            slackWebApiClient = client,
+            llmConfigurationRepository = InMemoryLlmConfigurationRepository(),
+            slackSummaryGenerationService = DefaultSlackSummaryGenerationService()
+        )
+        val progressSnapshots: MutableList<SlackAnalysisChannelProgress> = mutableListOf()
+        service.runIncrementalAnalysis(
+            trigger = SlackAnalysisTrigger.MANUAL,
+            onProgress = { },
+            onChannelProgress = { progressSnapshots.add(it) }
+        )
+        assertTrue(progressSnapshots.any { it.channelBeingProcessed == null && it.pendingChannelIds == listOf("C1", "C2") })
+        assertTrue(progressSnapshots.any { it.channelBeingProcessed == "C1" && it.pendingChannelIds == listOf("C2") })
+        assertTrue(progressSnapshots.any { it.channelBeingProcessed == "C2" && it.pendingChannelIds.isEmpty() })
     }
 }
