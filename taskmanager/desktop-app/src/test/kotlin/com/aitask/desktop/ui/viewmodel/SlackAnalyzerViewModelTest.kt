@@ -28,8 +28,14 @@ private class FakeSlackChannelAnalysisService : SlackChannelAnalysisService {
         onProgress("Analyzing channel C1…")
         return Result.success(
             SlackAnalysisRunResult(
-                outcomes = listOf(SlackChannelRunOutcome.Processed(channelId = "C1", messageCount = 1)),
-                summaryMessage = "Slack analysis finished: processed=1, skipped (no new messages)=0, channel failures=0."
+                outcomes = listOf(
+                    SlackChannelRunOutcome.Processed(
+                        channelId = "C1",
+                        messageCount = 1,
+                        summaries = emptyList()
+                    )
+                ),
+                summaryMessage = "Slack analysis finished: processed=1, skipped (no new messages)=0, channel failures=0, topic summaries=0."
             )
         )
     }
@@ -77,7 +83,7 @@ class SlackAnalyzerViewModelTest {
         advanceUntilIdle()
         assertFalse(viewModel.uiState.analysisRunInProgress)
         assertEquals(
-            "Slack analysis finished: processed=1, skipped (no new messages)=0, channel failures=0.",
+            "Slack analysis finished: processed=1, skipped (no new messages)=0, channel failures=0, topic summaries=0.",
             viewModel.uiState.analysisLastSummary
         )
         assertNull(viewModel.uiState.analysisLastError)

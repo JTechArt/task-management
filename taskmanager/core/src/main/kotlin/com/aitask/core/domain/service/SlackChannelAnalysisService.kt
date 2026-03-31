@@ -1,5 +1,7 @@
 package com.aitask.core.domain.service
 
+import com.aitask.core.domain.model.SlackConversationSummaryItem
+
 enum class SlackAnalysisTrigger {
     MANUAL,
     SCHEDULED
@@ -7,7 +9,12 @@ enum class SlackAnalysisTrigger {
 
 sealed class SlackChannelRunOutcome {
     data class SkippedNoNewContent(val channelId: String) : SlackChannelRunOutcome()
-    data class Processed(val channelId: String, val messageCount: Int) : SlackChannelRunOutcome()
+    data class Processed(
+        val channelId: String,
+        val messageCount: Int,
+        val summaries: List<SlackConversationSummaryItem>,
+        val summaryDiagnostics: List<String> = emptyList()
+    ) : SlackChannelRunOutcome()
     data class Failed(val channelId: String, val diagnostic: String) : SlackChannelRunOutcome()
 }
 

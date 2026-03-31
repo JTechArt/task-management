@@ -1,5 +1,6 @@
 package com.aitask.core.infrastructure.plugin
 
+import com.aitask.core.domain.model.SlackChannelMessage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -9,10 +10,12 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 data class SlackConversationHistoryPage(
-    val messageTimestamps: List<String>,
+    val messages: List<SlackChannelMessage>,
     val hasMore: Boolean,
     val nextCursor: String?
-)
+) {
+    val messageTimestamps: List<String> get() = messages.map { message: SlackChannelMessage -> message.ts }
+}
 
 sealed class SlackConversationHistoryResult {
     data class Ok(val page: SlackConversationHistoryPage) : SlackConversationHistoryResult()
@@ -51,7 +54,13 @@ private data class SlackResponseMetadataDto(
 )
 
 @Serializable
-private data class SlackMessageDto(val ts: String? = null)
+private data class SlackMessageDto(
+    val ts: String? = null,
+    val text: String? = null,
+    @SerialName("thread_ts") val threadTs: String? = null,
+    val user: String? = null,
+    val subtype: String? = null
+)
 
 class DefaultSlackWebApiClient : SlackWebApiClient {
     override fun authTest(token: String): Boolean {
@@ -128,11 +137,17 @@ class DefaultSlackWebApiClient : SlackWebApiClient {
             if (!dto.ok) {
                 return SlackConversationHistoryResult.Error(diagnostic = dto.error ?: "Slack conversations.history failed")
             }
-            val timestamps: List<String> = dto.messages.mapNotNull { message: SlackMessageDto -> message.ts }
+            val mapped: List<SlackChannelMessage> = dto.messages.mapNotNull { message: SlackMessageDto ->
+                val ts: String = message.ts?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+                val body: String = message.text?.trim().orEmpty().ifEmpty {
+                    message.subtype?.let { subtype: String -> "(system: $subtype)" } ?: "(no text)"
+                }
+                SlackChannelMessage(ts = ts, text = body, threadTs = message.threadTs, userId = message.user)
+            }
             val next: String? = dto.responseMetadata?.nextCursor?.takeIf { it.isNotBlank() }
             SlackConversationHistoryResult.Ok(
                 page = SlackConversationHistoryPage(
-                    messageTimestamps = timestamps,
+                    messages = mapped,
                     hasMore = dto.hasMore,
                     nextCursor = next
                 )

@@ -1,8 +1,10 @@
 package com.aitask.core.infrastructure.slack
 
 import com.aitask.core.data.repository.InMemoryActivityRepository
+import com.aitask.core.data.repository.InMemoryLlmConfigurationRepository
 import com.aitask.core.domain.model.ActivityStatus
 import com.aitask.core.domain.model.ActivityType
+import com.aitask.core.domain.model.SlackChannelMessage
 import com.aitask.core.domain.plugin.PluginConfigurationScope
 import com.aitask.core.domain.plugin.PluginConfigurationSnapshot
 import com.aitask.core.domain.plugin.PluginConfigurationValidationStatus
@@ -52,7 +54,7 @@ class DefaultSlackChannelAnalysisServiceTest {
                 ?: listOf(
                     SlackConversationHistoryResult.Ok(
                         SlackConversationHistoryPage(
-                            messageTimestamps = emptyList(),
+                            messages = emptyList(),
                             hasMore = false,
                             nextCursor = null
                         )
@@ -89,14 +91,20 @@ class DefaultSlackChannelAnalysisServiceTest {
                 "C1" to listOf(
                     SlackConversationHistoryResult.Ok(
                         SlackConversationHistoryPage(
-                            messageTimestamps = listOf("100.0", "101.0"),
+                            messages = listOf(
+                                SlackChannelMessage(ts = "100.0", text = "a"),
+                                SlackChannelMessage(ts = "101.0", text = "b")
+                            ),
                             hasMore = false,
                             nextCursor = null
                         )
                     ),
                     SlackConversationHistoryResult.Ok(
                         SlackConversationHistoryPage(
-                            messageTimestamps = listOf("100.0", "101.0"),
+                            messages = listOf(
+                                SlackChannelMessage(ts = "100.0", text = "a"),
+                                SlackChannelMessage(ts = "101.0", text = "b")
+                            ),
                             hasMore = false,
                             nextCursor = null
                         )
@@ -107,12 +115,16 @@ class DefaultSlackChannelAnalysisServiceTest {
         val service = DefaultSlackChannelAnalysisService(
             pluginManagementService = pluginManagementService,
             activityRepository = activityRepository,
-            slackWebApiClient = client
+            slackWebApiClient = client,
+            llmConfigurationRepository = InMemoryLlmConfigurationRepository(),
+            slackSummaryGenerationService = DefaultSlackSummaryGenerationService()
         )
         val first = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL) { }
         assertTrue(first.isSuccess)
         val firstOutcome = first.getOrNull()!!.outcomes.single() as SlackChannelRunOutcome.Processed
         assertEquals(2, firstOutcome.messageCount)
+        assertEquals(1, firstOutcome.summaries.size)
+        assertTrue(firstOutcome.summaries.single().degradedSingleTopicFallback)
         val second = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL) { }
         assertTrue(second.isSuccess)
         assertTrue(second.getOrNull()!!.outcomes.single() is SlackChannelRunOutcome.SkippedNoNewContent)
@@ -139,7 +151,7 @@ class DefaultSlackChannelAnalysisServiceTest {
                 "C1" to listOf(
                     SlackConversationHistoryResult.Ok(
                         SlackConversationHistoryPage(
-                            messageTimestamps = listOf("10.0"),
+                            messages = listOf(SlackChannelMessage(ts = "10.0", text = "hello")),
                             hasMore = false,
                             nextCursor = null
                         )
@@ -153,7 +165,9 @@ class DefaultSlackChannelAnalysisServiceTest {
         val service = DefaultSlackChannelAnalysisService(
             pluginManagementService = pluginManagementService,
             activityRepository = activityRepository,
-            slackWebApiClient = client
+            slackWebApiClient = client,
+            llmConfigurationRepository = InMemoryLlmConfigurationRepository(),
+            slackSummaryGenerationService = DefaultSlackSummaryGenerationService()
         )
         val result = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL) { }
         assertTrue(result.isSuccess)
@@ -188,7 +202,7 @@ class DefaultSlackChannelAnalysisServiceTest {
                 "C1" to listOf(
                     SlackConversationHistoryResult.Ok(
                         SlackConversationHistoryPage(
-                            messageTimestamps = listOf("100.0"),
+                            messages = listOf(SlackChannelMessage(ts = "100.0", text = "hello")),
                             hasMore = false,
                             nextCursor = null
                         )
@@ -199,7 +213,9 @@ class DefaultSlackChannelAnalysisServiceTest {
         val service = DefaultSlackChannelAnalysisService(
             pluginManagementService = wrapped,
             activityRepository = activityRepository,
-            slackWebApiClient = client
+            slackWebApiClient = client,
+            llmConfigurationRepository = InMemoryLlmConfigurationRepository(),
+            slackSummaryGenerationService = DefaultSlackSummaryGenerationService()
         )
         val result = service.runIncrementalAnalysis(SlackAnalysisTrigger.MANUAL) { }
         assertTrue(result.isSuccess)
@@ -224,7 +240,7 @@ class DefaultSlackChannelAnalysisServiceTest {
                 "C1" to listOf(
                     SlackConversationHistoryResult.Ok(
                         SlackConversationHistoryPage(
-                            messageTimestamps = listOf("1.0"),
+                            messages = listOf(SlackChannelMessage(ts = "1.0", text = "hello")),
                             hasMore = false,
                             nextCursor = null
                         )
@@ -235,7 +251,9 @@ class DefaultSlackChannelAnalysisServiceTest {
         val service = DefaultSlackChannelAnalysisService(
             pluginManagementService = pluginManagementService,
             activityRepository = activityRepository,
-            slackWebApiClient = client
+            slackWebApiClient = client,
+            llmConfigurationRepository = InMemoryLlmConfigurationRepository(),
+            slackSummaryGenerationService = DefaultSlackSummaryGenerationService()
         )
         service.runIncrementalAnalysis(SlackAnalysisTrigger.SCHEDULED) { }
         val logged = activityRepository.findByType(ActivityType.SLACK_ANALYSIS_RUN)

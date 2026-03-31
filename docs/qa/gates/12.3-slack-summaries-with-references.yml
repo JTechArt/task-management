@@ -1,0 +1,53 @@
+schema: 1
+story: "12.3"
+story_title: "Daily, Per-Channel, and Per-Topic Summaries with References"
+gate: CONCERNS
+status_reason: "Feature meets acceptance criteria and tests pass; residual concerns are test depth for multi-topic and alternate LLM flavors plus diagnostic string hygiene."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-31T12:00:00Z"
+
+top_issues:
+  - id: "TEST-001"
+    severity: medium
+    finding: "Unit tests do not assert multi-topic LLM JSON parsing or Ollama-style response handling; coverage relies on single-topic OpenAI-style mock and integration fallback paths."
+    suggested_action: "Add focused tests in DefaultSlackSummaryGenerationServiceTest for multiple topics and optionally Ollama flavor."
+    suggested_owner: dev
+  - id: "MNT-001"
+    severity: low
+    finding: "Summary diagnostics include raw exception messages from the LLM HTTP path, which may be verbose in activity metadata."
+    suggested_action: "Consider mapping failures to stable diagnostic codes or redacted messages if metadata is user-visible or exported."
+    suggested_owner: dev
+
+waiver:
+  active: false
+
+evidence:
+  tests_reviewed: 4
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: CONCERNS
+    notes: "HTTPS usage and optional Bearer auth align with expectations; diagnostic text in metadata noted under MNT-001."
+  performance:
+    status: PASS
+    notes: "Explicit size caps on prompts and persisted summaries."
+  reliability:
+    status: PASS
+    notes: "Isolated per-day fallback, multi-channel continuation, checkpoint rollback tested."
+  maintainability:
+    status: CONCERNS
+    notes: "Service unit test surface is thin for branching in DefaultSlackSummaryGenerationService."
+
+recommendations:
+  immediate: []
+  future:
+    - action: "Expand DefaultSlackSummaryGenerationServiceTest scenarios (multi-topic, parse-empty, Ollama)."
+      refs:
+        - "taskmanager/core/src/test/kotlin/com/aitask/core/infrastructure/slack/DefaultSlackSummaryGenerationServiceTest.kt"
+
+quality_score: 85
+expires: "2026-04-14T12:00:00Z"
