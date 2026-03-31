@@ -22,6 +22,7 @@ import com.aitask.core.domain.service.RuleApplicationService
 import com.aitask.core.domain.service.EncryptionService
 import com.aitask.core.domain.service.OAuthService
 import com.aitask.core.domain.service.PluginManagementService
+import com.aitask.core.domain.service.SlackChannelAnalysisService
 import com.aitask.core.domain.service.SlackNotificationService
 import com.aitask.core.domain.service.SlackService
 import com.aitask.core.domain.service.BmadWorkspaceInjectionService
@@ -47,7 +48,11 @@ import com.aitask.core.infrastructure.llm.DefaultTaskApproachGenerationService
 import com.aitask.core.infrastructure.llm.DefaultTaskContentGenerationService
 import com.aitask.core.infrastructure.mcp.DefaultMcpBridgeService
 import com.aitask.core.infrastructure.plugin.DefaultPluginPrerequisiteProbe
+import com.aitask.core.infrastructure.plugin.DefaultSlackWebApiClient
 import com.aitask.core.infrastructure.plugin.InMemoryPluginManagementService
+import com.aitask.core.domain.service.SlackSummaryGenerationService
+import com.aitask.core.infrastructure.slack.DefaultSlackChannelAnalysisService
+import com.aitask.core.infrastructure.slack.DefaultSlackSummaryGenerationService
 import com.aitask.core.infrastructure.rules.FileSystemRuleApplicationService
 import com.aitask.core.config.OAuthConfig
 import com.aitask.core.infrastructure.oauth.OAuthServiceImpl
@@ -260,6 +265,20 @@ object DependencyContainer {
             activityRepository = activityRepository,
             configurationRepository = PluginConfigurationRepositoryImpl(),
             prerequisiteProbe = DefaultPluginPrerequisiteProbe(ideService = ideService)
+        )
+    }
+
+    val slackSummaryGenerationService: SlackSummaryGenerationService by lazy {
+        DefaultSlackSummaryGenerationService()
+    }
+
+    val slackChannelAnalysisService: SlackChannelAnalysisService by lazy {
+        DefaultSlackChannelAnalysisService(
+            pluginManagementService = pluginManagementService,
+            activityRepository = activityRepository,
+            slackWebApiClient = DefaultSlackWebApiClient(),
+            llmConfigurationRepository = llmConfigurationRepository,
+            slackSummaryGenerationService = slackSummaryGenerationService
         )
     }
 

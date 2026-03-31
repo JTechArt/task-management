@@ -326,6 +326,15 @@ class InMemoryPluginManagementService(
         }
 
         manifest.configurationSchema.validationRules.forEach { rule ->
+            if (rule.whenFieldId != null) {
+                if (rule.whenFieldMatches.isEmpty()) {
+                    return@forEach
+                }
+                val trigger = fieldValues[rule.whenFieldId]
+                if (trigger == null || trigger !in rule.whenFieldMatches) {
+                    return@forEach
+                }
+            }
             rule.requiredFields.forEach { fieldId ->
                 val value = fieldValues[fieldId]
                 if (value.isNullOrBlank()) {
@@ -352,6 +361,16 @@ class InMemoryPluginManagementService(
                             append("missing prerequisites ${missingPrerequisites.joinToString()}")
                         }
                     }
+                }
+            }
+        }
+
+        if (manifest.id == "plugin.slack-channel-analyzer") {
+            val mode = fieldValues["schedule_mode"]
+            if (mode == "daily" || mode == "manual_and_daily") {
+                val time = fieldValues["daily_run_time"]?.trim()
+                if (!time.isNullOrBlank() && !time.matches(Regex("""^(?:[01]?\d|2[0-3]):[0-5]\d$"""))) {
+                    fieldErrors["daily_run_time"] = "Use HH:mm (24h), e.g. 10:00"
                 }
             }
         }

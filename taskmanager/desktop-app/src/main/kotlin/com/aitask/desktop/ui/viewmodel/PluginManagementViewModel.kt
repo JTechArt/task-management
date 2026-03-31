@@ -9,6 +9,8 @@ import com.aitask.core.domain.plugin.PluginCatalogItem
 import com.aitask.core.domain.plugin.PluginConfigurationScope
 import com.aitask.core.domain.plugin.PluginConfigurationSnapshot
 import com.aitask.core.domain.plugin.PluginConfigurationValidationResult
+import com.aitask.core.domain.plugin.mergePluginConfigurationFields
+import com.aitask.core.domain.plugin.splitPluginConfigurationFields
 import com.aitask.core.domain.plugin.PluginHealthReport
 import com.aitask.core.domain.service.PluginManagementService
 import com.aitask.desktop.di.DependencyContainer
@@ -39,6 +41,7 @@ data class PluginConfigurationEditorState(
     val plugin: PluginCatalogItem,
     val scopeKey: String = "",
     val fields: Map<String, String> = emptyMap(),
+    val internalFields: Map<String, String> = emptyMap(),
     val secrets: Map<String, String> = emptyMap(),
     val schedule: String = "",
     val validationResult: PluginConfigurationValidationResult? = null
@@ -153,11 +156,16 @@ class PluginManagementViewModel(
                 scope = plugin.configurationScope,
                 scopeKey = snapshot?.scopeKey
             ).getOrNull()
+            val split = splitPluginConfigurationFields(
+                plugin = plugin,
+                snapshotFields = snapshot?.fields ?: emptyMap()
+            )
             uiState = uiState.copy(
                 configurationEditor = PluginConfigurationEditorState(
                     plugin = plugin,
                     scopeKey = snapshot?.scopeKey.orEmpty(),
-                    fields = snapshot?.fields ?: emptyMap(),
+                    fields = split.visible,
+                    internalFields = split.internal,
                     secrets = snapshot?.secrets ?: emptyMap(),
                     schedule = snapshot?.schedule.orEmpty(),
                     validationResult = validationResult
@@ -227,11 +235,16 @@ class PluginManagementViewModel(
                         saved
                     ).getOrNull()
                     val recentActivity = pluginManagementService.recentActivity(saved.pluginId)
+                    val splitSaved = splitPluginConfigurationFields(
+                        plugin = editor.plugin,
+                        snapshotFields = saved.fields
+                    )
                     uiState = uiState.copy(
                         plugins = pluginManagementService.catalog(),
                         configurationEditor = editor.copy(
                             scopeKey = saved.scopeKey.orEmpty(),
-                            fields = saved.fields,
+                            fields = splitSaved.visible,
+                            internalFields = splitSaved.internal,
                             secrets = saved.secrets,
                             schedule = saved.schedule.orEmpty(),
                             validationResult = validationResult
@@ -302,7 +315,7 @@ class PluginManagementViewModel(
             pluginId = plugin.id,
             scope = plugin.configurationScope,
             scopeKey = scopeKey.takeIf { it.isNotBlank() },
-            fields = fields,
+            fields = mergePluginConfigurationFields(visible = fields, internal = internalFields),
             secrets = secrets,
             schedule = schedule.takeIf { it.isNotBlank() }
         )

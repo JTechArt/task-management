@@ -1,0 +1,58 @@
+schema: 1
+story: "12.4"
+story_title: "Analysis Run History and Operational Dashboard"
+gate: PASS
+status_reason: "ViewModel run-history filter tests now cover status, trigger, date range, and clear filters; all targeted tests pass. Optional future work remains if product wants live progress for scheduled runs outside this screen."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-31T20:30:00Z"
+
+top_issues: []
+
+waiver:
+  active: false
+
+evidence:
+  tests_reviewed: 13
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "No new secret exposure; failure details use stored metadata."
+  performance:
+    status: PASS
+    notes: "Capped history load; filter applied client-side on result set."
+  reliability:
+    status: PASS
+    notes: "Core metadata, progress, and filter paths covered by unit tests."
+  maintainability:
+    status: PASS
+    notes: "SlackAnalyzerViewModelTest asserts status, trigger, date filters and clearRunHistoryFilters."
+
+recommendations:
+  immediate: []
+  future:
+    - action: "If product requires live in-progress visibility for scheduled/headless runs, add IN_PROGRESS activities or shared progress wiring in a follow-up story."
+      refs:
+        - "taskmanager/desktop-app/src/main/kotlin/com/aitask/desktop/ui/viewmodel/SlackAnalyzerViewModel.kt"
+
+quality_score: 95
+expires: "2026-04-14T20:30:00Z"
+
+risk_summary:
+  totals:
+    critical: 0
+    high: 0
+    medium: 0
+    low: 1
+  highest:
+    id: OPS-001
+    score: 4
+    title: "Scheduled run live progress visibility"
+  recommendations:
+    must_fix: []
+    monitor:
+      - "Confirm product expectation for scheduled vs manual operational visibility."

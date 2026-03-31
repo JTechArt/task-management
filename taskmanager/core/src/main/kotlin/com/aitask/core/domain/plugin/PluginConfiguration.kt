@@ -38,7 +38,9 @@ enum class PluginPrerequisiteType {
     LOCAL_BINARY,
     ENDPOINT,
     CREDENTIAL,
-    COMPANION_APP
+    COMPANION_APP,
+    SLACK_API,
+    SLACK_CHANNELS
 }
 
 @Serializable
@@ -60,7 +62,9 @@ data class PluginValidationRule(
     val id: String,
     val description: String,
     val requiredFields: List<String> = emptyList(),
-    val requiredPrerequisites: List<PluginPrerequisite> = emptyList()
+    val requiredPrerequisites: List<PluginPrerequisite> = emptyList(),
+    val whenFieldId: String? = null,
+    val whenFieldMatches: List<String> = emptyList()
 )
 
 @Serializable

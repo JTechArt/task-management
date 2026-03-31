@@ -20,6 +20,7 @@ import com.aitask.desktop.ui.viewmodel.ActivityFilters
 import com.aitask.desktop.ui.dashboard.DashboardView
 import com.aitask.desktop.ui.integrations.IntegrationsView
 import com.aitask.desktop.ui.plugins.PluginManagementView
+import com.aitask.desktop.ui.slack.SlackAnalyzerView
 import com.aitask.desktop.ui.projects.ProjectsView
 import com.aitask.desktop.ui.tasks.TasksView
 import com.aitask.desktop.ui.rules.RulesView
@@ -130,6 +131,7 @@ fun AppSurface(config: AppConfig, bootstrapResult: BootstrapResult) {
                         NavigationItem.RULES -> RulesView()
                         NavigationItem.INTEGRATIONS -> IntegrationsView()
                         NavigationItem.PLUGINS -> PluginManagementView()
+                        NavigationItem.SLACK_ANALYZER -> SlackAnalyzerView()
                         NavigationItem.SETTINGS -> SettingsView()
                     }
                 }
