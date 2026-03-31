@@ -229,6 +229,83 @@ object PluginCatalogFixtures {
                 )
             ),
             installed = false
+        ),
+        PluginSeed(
+            definition = samplePlugin(
+                id = "plugin.slack-channel-analyzer",
+                name = "Slack Channel Analyzer",
+                description = "Summarizes Slack channel activity on a schedule you control.",
+                version = "1.0.0",
+                configurationScope = PluginConfigurationScope.APP,
+                configurationSchema = PluginConfigurationSchema(
+                    fields = listOf(
+                        PluginConfigurationField(
+                            id = "slack_bot_token",
+                            label = "Slack Bot Token",
+                            type = PluginConfigurationFieldType.SECRET,
+                            required = true,
+                            description = "Bot token (xoxb-) with channels:read and conversations access for validation.",
+                            placeholder = "xoxb-..."
+                        ),
+                        PluginConfigurationField(
+                            id = "analysis_channels",
+                            label = "Channels to analyze",
+                            type = PluginConfigurationFieldType.TEXT,
+                            required = true,
+                            description = "Comma-separated Slack channel IDs (for example C0123456789).",
+                            placeholder = "C0123456789, C0987654321"
+                        ),
+                        PluginConfigurationField(
+                            id = "schedule_mode",
+                            label = "Run mode",
+                            type = PluginConfigurationFieldType.SELECT,
+                            required = true,
+                            options = listOf("manual_only", "daily", "manual_and_daily"),
+                            description = "Manual runs only, daily scheduled runs, or both."
+                        ),
+                        PluginConfigurationField(
+                            id = "daily_run_time",
+                            label = "Daily run time (local)",
+                            type = PluginConfigurationFieldType.TEXT,
+                            required = false,
+                            description = "Time for daily runs in 24-hour form (for example 10:00 for 10:00 AM).",
+                            placeholder = "10:00"
+                        )
+                    ),
+                    prerequisites = listOf(
+                        PluginPrerequisite(
+                            type = PluginPrerequisiteType.SLACK_API,
+                            name = "Slack connectivity",
+                            value = "slack_bot_token",
+                            remediation = "Provide a valid Slack bot token with required scopes."
+                        ),
+                        PluginPrerequisite(
+                            type = PluginPrerequisiteType.SLACK_CHANNELS,
+                            name = "Channel accessibility",
+                            value = "analysis_channels",
+                            remediation = "Use valid channel IDs and invite the bot to private channels."
+                        )
+                    ),
+                    validationRules = listOf(
+                        PluginValidationRule(
+                            id = "daily-run-time-required",
+                            description = "Daily runs require a local run time",
+                            requiredFields = listOf("daily_run_time"),
+                            whenFieldId = "schedule_mode",
+                            whenFieldMatches = listOf("daily", "manual_and_daily")
+                        )
+                    )
+                ),
+                installed = true,
+                extensionPoints = listOf(
+                    PluginExtensionPointDeclaration(
+                        type = PluginExtensionPointType.UI_SURFACE,
+                        id = "slack-analyzer-source-schedule",
+                        label = "Slack Analyzer — Source & Schedule"
+                    )
+                )
+            ),
+            installed = true
         )
     )
 

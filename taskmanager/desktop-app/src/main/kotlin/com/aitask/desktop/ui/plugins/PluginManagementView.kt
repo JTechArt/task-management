@@ -561,7 +561,6 @@ private fun PluginConfigurationDialog(
     onSecretChange: (String, String) -> Unit,
     onScheduleChange: (String) -> Unit
 ) {
-    val scrollState = rememberScrollState()
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -570,88 +569,120 @@ private fun PluginConfigurationDialog(
             shape = RoundedCornerShape(20.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .verticalScroll(scrollState),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "Configure ${editor.plugin.name}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Scope: ${editor.plugin.configurationScope.name.lowercase().replaceFirstChar { it.uppercase() }}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-                if (editor.plugin.configurationScope == PluginConfigurationScope.PROJECT) {
-                    OutlinedTextField(
-                        value = editor.scopeKey,
-                        onValueChange = onScopeKeyChange,
-                        label = { Text("Project scope key") },
-                        placeholder = { Text("Project identifier") },
-                        supportingText = { Text("Use a stable project key so configuration stays isolated.") },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !inProgress
-                    )
-                }
-                if (editor.plugin.configurationSchema.fields.isEmpty() && editor.plugin.configurationSchema.prerequisites.isEmpty()) {
-                    Text(
-                        text = "This plugin does not require configuration.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                } else {
-                    editor.plugin.configurationSchema.fields.forEach { field ->
-                        ConfigurationFieldEditor(
-                            field = field,
-                            value = when (field.type) {
-                                PluginConfigurationFieldType.SECRET -> editor.secrets[field.id].orEmpty()
-                                PluginConfigurationFieldType.SCHEDULE -> editor.schedule
-                                else -> editor.fields[field.id].orEmpty()
-                            },
-                            error = editor.validationResult?.fieldErrors?.get(field.id),
-                            enabled = !inProgress,
-                            onValueChange = { value ->
-                                when (field.type) {
-                                    PluginConfigurationFieldType.SECRET -> onSecretChange(field.id, value)
-                                    PluginConfigurationFieldType.SCHEDULE -> onScheduleChange(value)
-                                    else -> onFieldChange(field.id, value)
-                                }
-                            }
-                        )
-                    }
-                    if (editor.plugin.configurationSchema.prerequisites.isNotEmpty()) {
-                        Divider()
-                        Text(
-                            text = "Prerequisites",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        editor.plugin.configurationSchema.prerequisites.forEach { prerequisite ->
-                            Text(
-                                text = "• ${prerequisite.name}: ${prerequisite.remediation}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-                            )
+            PluginConfigurationFormContent(
+                editor = editor,
+                inProgress = inProgress,
+                title = "Configure ${editor.plugin.name}",
+                includeCloseButton = true,
+                onDismiss = onDismiss,
+                onValidate = onValidate,
+                onSave = onSave,
+                onScopeKeyChange = onScopeKeyChange,
+                onFieldChange = onFieldChange,
+                onSecretChange = onSecretChange,
+                onScheduleChange = onScheduleChange,
+                modifier = Modifier.padding(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun PluginConfigurationFormContent(
+    editor: PluginConfigurationEditorState,
+    inProgress: Boolean,
+    title: String,
+    includeCloseButton: Boolean,
+    onDismiss: (() -> Unit)?,
+    onValidate: () -> Unit,
+    onSave: () -> Unit,
+    onScopeKeyChange: (String) -> Unit,
+    onFieldChange: (String, String) -> Unit,
+    onSecretChange: (String, String) -> Unit,
+    onScheduleChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scrollState = rememberScrollState()
+    Column(
+        modifier = modifier.verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Scope: ${editor.plugin.configurationScope.name.lowercase().replaceFirstChar { it.uppercase() }}",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+        )
+        if (editor.plugin.configurationScope == PluginConfigurationScope.PROJECT) {
+            OutlinedTextField(
+                value = editor.scopeKey,
+                onValueChange = onScopeKeyChange,
+                label = { Text("Project scope key") },
+                placeholder = { Text("Project identifier") },
+                supportingText = { Text("Use a stable project key so configuration stays isolated.") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !inProgress
+            )
+        }
+        if (editor.plugin.configurationSchema.fields.isEmpty() && editor.plugin.configurationSchema.prerequisites.isEmpty()) {
+            Text(
+                text = "This plugin does not require configuration.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        } else {
+            editor.plugin.configurationSchema.fields.forEach { field ->
+                ConfigurationFieldEditor(
+                    field = field,
+                    value = when (field.type) {
+                        PluginConfigurationFieldType.SECRET -> editor.secrets[field.id].orEmpty()
+                        PluginConfigurationFieldType.SCHEDULE -> editor.schedule
+                        else -> editor.fields[field.id].orEmpty()
+                    },
+                    error = editor.validationResult?.fieldErrors?.get(field.id),
+                    enabled = !inProgress,
+                    onValueChange = { value ->
+                        when (field.type) {
+                            PluginConfigurationFieldType.SECRET -> onSecretChange(field.id, value)
+                            PluginConfigurationFieldType.SCHEDULE -> onScheduleChange(value)
+                            else -> onFieldChange(field.id, value)
                         }
                     }
+                )
+            }
+            if (editor.plugin.configurationSchema.prerequisites.isNotEmpty()) {
+                Divider()
+                Text(
+                    text = "Prerequisites",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                editor.plugin.configurationSchema.prerequisites.forEach { prerequisite ->
+                    Text(
+                        text = "• ${prerequisite.name}: ${prerequisite.remediation}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                    )
                 }
-                editor.validationResult?.let {
-                    ConfigurationValidationSummary(result = it)
+            }
+        }
+        editor.validationResult?.let {
+            ConfigurationValidationSummary(result = it)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            if (includeCloseButton && onDismiss != null) {
+                OutlinedButton(onClick = onDismiss, enabled = !inProgress) {
+                    Text("Close")
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(onClick = onDismiss, enabled = !inProgress) {
-                        Text("Close")
-                    }
-                    OutlinedButton(onClick = onValidate, enabled = !inProgress) {
-                        Text("Validate")
-                    }
-                    Button(onClick = onSave, enabled = !inProgress) {
-                        Text("Save configuration")
-                    }
-                }
+            }
+            OutlinedButton(onClick = onValidate, enabled = !inProgress) {
+                Text("Validate")
+            }
+            Button(onClick = onSave, enabled = !inProgress) {
+                Text("Save configuration")
             }
         }
     }

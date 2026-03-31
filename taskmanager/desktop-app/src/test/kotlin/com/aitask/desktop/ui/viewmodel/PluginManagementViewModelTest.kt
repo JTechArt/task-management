@@ -36,7 +36,7 @@ class PluginManagementViewModelTest {
         advanceUntilIdle()
 
         assertEquals(7, viewModel.uiState.coreFeatures.size)
-        assertEquals(3, viewModel.uiState.plugins.size)
+        assertEquals(4, viewModel.uiState.plugins.size)
         assertFalse(viewModel.uiState.isLoading)
         assertTrue(viewModel.uiState.feedback == null)
     }

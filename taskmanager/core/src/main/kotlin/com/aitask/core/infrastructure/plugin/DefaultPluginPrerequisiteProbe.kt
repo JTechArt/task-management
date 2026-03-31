@@ -14,7 +14,8 @@ import java.net.URI
 
 class DefaultPluginPrerequisiteProbe(
     private val ideService: IDEService,
-    private val environment: Map<String, String> = System.getenv()
+    private val environment: Map<String, String> = System.getenv(),
+    private val slackWebApiClient: SlackWebApiClient = DefaultSlackWebApiClient()
 ) : PluginPrerequisiteProbe {
     override suspend fun evaluate(
         prerequisite: PluginPrerequisite,
@@ -25,6 +26,8 @@ class DefaultPluginPrerequisiteProbe(
             PluginPrerequisiteType.ENDPOINT -> evaluateEndpoint(prerequisite)
             PluginPrerequisiteType.CREDENTIAL -> evaluateCredential(prerequisite, pluginConfiguration)
             PluginPrerequisiteType.COMPANION_APP -> evaluateCompanionApp(prerequisite)
+            PluginPrerequisiteType.SLACK_API -> evaluateSlackApi(prerequisite, pluginConfiguration)
+            PluginPrerequisiteType.SLACK_CHANNELS -> evaluateSlackChannels(prerequisite, pluginConfiguration)
         }
     }
 
@@ -91,6 +94,88 @@ class DefaultPluginPrerequisiteProbe(
             },
             remediation = if (present) null else prerequisite.remediation
         )
+    }
+
+    private fun evaluateSlackApi(
+        prerequisite: PluginPrerequisite,
+        pluginConfiguration: Map<String, String>
+    ): PluginPrerequisiteResult {
+        val token = pluginConfiguration[prerequisite.value].orEmpty()
+        if (token.isBlank()) {
+            return PluginPrerequisiteResult(
+                prerequisite = prerequisite,
+                satisfied = false,
+                message = "Slack bot token is missing",
+                remediation = prerequisite.remediation
+            )
+        }
+        return try {
+            val ok = slackWebApiClient.authTest(token)
+            PluginPrerequisiteResult(
+                prerequisite = prerequisite,
+                satisfied = ok,
+                message = if (ok) {
+                    "Slack API accepted the bot token"
+                } else {
+                    "Slack auth.test failed (check token and network)"
+                },
+                remediation = if (ok) null else prerequisite.remediation
+            )
+        } catch (e: Exception) {
+            PluginPrerequisiteResult(
+                prerequisite = prerequisite,
+                satisfied = false,
+                message = e.message ?: "Slack connectivity check failed",
+                remediation = prerequisite.remediation
+            )
+        }
+    }
+
+    private fun evaluateSlackChannels(
+        prerequisite: PluginPrerequisite,
+        pluginConfiguration: Map<String, String>
+    ): PluginPrerequisiteResult {
+        val token = pluginConfiguration["slack_bot_token"].orEmpty()
+        if (token.isBlank()) {
+            return PluginPrerequisiteResult(
+                prerequisite = prerequisite,
+                satisfied = false,
+                message = "Slack bot token is missing",
+                remediation = prerequisite.remediation
+            )
+        }
+        val raw = pluginConfiguration[prerequisite.value].orEmpty()
+        val channels = raw.split(',').map { it.trim() }.filter { it.isNotBlank() }
+        if (channels.isEmpty()) {
+            return PluginPrerequisiteResult(
+                prerequisite = prerequisite,
+                satisfied = false,
+                message = "Add at least one Slack channel ID",
+                remediation = prerequisite.remediation
+            )
+        }
+        val inaccessible = mutableListOf<String>()
+        for (channel in channels) {
+            val normalized = channel.removePrefix("#").trim()
+            if (normalized.isEmpty() || !slackWebApiClient.conversationInfoOk(token, normalized)) {
+                inaccessible.add(channel)
+            }
+        }
+        return if (inaccessible.isEmpty()) {
+            PluginPrerequisiteResult(
+                prerequisite = prerequisite,
+                satisfied = true,
+                message = "All configured channels are accessible to the bot",
+                remediation = null
+            )
+        } else {
+            PluginPrerequisiteResult(
+                prerequisite = prerequisite,
+                satisfied = false,
+                message = "Disabled or inaccessible channels: ${inaccessible.joinToString()}",
+                remediation = prerequisite.remediation
+            )
+        }
     }
 
     private suspend fun evaluateCompanionApp(prerequisite: PluginPrerequisite): PluginPrerequisiteResult {

@@ -22,8 +22,9 @@ class InMemoryPluginManagementServiceTest {
 
         val catalog = service.catalog()
 
-        assertEquals(3, catalog.size)
+        assertEquals(4, catalog.size)
         assertTrue(catalog.any { it.id == "plugin.code-review-assistant" && it.installed })
+        assertTrue(catalog.any { it.id == "plugin.slack-channel-analyzer" && it.installed })
         assertTrue(catalog.any { it.id == "plugin.release-notes" && !it.installed })
     }
 

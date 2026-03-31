@@ -23,7 +23,13 @@ enum class NavigationItem {
     RULES,
     INTEGRATIONS,
     PLUGINS,
+    SLACK_ANALYZER,
     SETTINGS
+}
+
+private fun NavigationItem.navigationLabel(): String = when (this) {
+    NavigationItem.SLACK_ANALYZER -> "Slack Analyzer"
+    else -> name.lowercase().replaceFirstChar { it.uppercase() }
 }
 
 @Composable
@@ -93,7 +99,7 @@ fun NavigationSidebar(
         // Navigation items
         NavigationItem.entries.forEach { item ->
             NavItem(
-                label = item.name.lowercase().replaceFirstChar { it.uppercase() },
+                label = item.navigationLabel(),
                 isSelected = item == selectedItem,
                 onClick = { onItemSelected(item) }
             )

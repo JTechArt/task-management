@@ -1,0 +1,51 @@
+schema: 1
+story: "12.1"
+story_title: "Slack Analysis Source and Schedule Configuration"
+gate: PASS
+status_reason: "Re-review: TEST-001 closed—SlackWebApiClient is injectable; DefaultPluginPrerequisiteProbeSlackTest and SlackJsonResponseOkTest cover SLACK_API, SLACK_CHANNELS, and JSON ok parsing. Acceptance criteria remain satisfied; SEC-001 remains a low monitoring note for future logging."
+reviewer: "Quinn (Test Architect)"
+updated: "2026-03-31T18:00:00Z"
+waiver: { active: false }
+top_issues:
+  - id: SEC-001
+    severity: low
+    finding: "Bot tokens are sent as Bearer credentials to fixed https://slack.com/api/* endpoints only; acceptable for current scope. Ensure logs never include response bodies that might echo tokens."
+    suggested_action: "Keep logging limited to high-level validation outcomes; audit if diagnostic logging is added around HTTP calls."
+evidence:
+  tests_reviewed: 9
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+nfr_validation:
+  security:
+    status: PASS
+    notes: "HTTPS-only Slack Web API; secrets use SECRET field; no hardcoded credentials in reviewed paths."
+  performance:
+    status: PASS
+    notes: "Connect/read timeouts set; validation runs on user save/validate actions."
+  reliability:
+    status: PASS
+    notes: "saveConfiguration rejects invalid snapshots; validation aggregates field errors and prerequisite results."
+  maintainability:
+    status: PASS
+    notes: "Slack probe logic covered by fake SlackWebApiClient tests; slackJsonResponseOk unit-tested."
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
+  highest:
+    id: SEC-001
+    score: 3
+    title: "Token handling if verbose HTTP logging added later"
+  recommendations:
+    must_fix: []
+    monitor:
+      - "SEC-001 if diagnostic logging is added around SlackWebApiClient"
+quality_score: 97
+expires: "2026-04-14T00:00:00Z"
+review_history:
+  - at: "2026-03-31T12:00:00Z"
+    gate: CONCERNS
+    note: "TEST-001: Slack prerequisite probes not covered in CI."
+  - at: "2026-03-31T18:00:00Z"
+    gate: PASS
+    note: "Dev added SlackWebApiClient + DefaultPluginPrerequisiteProbeSlackTest + SlackJsonResponseOkTest; gate lifted."
