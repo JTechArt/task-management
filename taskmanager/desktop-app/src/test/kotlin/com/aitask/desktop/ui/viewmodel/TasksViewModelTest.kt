@@ -70,7 +70,7 @@ class TasksViewModelTest {
             )
         )
         coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(emptyList())
-        coEvery { getAgentDefinitionsUseCase.invoke(any()) } returns Result.success(emptyList())
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(emptyList())
         coEvery { codexConfigurationRepository.find() } returns null
         coEvery { claudeConfigurationRepository.find() } returns null
         coEvery { generateTaskContentUseCase.invoke(any()) } returns Result.success(
@@ -112,6 +112,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = slackNotificationService,
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -234,6 +235,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -283,6 +285,8 @@ class TasksViewModelTest {
             description = null,
             promptTemplate = "Plan {{taskTitle}}",
             llmConfigurationId = null,
+            associatedTools = setOf(com.aitask.core.domain.model.AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
             scope = AgentScope.GLOBAL,
             projectId = null,
             trigger = AgentTrigger.MANUAL,
@@ -309,7 +313,7 @@ class TasksViewModelTest {
             )
         )
         coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(listOf(task))
-        coEvery { getAgentDefinitionsUseCase.invoke(any()) } returns Result.success(listOf(agent))
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(listOf(agent))
         coEvery { runAgentUseCase.invoke(any()) } returns Result.success(
             RunAgentResult(
                 agentId = agent.id,
@@ -343,6 +347,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -377,6 +382,8 @@ class TasksViewModelTest {
             description = null,
             promptTemplate = "Plan {{taskTitle}}",
             llmConfigurationId = null,
+            associatedTools = setOf(com.aitask.core.domain.model.AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
             scope = AgentScope.GLOBAL,
             projectId = null,
             trigger = AgentTrigger.MANUAL,
@@ -403,7 +410,7 @@ class TasksViewModelTest {
             )
         )
         coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(listOf(task))
-        coEvery { getAgentDefinitionsUseCase.invoke(any()) } returns Result.success(listOf(agent))
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(listOf(agent))
         coEvery { runAgentUseCase.invoke(any()) } returns Result.failure(IllegalStateException("Agent failed"))
 
         viewModel = TasksViewModel(
@@ -428,6 +435,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -438,6 +446,340 @@ class TasksViewModelTest {
         assertFalse(viewModel.uiState.isRunningAgent)
         assertEquals("Agent failed", viewModel.uiState.agentRunError)
         assertTrue(viewModel.uiState.agentRunResult == null)
+    }
+
+    @Test
+    fun `runAgent does not invoke use case when solving approach is pending review`() = runTest(testDispatcher) {
+        val task = Task(
+            id = TEST_TASK_ID,
+            title = "Add agent builder",
+            description = "Create reusable agents",
+            taskType = TaskType.FEATURE,
+            status = TaskStatus.IN_PROGRESS,
+            projectId = TEST_PROJECT_ID,
+            workspacePath = "/workspace",
+            branchName = "feature/agent-builder",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+            completedAt = null
+        )
+        val agent = AgentDefinition(
+            id = UUID.randomUUID(),
+            name = "Planner",
+            description = null,
+            promptTemplate = "Plan {{taskTitle}}",
+            llmConfigurationId = null,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            trigger = AgentTrigger.MANUAL,
+            isEnabled = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        val getTasksUseCase = mockk<GetTasksUseCase>()
+        val getProjectsUseCase = mockk<GetProjectsUseCase>()
+        val getAgentDefinitionsUseCase = mockk<GetAgentDefinitionsUseCase>()
+        val generateTaskApproachUseCase = mockk<GenerateTaskApproachUseCase>()
+        val runAgentUseCaseLocal = mockk<RunAgentUseCase>()
+        coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(
+            listOf(
+                Project(
+                    id = TEST_PROJECT_ID,
+                    name = "Atlas",
+                    description = null,
+                    workspacePath = "/workspace",
+                    branchTemplate = "task-{taskId}",
+                    methodology = Methodology.NONE,
+                    createdAt = Instant.now(),
+                    updatedAt = Instant.now()
+                )
+            )
+        )
+        coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(listOf(task))
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(listOf(agent))
+        coEvery { generateTaskApproachUseCase.invoke(any()) } returns Result.success(
+            GenerateTaskApproachResult(
+                approach = TaskSolvingApproach(
+                    summary = "Plan",
+                    steps = listOf(
+                        TaskApproachStep(
+                            title = "Step A",
+                            detail = "",
+                            suggestedTools = listOf(AgentToolKind.LOCAL_LLM),
+                            prompt = null
+                        )
+                    ),
+                    contextAgentId = null,
+                    contextAgentName = null
+                )
+            )
+        )
+        coEvery { runAgentUseCaseLocal.invoke(any()) } returns Result.success(
+            RunAgentResult(
+                agentId = agent.id,
+                agentName = agent.name,
+                generatedText = "ok",
+                configurationName = "Local",
+                modelIdentifier = "m",
+                endpointUrl = "http://localhost:11434"
+            )
+        )
+        viewModel = TasksViewModel(
+            getTasksUseCase = getTasksUseCase,
+            createTaskUseCase = mockk(relaxed = true),
+            updateTaskUseCase = mockk(relaxed = true),
+            deleteTaskUseCase = mockk(relaxed = true),
+            getProjectsUseCase = getProjectsUseCase,
+            generateWorkspaceUseCase = mockk(relaxed = true),
+            cleanupWorkspaceUseCase = mockk(relaxed = true),
+            launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = mockk(relaxed = true),
+            codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
+            generateTaskContentUseCase = mockk(relaxed = true),
+            generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
+            getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
+            runAgentUseCase = runAgentUseCaseLocal,
+            ideService = mockk(relaxed = true),
+            repositoryRepository = mockk(relaxed = true),
+            projectRepository = projectRepository,
+            slackNotificationService = mockk(relaxed = true),
+            activityRepository = activityRepository,
+            generateTaskApproachUseCase = generateTaskApproachUseCase,
+            scope = CoroutineScope(testDispatcher)
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.generateTaskApproach(TEST_TASK_ID)
+        advanceUntilIdle()
+        assertEquals(TaskApproachReviewState.PENDING_REVIEW, viewModel.uiState.taskApproachReviewState)
+        viewModel.runAgent(TEST_TASK_ID, agent.id)
+        advanceUntilIdle()
+        coVerify(exactly = 0) { runAgentUseCaseLocal.invoke(any()) }
+        assertTrue(viewModel.uiState.agentRunError?.contains("Approve or reject") == true)
+    }
+
+    @Test
+    fun `runAgent passes approved approach to use case`() = runTest(testDispatcher) {
+        val task = Task(
+            id = TEST_TASK_ID,
+            title = "Add agent builder",
+            description = "Create reusable agents",
+            taskType = TaskType.FEATURE,
+            status = TaskStatus.IN_PROGRESS,
+            projectId = TEST_PROJECT_ID,
+            workspacePath = "/workspace",
+            branchName = "feature/agent-builder",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+            completedAt = null
+        )
+        val agent = AgentDefinition(
+            id = UUID.randomUUID(),
+            name = "Planner",
+            description = null,
+            promptTemplate = "Plan {{taskTitle}}",
+            llmConfigurationId = null,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            trigger = AgentTrigger.MANUAL,
+            isEnabled = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        val getTasksUseCase = mockk<GetTasksUseCase>()
+        val getProjectsUseCase = mockk<GetProjectsUseCase>()
+        val getAgentDefinitionsUseCase = mockk<GetAgentDefinitionsUseCase>()
+        val generateTaskApproachUseCase = mockk<GenerateTaskApproachUseCase>()
+        val runAgentUseCaseLocal = mockk<RunAgentUseCase>()
+        val requestSlot = slot<RunAgentRequest>()
+        coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(
+            listOf(
+                Project(
+                    id = TEST_PROJECT_ID,
+                    name = "Atlas",
+                    description = null,
+                    workspacePath = "/workspace",
+                    branchTemplate = "task-{taskId}",
+                    methodology = Methodology.NONE,
+                    createdAt = Instant.now(),
+                    updatedAt = Instant.now()
+                )
+            )
+        )
+        coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(listOf(task))
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(listOf(agent))
+        coEvery { generateTaskApproachUseCase.invoke(any()) } returns Result.success(
+            GenerateTaskApproachResult(
+                approach = TaskSolvingApproach(
+                    summary = "Edited summary",
+                    steps = listOf(
+                        TaskApproachStep(
+                            title = "Step A",
+                            detail = "",
+                            suggestedTools = listOf(AgentToolKind.CODEX),
+                            prompt = null
+                        )
+                    ),
+                    contextAgentId = null,
+                    contextAgentName = null
+                )
+            )
+        )
+        coEvery { runAgentUseCaseLocal.invoke(capture(requestSlot)) } returns Result.success(
+            RunAgentResult(
+                agentId = agent.id,
+                agentName = agent.name,
+                generatedText = "ok",
+                configurationName = "Local",
+                modelIdentifier = "m",
+                endpointUrl = "http://localhost:11434"
+            )
+        )
+        viewModel = TasksViewModel(
+            getTasksUseCase = getTasksUseCase,
+            createTaskUseCase = mockk(relaxed = true),
+            updateTaskUseCase = mockk(relaxed = true),
+            deleteTaskUseCase = mockk(relaxed = true),
+            getProjectsUseCase = getProjectsUseCase,
+            generateWorkspaceUseCase = mockk(relaxed = true),
+            cleanupWorkspaceUseCase = mockk(relaxed = true),
+            launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = mockk(relaxed = true),
+            codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
+            generateTaskContentUseCase = mockk(relaxed = true),
+            generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
+            getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
+            runAgentUseCase = runAgentUseCaseLocal,
+            ideService = mockk(relaxed = true),
+            repositoryRepository = mockk(relaxed = true),
+            projectRepository = projectRepository,
+            slackNotificationService = mockk(relaxed = true),
+            activityRepository = activityRepository,
+            generateTaskApproachUseCase = generateTaskApproachUseCase,
+            scope = CoroutineScope(testDispatcher)
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.generateTaskApproach(TEST_TASK_ID)
+        advanceUntilIdle()
+        viewModel.approveTaskApproach()
+        viewModel.runAgent(TEST_TASK_ID, agent.id)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { runAgentUseCaseLocal.invoke(any()) }
+        assertEquals("Edited summary", requestSlot.captured.approvedApproach?.summary)
+        assertEquals(AgentToolKind.CODEX, requestSlot.captured.approvedApproach?.steps?.firstOrNull()?.suggestedTools?.first())
+    }
+
+    @Test
+    fun `removeTaskApproachStep removes step from draft`() = runTest(testDispatcher) {
+        val task = Task(
+            id = TEST_TASK_ID,
+            title = "Add agent builder",
+            description = "Create reusable agents",
+            taskType = TaskType.FEATURE,
+            status = TaskStatus.IN_PROGRESS,
+            projectId = TEST_PROJECT_ID,
+            workspacePath = "/workspace",
+            branchName = "feature/agent-builder",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+            completedAt = null
+        )
+        val agent = AgentDefinition(
+            id = UUID.randomUUID(),
+            name = "Planner",
+            description = null,
+            promptTemplate = "Plan {{taskTitle}}",
+            llmConfigurationId = null,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            trigger = AgentTrigger.MANUAL,
+            isEnabled = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        val getTasksUseCase = mockk<GetTasksUseCase>()
+        val getProjectsUseCase = mockk<GetProjectsUseCase>()
+        val getAgentDefinitionsUseCase = mockk<GetAgentDefinitionsUseCase>()
+        val generateTaskApproachUseCase = mockk<GenerateTaskApproachUseCase>()
+        coEvery { getProjectsUseCase(includeArchived = false) } returns Result.success(
+            listOf(
+                Project(
+                    id = TEST_PROJECT_ID,
+                    name = "Atlas",
+                    description = null,
+                    workspacePath = "/workspace",
+                    branchTemplate = "task-{taskId}",
+                    methodology = Methodology.NONE,
+                    createdAt = Instant.now(),
+                    updatedAt = Instant.now()
+                )
+            )
+        )
+        coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(listOf(task))
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(listOf(agent))
+        coEvery { generateTaskApproachUseCase.invoke(any()) } returns Result.success(
+            GenerateTaskApproachResult(
+                approach = TaskSolvingApproach(
+                    summary = "Plan",
+                    steps = listOf(
+                        TaskApproachStep(
+                            title = "Step A",
+                            detail = "",
+                            suggestedTools = emptyList(),
+                            prompt = null
+                        ),
+                        TaskApproachStep(
+                            title = "Step B",
+                            detail = "",
+                            suggestedTools = emptyList(),
+                            prompt = null
+                        )
+                    ),
+                    contextAgentId = null,
+                    contextAgentName = null
+                )
+            )
+        )
+        viewModel = TasksViewModel(
+            getTasksUseCase = getTasksUseCase,
+            createTaskUseCase = mockk(relaxed = true),
+            updateTaskUseCase = mockk(relaxed = true),
+            deleteTaskUseCase = mockk(relaxed = true),
+            getProjectsUseCase = getProjectsUseCase,
+            generateWorkspaceUseCase = mockk(relaxed = true),
+            cleanupWorkspaceUseCase = mockk(relaxed = true),
+            launchIDEUseCase = mockk(relaxed = true),
+            launchCodexUseCase = mockk(relaxed = true),
+            launchClaudeUseCase = mockk(relaxed = true),
+            codexConfigurationRepository = mockk(relaxed = true),
+            claudeConfigurationRepository = mockk(relaxed = true),
+            generateTaskContentUseCase = mockk(relaxed = true),
+            generateGitAssistantSuggestionUseCase = mockk(relaxed = true),
+            getAgentDefinitionsUseCase = getAgentDefinitionsUseCase,
+            runAgentUseCase = runAgentUseCase,
+            ideService = mockk(relaxed = true),
+            repositoryRepository = mockk(relaxed = true),
+            projectRepository = projectRepository,
+            slackNotificationService = mockk(relaxed = true),
+            activityRepository = activityRepository,
+            generateTaskApproachUseCase = generateTaskApproachUseCase,
+            scope = CoroutineScope(testDispatcher)
+        )
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.generateTaskApproach(TEST_TASK_ID)
+        advanceUntilIdle()
+        viewModel.removeTaskApproachStep(0)
+        assertEquals(1, viewModel.uiState.taskApproachDraft?.steps?.size)
+        assertEquals("Step B", viewModel.uiState.taskApproachDraft?.steps?.firstOrNull()?.title)
     }
 
     @Test
@@ -461,6 +803,8 @@ class TasksViewModelTest {
             description = null,
             promptTemplate = "Review {{taskTitle}}",
             llmConfigurationId = null,
+            associatedTools = setOf(com.aitask.core.domain.model.AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
             scope = AgentScope.GLOBAL,
             projectId = null,
             trigger = AgentTrigger.TASK_OPENED,
@@ -487,7 +831,7 @@ class TasksViewModelTest {
             )
         )
         coEvery { getTasksUseCase.invoke(any(), any()) } returns Result.success(listOf(task))
-        coEvery { getAgentDefinitionsUseCase.invoke(any()) } returns Result.success(listOf(agent))
+        coEvery { getAgentDefinitionsUseCase.invoke(any(), any()) } returns Result.success(listOf(agent))
         coEvery { runAgentUseCase.invoke(any()) } returns Result.success(
             RunAgentResult(
                 agentId = agent.id,
@@ -521,6 +865,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -577,6 +922,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -641,6 +987,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -729,6 +1076,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -770,6 +1118,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -852,6 +1201,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()
@@ -893,6 +1243,7 @@ class TasksViewModelTest {
             projectRepository = projectRepository,
             slackNotificationService = mockk(relaxed = true),
             activityRepository = activityRepository,
+            generateTaskApproachUseCase = mockk(relaxed = true),
             scope = CoroutineScope(testDispatcher)
         )
         testDispatcher.scheduler.advanceUntilIdle()

@@ -1,0 +1,46 @@
+schema: 1
+story: '10.1'
+story_title: 'Agent Builder and Custom Workflow Configuration'
+gate: PASS
+status_reason: 'Independent QA re-run: tests green; AC1–AC5 verified against domain, RunAgentUseCase, Settings, and project automation surfaces. Residual: optional Compose UI tests (TEST-001, low).'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-03-31T23:45:00Z'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: low
+    finding: 'Agent builder UI is covered indirectly via ViewModel/use case tests; there are no Compose UI tests for AgentDefinitionCard.'
+    suggested_action: 'Add UI tests or smoke tests for agent save/delete if the team wants higher confidence on regressions.'
+
+waiver:
+  active: false
+
+evidence:
+  tests_reviewed: 4
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Local desktop app; no new hardcoded secrets in reviewed paths; agent tool list stored as enum names.'
+  performance:
+    status: PASS
+    notes: 'Standard list/load patterns; no hot-path concerns identified for this story.'
+  reliability:
+    status: PASS
+    notes: 'Use cases delegate to repository; SettingsViewModel handles load/save errors with user feedback.'
+  maintainability:
+    status: PASS
+    notes: 'Use case and RunAgent tests cover task-type filtering; REQ-001 addressed in code.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'Consider UI-level tests for Settings agent builder card'
+      refs: ['taskmanager/desktop-app/src/main/kotlin/com/aitask/desktop/ui/PlaceholderViews.kt']
+
+quality_score: 95
+expires: '2026-04-14T12:00:00Z'

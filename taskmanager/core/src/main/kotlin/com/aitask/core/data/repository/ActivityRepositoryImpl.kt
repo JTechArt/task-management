@@ -11,6 +11,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.time.Instant
@@ -72,12 +73,18 @@ class ActivityRepositoryImpl : ActivityRepository {
         projectId: UUID?,
         taskId: UUID?,
         type: ActivityType?,
+        status: ActivityStatus?,
+        createdAfterInclusive: Instant?,
+        createdBeforeExclusive: Instant?,
         limit: Int
     ): List<Activity> = newSuspendedTransaction {
         val conditions = listOfNotNull(
             projectId?.let { ActivityLog.projectId eq it },
             taskId?.let { (ActivityLog.entityType eq "task") and (ActivityLog.entityId eq it) },
-            type?.let { ActivityLog.activityType eq it.name }
+            type?.let { ActivityLog.activityType eq it.name },
+            status?.let { ActivityLog.status eq it.name },
+            createdAfterInclusive?.let { ActivityLog.createdAt greaterEq it },
+            createdBeforeExclusive?.let { ActivityLog.createdAt less it }
         )
         val query = if (conditions.isEmpty()) {
             ActivityLog.selectAll()

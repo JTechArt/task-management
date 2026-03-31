@@ -32,6 +32,8 @@ class ProjectsViewModel(
     private val updateSlackChannelUseCase: UpdateSlackChannelUseCase = DependencyContainer.updateSlackChannelUseCase,
     private val deleteSlackChannelUseCase: DeleteSlackChannelUseCase = DependencyContainer.deleteSlackChannelUseCase,
     private val sendSlackTestMessageUseCase: SendSlackTestMessageUseCase = DependencyContainer.sendSlackTestMessageUseCase,
+    private val agentDefinitionRepository: com.aitask.core.domain.repository.AgentDefinitionRepository =
+        DependencyContainer.agentDefinitionRepository,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) {
     var uiState by mutableStateOf(ProjectsUiState())
@@ -122,12 +124,14 @@ class ProjectsViewModel(
             loadProjectRules(project.id)
             loadPreRunScripts(project.id)
             loadSlackChannels(project.id)
+            loadProjectAgents(project.id)
         } else {
             uiState = uiState.copy(
                 selectedProjectRepositories = emptyList(),
                 selectedProjectHasAttachedRules = false,
                 selectedProjectPreRunScripts = emptyList(),
-                selectedProjectSlackChannels = emptyList()
+                selectedProjectSlackChannels = emptyList(),
+                selectedProjectAgents = emptyList()
             )
         }
     }
@@ -179,6 +183,23 @@ class ProjectsViewModel(
                 uiState = uiState.copy(selectedProjectPreRunScripts = scripts)
             } catch (e: Exception) {
                 uiState = uiState.copy(selectedProjectPreRunScripts = emptyList())
+            }
+        }
+    }
+
+    private fun loadProjectAgents(projectId: java.util.UUID) {
+        scope.launch {
+            try {
+                val agents = withContext(Dispatchers.IO) {
+                    agentDefinitionRepository.findAvailableForProject(projectId)
+                }
+                if (uiState.selectedProject?.id == projectId) {
+                    uiState = uiState.copy(selectedProjectAgents = agents)
+                }
+            } catch (e: Exception) {
+                if (uiState.selectedProject?.id == projectId) {
+                    uiState = uiState.copy(selectedProjectAgents = emptyList())
+                }
             }
         }
     }
@@ -616,6 +637,7 @@ data class ProjectsUiState(
     val selectedProjectRepositories: List<Repository> = emptyList(),
     val selectedProjectPreRunScripts: List<PreRunScript> = emptyList(),
     val selectedProjectSlackChannels: List<SlackChannelConfig> = emptyList(),
+    val selectedProjectAgents: List<AgentDefinition> = emptyList(),
     val selectedProjectHasAttachedRules: Boolean = false,
     val selectedDetailTab: com.aitask.desktop.ui.projects.ProjectDetailTab = com.aitask.desktop.ui.projects.ProjectDetailTab.REPOSITORIES,
     val searchQuery: String = "",

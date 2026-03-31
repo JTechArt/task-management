@@ -1,6 +1,7 @@
 package com.aitask.core.data.repository
 
 import com.aitask.core.domain.model.Activity
+import com.aitask.core.domain.model.ActivityStatus
 import com.aitask.core.domain.model.ActivityType
 import com.aitask.core.domain.repository.ActivityRepository
 import java.time.Instant
@@ -45,14 +46,20 @@ class InMemoryActivityRepository : ActivityRepository {
     override suspend fun findFiltered(
         projectId: UUID?,
         taskId: UUID?,
-        type: com.aitask.core.domain.model.ActivityType?,
+        type: ActivityType?,
+        status: ActivityStatus?,
+        createdAfterInclusive: Instant?,
+        createdBeforeExclusive: Instant?,
         limit: Int
     ): List<Activity> {
         return activities.values
             .filter { act ->
                 (projectId == null || act.projectId == projectId) &&
                 (taskId == null || (act.entityType == "task" && act.entityId == taskId)) &&
-                (type == null || act.type == type)
+                (type == null || act.type == type) &&
+                (status == null || act.status == status) &&
+                (createdAfterInclusive == null || !act.createdAt.isBefore(createdAfterInclusive)) &&
+                (createdBeforeExclusive == null || act.createdAt.isBefore(createdBeforeExclusive))
             }
             .sortedByDescending { it.createdAt }
             .take(limit)

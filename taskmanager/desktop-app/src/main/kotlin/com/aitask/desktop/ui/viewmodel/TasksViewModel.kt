@@ -38,6 +38,7 @@ class TasksViewModel(
     private val generateGitAssistantSuggestionUseCase: GenerateGitAssistantSuggestionUseCase = DependencyContainer.generateGitAssistantSuggestionUseCase,
     private val getAgentDefinitionsUseCase: GetAgentDefinitionsUseCase = DependencyContainer.getAgentDefinitionsUseCase,
     private val runAgentUseCase: RunAgentUseCase = DependencyContainer.runAgentUseCase,
+    private val generateTaskApproachUseCase: GenerateTaskApproachUseCase = DependencyContainer.generateTaskApproachUseCase,
     private val ideService: IDEService = DependencyContainer.ideService,
     private val repositoryRepository: com.aitask.core.domain.repository.RepositoryRepository = DependencyContainer.repositoryRepository,
     private val projectRepository: com.aitask.core.domain.repository.ProjectRepository = DependencyContainer.projectRepository,
@@ -261,13 +262,30 @@ class TasksViewModel(
     }
     
     fun selectTask(task: Task?) {
-        uiState = uiState.copy(selectedTask = task, error = null)
+        uiState = uiState.copy(
+            selectedTask = task,
+            error = null,
+            taskApproachDraft = null,
+            taskApproachError = null,
+            taskApproachTargetTaskId = null,
+            taskApproachReviewState = TaskApproachReviewState.NONE,
+            isGeneratingTaskApproach = false,
+            taskAutomationRuns = emptyList()
+        )
 
         // Load repositories for the selected task's project
         if (task != null) {
             scope.launch {
                 val repositories = repositoryRepository.findByProject(task.projectId)
-                uiState = uiState.copy(projectRepositories = repositories)
+                val automationRuns = activityRepository.findFiltered(
+                    taskId = task.id,
+                    type = ActivityType.AGENT_EXECUTED,
+                    limit = 25
+                )
+                uiState = uiState.copy(
+                    projectRepositories = repositories,
+                    taskAutomationRuns = automationRuns
+                )
             }
             loadAvailableAgents(task.projectId, task, AgentTrigger.TASK_OPENED)
         } else {
@@ -604,7 +622,7 @@ class TasksViewModel(
 
     fun loadAvailableAgents(projectId: UUID? = null, taskForAutoRun: Task? = null, trigger: AgentTrigger? = null) {
         scope.launch {
-            val result = getAgentDefinitionsUseCase(projectId)
+            val result = getAgentDefinitionsUseCase(projectId, taskForAutoRun?.taskType)
             result.fold(
                 onSuccess = { agents ->
                     uiState = uiState.copy(
@@ -627,9 +645,28 @@ class TasksViewModel(
     }
 
     fun runAgent(taskId: UUID, agentId: UUID) {
-        uiState = uiState.copy(isRunningAgent = true, agentRunError = null, agentRunResult = null, agentRunTargetTaskId = taskId)
+        val snapshot = uiState
+        val draftForTask = snapshot.taskApproachTargetTaskId == taskId && snapshot.taskApproachDraft != null
+        if (draftForTask && snapshot.taskApproachReviewState == TaskApproachReviewState.PENDING_REVIEW) {
+            uiState = snapshot.copy(
+                isRunningAgent = false,
+                agentRunError = "Approve or reject the solving approach before running the agent.",
+                agentRunResult = null,
+                agentRunTargetTaskId = taskId
+            )
+            return
+        }
+        val approvedApproach: TaskSolvingApproach? =
+            if (draftForTask && snapshot.taskApproachReviewState == TaskApproachReviewState.APPROVED) {
+                snapshot.taskApproachDraft
+            } else {
+                null
+            }
+        uiState = snapshot.copy(isRunningAgent = true, agentRunError = null, agentRunResult = null, agentRunTargetTaskId = taskId)
         scope.launch {
-            val result = runAgentUseCase(RunAgentRequest(taskId = taskId, agentId = agentId))
+            val result = runAgentUseCase(
+                RunAgentRequest(taskId = taskId, agentId = agentId, approvedApproach = approvedApproach)
+            )
             result.fold(
                 onSuccess = { execution ->
                     uiState = uiState.copy(
@@ -645,6 +682,21 @@ class TasksViewModel(
                     )
                 }
             )
+            refreshTaskAutomationRuns(taskId)
+        }
+    }
+
+    private fun refreshTaskAutomationRuns(taskId: UUID) {
+        scope.launch {
+            val runs = activityRepository.findFiltered(
+                taskId = taskId,
+                type = ActivityType.AGENT_EXECUTED,
+                limit = 25
+            )
+            val selected = uiState.selectedTask
+            if (selected?.id == taskId) {
+                uiState = uiState.copy(taskAutomationRuns = runs)
+            }
         }
     }
 
@@ -654,6 +706,100 @@ class TasksViewModel(
             agentRunError = null,
             agentRunTargetTaskId = null,
             isRunningAgent = false
+        )
+    }
+
+    fun generateTaskApproach(taskId: UUID) {
+        uiState = uiState.copy(
+            isGeneratingTaskApproach = true,
+            taskApproachError = null,
+            taskApproachTargetTaskId = taskId,
+            taskApproachReviewState = TaskApproachReviewState.NONE
+        )
+        scope.launch {
+            val result = generateTaskApproachUseCase(
+                GenerateTaskApproachRequest(taskId = taskId, agentId = uiState.selectedAgentId)
+            )
+            result.fold(
+                onSuccess = { output ->
+                    uiState = uiState.copy(
+                        isGeneratingTaskApproach = false,
+                        taskApproachDraft = output.approach,
+                        taskApproachReviewState = TaskApproachReviewState.PENDING_REVIEW,
+                        taskApproachError = null
+                    )
+                },
+                onFailure = { error ->
+                    uiState = uiState.copy(
+                        isGeneratingTaskApproach = false,
+                        taskApproachError = error.message ?: "Failed to generate solving approach"
+                    )
+                }
+            )
+        }
+    }
+
+    fun updateTaskApproachSummary(summary: String) {
+        val draft = uiState.taskApproachDraft ?: return
+        uiState = uiState.copy(taskApproachDraft = draft.copy(summary = summary))
+    }
+
+    fun updateTaskApproachStep(index: Int, step: TaskApproachStep) {
+        val draft = uiState.taskApproachDraft ?: return
+        val steps = draft.steps.toMutableList()
+        if (index !in steps.indices) {
+            return
+        }
+        steps[index] = step
+        uiState = uiState.copy(taskApproachDraft = draft.copy(steps = steps))
+    }
+
+    fun removeTaskApproachStep(index: Int) {
+        val draft = uiState.taskApproachDraft ?: return
+        val steps = draft.steps.toMutableList()
+        if (index !in steps.indices) {
+            return
+        }
+        steps.removeAt(index)
+        uiState = uiState.copy(taskApproachDraft = draft.copy(steps = steps))
+    }
+
+    fun moveTaskApproachStep(index: Int, delta: Int) {
+        val draft = uiState.taskApproachDraft ?: return
+        val steps = draft.steps.toMutableList()
+        val newIndex = index + delta
+        if (index !in steps.indices || newIndex !in steps.indices) {
+            return
+        }
+        val tmp = steps[index]
+        steps[index] = steps[newIndex]
+        steps[newIndex] = tmp
+        uiState = uiState.copy(taskApproachDraft = draft.copy(steps = steps))
+    }
+
+    fun updateTaskApproachStepTools(index: Int, tools: List<AgentToolKind>) {
+        val draft = uiState.taskApproachDraft ?: return
+        val steps = draft.steps.toMutableList()
+        if (index !in steps.indices) {
+            return
+        }
+        steps[index] = steps[index].copy(suggestedTools = tools)
+        uiState = uiState.copy(taskApproachDraft = draft.copy(steps = steps))
+    }
+
+    fun approveTaskApproach() {
+        if (uiState.taskApproachDraft == null) {
+            return
+        }
+        uiState = uiState.copy(taskApproachReviewState = TaskApproachReviewState.APPROVED)
+    }
+
+    fun rejectTaskApproach() {
+        uiState = uiState.copy(
+            taskApproachDraft = null,
+            taskApproachReviewState = TaskApproachReviewState.REJECTED,
+            taskApproachError = null,
+            taskApproachTargetTaskId = null
         )
     }
 
@@ -848,5 +994,11 @@ data class TasksUiState(
     val isRunningAgent: Boolean = false,
     val agentRunError: String? = null,
     val agentRunResult: String? = null,
-    val agentRunTargetTaskId: UUID? = null
+    val agentRunTargetTaskId: UUID? = null,
+    val isGeneratingTaskApproach: Boolean = false,
+    val taskApproachError: String? = null,
+    val taskApproachDraft: TaskSolvingApproach? = null,
+    val taskApproachTargetTaskId: UUID? = null,
+    val taskApproachReviewState: TaskApproachReviewState = TaskApproachReviewState.NONE,
+    val taskAutomationRuns: List<Activity> = emptyList()
 )

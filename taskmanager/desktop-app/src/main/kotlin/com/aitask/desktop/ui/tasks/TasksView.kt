@@ -22,7 +22,8 @@ fun TasksView(
     modifier: Modifier = Modifier,
     viewModel: TasksViewModel = remember { TasksViewModel() },
     taskIdToSelectOnMount: UUID? = null,
-    onMountedAfterSelection: (() -> Unit)? = null
+    onMountedAfterSelection: (() -> Unit)? = null,
+    onOpenAutomationHistoryForTask: ((UUID) -> Unit)? = null
 ) {
     val uiState = viewModel.uiState
 
@@ -356,6 +357,16 @@ fun TasksView(
                             },
                             onClearAgentRunResult = { viewModel.clearAgentRunResult() },
                             onSelectAgent = { viewModel.selectAgent(it) },
+                            onGenerateTaskApproach = { taskId -> viewModel.generateTaskApproach(taskId) },
+                            onUpdateTaskApproachSummary = { viewModel.updateTaskApproachSummary(it) },
+                            onUpdateTaskApproachStep = { index, step -> viewModel.updateTaskApproachStep(index, step) },
+                            onRemoveTaskApproachStep = { viewModel.removeTaskApproachStep(it) },
+                            onMoveTaskApproachStep = { index, delta -> viewModel.moveTaskApproachStep(index, delta) },
+                            onUpdateTaskApproachStepTools = { index, tools ->
+                                viewModel.updateTaskApproachStepTools(index, tools)
+                            },
+                            onApproveTaskApproach = { viewModel.approveTaskApproach() },
+                            onRejectTaskApproach = { viewModel.rejectTaskApproach() },
                             availableIDEs = uiState.availableIDEs,
                             preferredIDEs = uiState.projectRepositories.flatMap { it.preferredIDEs }.distinct(),
                             availableAgents = uiState.availableAgents,
@@ -378,7 +389,14 @@ fun TasksView(
                             isRunningAgent = uiState.isRunningAgent,
                             agentRunError = uiState.agentRunError,
                             agentRunResult = uiState.agentRunResult,
-                            agentRunTargetTaskId = uiState.agentRunTargetTaskId
+                            agentRunTargetTaskId = uiState.agentRunTargetTaskId,
+                            isGeneratingTaskApproach = uiState.isGeneratingTaskApproach,
+                            taskApproachError = uiState.taskApproachError,
+                            taskApproachDraft = uiState.taskApproachDraft,
+                            taskApproachTargetTaskId = uiState.taskApproachTargetTaskId,
+                            taskApproachReviewState = uiState.taskApproachReviewState,
+                            taskAutomationRuns = uiState.taskAutomationRuns,
+                            onOpenAutomationHistoryForTask = onOpenAutomationHistoryForTask
                         )
                     }
                 }

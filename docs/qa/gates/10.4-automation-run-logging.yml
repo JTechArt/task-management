@@ -1,0 +1,43 @@
+schema: 1
+story: '10.4'
+story_title: 'Automation Run Logging and Traceability'
+gate: PASS
+status_reason: 'Failure-path activity logging is covered by RunAgentUseCaseTest; sanitized errorMessage verified without raw secrets.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2026-03-31T20:15:00Z'
+
+top_issues: []
+
+waiver:
+  active: false
+
+evidence:
+  tests_reviewed: 6
+  risks_identified: 0
+  trace:
+    ac_covered: [1, 2, 3, 4, 5]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'AutomationRunLogSanitizer redacts bearer/sk-/long hex; activity stores truncated plan summary and step titles, not full prompts or LLM output.'
+  performance:
+    status: PASS
+    notes: 'findFiltered is bounded by limit; client-side search on loaded page is acceptable for current limits.'
+  reliability:
+    status: PASS
+    notes: 'Success and failure paths both persist AGENT_EXECUTED; errors sanitized before metadata; failure path asserted in unit test.'
+  maintainability:
+    status: PASS
+    notes: 'Sanitizer, happy-path and failure-path RunAgentUseCase tests; ActivityViewModel tests updated for findFiltered.'
+
+recommendations:
+  immediate: []
+  future:
+    - action: 'If run volume grows, consider server-side text search or raising limit when search query is non-empty'
+      refs:
+        - 'taskmanager/desktop-app/src/main/kotlin/com/aitask/desktop/ui/viewmodel/ActivityViewModel.kt'
+
+quality_score: 95
+expires: '2026-04-14T12:00:00Z'

@@ -85,6 +85,8 @@ class RunAgentUseCaseTest {
             description = "Draft action plans",
             promptTemplate = "Plan {{taskTitle}} for {{projectName}} using {{repositoryNames}}",
             llmConfigurationId = configId,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
             scope = AgentScope.GLOBAL,
             projectId = null,
             trigger = AgentTrigger.MANUAL,
@@ -129,6 +131,212 @@ class RunAgentUseCaseTest {
         assertTrue(result.isSuccess)
         assertEquals("Plan drafted", result.getOrThrow().generatedText)
         coVerify(exactly = 1) { activityRepository.create(match { it.type == ActivityType.AGENT_EXECUTED }) }
+    }
+
+    @Test
+    fun `invoke logs failed activity with sanitized errorMessage when execution fails`() = runTest {
+        val taskRepository = mockk<TaskRepository>()
+        val projectRepository = mockk<ProjectRepository>()
+        val repositoryRepository = mockk<RepositoryRepository>()
+        val agentDefinitionRepository = mockk<AgentDefinitionRepository>()
+        val llmConfigurationRepository = mockk<LlmConfigurationRepository>()
+        val agentExecutionService = mockk<AgentExecutionService>()
+        val activityRepository = mockk<ActivityRepository>()
+        val useCase = RunAgentUseCase(
+            taskRepository,
+            projectRepository,
+            repositoryRepository,
+            agentDefinitionRepository,
+            llmConfigurationRepository,
+            agentExecutionService,
+            activityRepository
+        )
+        val projectId = UUID.randomUUID()
+        val taskId = UUID.randomUUID()
+        val agentId = UUID.randomUUID()
+        val configId = UUID.randomUUID()
+        val task = Task(
+            id = taskId,
+            title = "Add agent builder",
+            description = "Create reusable agents",
+            taskType = TaskType.FEATURE,
+            status = TaskStatus.IN_PROGRESS,
+            projectId = projectId,
+            workspacePath = "/workspace",
+            branchName = "feature/agent-builder",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+            completedAt = null
+        )
+        val project = Project(
+            id = projectId,
+            name = "Atlas",
+            description = null,
+            workspacePath = "/workspace",
+            branchTemplate = "task-{taskId}",
+            methodology = Methodology.NONE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        val agent = AgentDefinition(
+            id = agentId,
+            name = "Planner",
+            description = "Draft action plans",
+            promptTemplate = "Plan {{taskTitle}}",
+            llmConfigurationId = configId,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            trigger = AgentTrigger.MANUAL,
+            isEnabled = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        val configuration = LlmConfiguration(
+            id = configId,
+            name = "Local Agent",
+            endpointUrl = "http://localhost:11434",
+            modelIdentifier = "llama3.1",
+            hasApiKey = false,
+            isDefault = false,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        val rawSecretFragment = "raw-token-fragment-xyz"
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { projectRepository.findById(projectId) } returns project
+        coEvery { repositoryRepository.findByProject(projectId) } returns emptyList()
+        coEvery { agentDefinitionRepository.findById(agentId) } returns agent
+        coEvery { llmConfigurationRepository.findById(configId) } returns configuration
+        coEvery { agentExecutionService.execute(any(), any(), any()) } returns Result.failure(
+            IllegalStateException("Upstream refused: Bearer $rawSecretFragment")
+        )
+        coEvery { activityRepository.create(any()) } returns mockk()
+        val result = useCase(RunAgentRequest(taskId, agentId))
+        assertTrue(result.isFailure)
+        coVerify(exactly = 1) {
+            activityRepository.create(
+                match {
+                    it.type == ActivityType.AGENT_EXECUTED &&
+                        it.status == ActivityStatus.FAILED &&
+                        it.metadata["resultStatus"] == "FAILED" &&
+                        it.metadata.containsKey("errorMessage") &&
+                        !it.metadata["errorMessage"]!!.contains(rawSecretFragment) &&
+                        it.metadata["errorMessage"]!!.contains("[REDACTED]")
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `invoke fails when agent is not associated with Local LLM`() = runTest {
+        val taskRepository = mockk<TaskRepository>()
+        val projectRepository = mockk<ProjectRepository>()
+        val repositoryRepository = mockk<RepositoryRepository>()
+        val agentDefinitionRepository = mockk<AgentDefinitionRepository>()
+        val llmConfigurationRepository = mockk<LlmConfigurationRepository>()
+        val agentExecutionService = mockk<AgentExecutionService>()
+        val activityRepository = mockk<ActivityRepository>()
+        val useCase = RunAgentUseCase(
+            taskRepository,
+            projectRepository,
+            repositoryRepository,
+            agentDefinitionRepository,
+            llmConfigurationRepository,
+            agentExecutionService,
+            activityRepository
+        )
+        val projectId = UUID.randomUUID()
+        val taskId = UUID.randomUUID()
+        val agentId = UUID.randomUUID()
+        val task = Task(
+            id = taskId,
+            title = "Task",
+            description = null,
+            taskType = TaskType.FEATURE,
+            status = TaskStatus.IN_PROGRESS,
+            projectId = projectId,
+            workspacePath = "/w",
+            branchName = "b",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+            completedAt = null
+        )
+        val agent = AgentDefinition(
+            id = agentId,
+            name = "Codex only",
+            description = null,
+            promptTemplate = "Hi",
+            llmConfigurationId = null,
+            associatedTools = setOf(AgentToolKind.CODEX),
+            taskTypeFilter = null,
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            trigger = AgentTrigger.MANUAL,
+            isEnabled = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { agentDefinitionRepository.findById(agentId) } returns agent
+        val result = useCase(RunAgentRequest(taskId, agentId))
+        assertTrue(result.isFailure)
+    }
+
+    @Test
+    fun `invoke fails when task type does not match agent filter`() = runTest {
+        val taskRepository = mockk<TaskRepository>()
+        val projectRepository = mockk<ProjectRepository>()
+        val repositoryRepository = mockk<RepositoryRepository>()
+        val agentDefinitionRepository = mockk<AgentDefinitionRepository>()
+        val llmConfigurationRepository = mockk<LlmConfigurationRepository>()
+        val agentExecutionService = mockk<AgentExecutionService>()
+        val activityRepository = mockk<ActivityRepository>()
+        val useCase = RunAgentUseCase(
+            taskRepository,
+            projectRepository,
+            repositoryRepository,
+            agentDefinitionRepository,
+            llmConfigurationRepository,
+            agentExecutionService,
+            activityRepository
+        )
+        val projectId = UUID.randomUUID()
+        val taskId = UUID.randomUUID()
+        val agentId = UUID.randomUUID()
+        val task = Task(
+            id = taskId,
+            title = "Task",
+            description = null,
+            taskType = TaskType.FEATURE,
+            status = TaskStatus.IN_PROGRESS,
+            projectId = projectId,
+            workspacePath = "/w",
+            branchName = "b",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+            completedAt = null
+        )
+        val agent = AgentDefinition(
+            id = agentId,
+            name = "Bug agent",
+            description = null,
+            promptTemplate = "Hi",
+            llmConfigurationId = null,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = TaskType.BUG_FIX,
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            trigger = AgentTrigger.MANUAL,
+            isEnabled = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { agentDefinitionRepository.findById(agentId) } returns agent
+        val result = useCase(RunAgentRequest(taskId, agentId))
+        assertTrue(result.isFailure)
     }
 
     @Test
@@ -186,6 +394,8 @@ class RunAgentUseCaseTest {
             description = "Draft action plans",
             promptTemplate = "Plan {{taskTitle}} for {{projectName}}",
             llmConfigurationId = configId,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
             scope = AgentScope.GLOBAL,
             projectId = null,
             trigger = AgentTrigger.MANUAL,
@@ -229,6 +439,133 @@ class RunAgentUseCaseTest {
             activityRepository.create(match {
                 it.metadata["geppaOptimized"] == "true"
             })
+        }
+    }
+
+    @Test
+    fun `invoke includes approved solving approach in prompt`() = runTest {
+        val taskRepository = mockk<TaskRepository>()
+        val projectRepository = mockk<ProjectRepository>()
+        val repositoryRepository = mockk<RepositoryRepository>()
+        val agentDefinitionRepository = mockk<AgentDefinitionRepository>()
+        val llmConfigurationRepository = mockk<LlmConfigurationRepository>()
+        val agentExecutionService = mockk<AgentExecutionService>()
+        val activityRepository = mockk<ActivityRepository>()
+        val useCase = RunAgentUseCase(
+            taskRepository,
+            projectRepository,
+            repositoryRepository,
+            agentDefinitionRepository,
+            llmConfigurationRepository,
+            agentExecutionService,
+            activityRepository
+        )
+        val projectId = UUID.randomUUID()
+        val taskId = UUID.randomUUID()
+        val agentId = UUID.randomUUID()
+        val configId = UUID.randomUUID()
+        val task = Task(
+            id = taskId,
+            title = "Add agent builder",
+            description = "Create reusable agents",
+            taskType = TaskType.FEATURE,
+            status = TaskStatus.IN_PROGRESS,
+            projectId = projectId,
+            workspacePath = "/workspace",
+            branchName = "feature/agent-builder",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+            completedAt = null
+        )
+        val project = Project(
+            id = projectId,
+            name = "Atlas",
+            description = null,
+            workspacePath = "/workspace",
+            branchTemplate = "task-{taskId}",
+            methodology = Methodology.NONE,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        val agent = AgentDefinition(
+            id = agentId,
+            name = "Planner",
+            description = "Draft action plans",
+            promptTemplate = "Plan {{taskTitle}} for {{projectName}} using {{repositoryNames}}",
+            llmConfigurationId = configId,
+            associatedTools = setOf(AgentToolKind.LOCAL_LLM),
+            taskTypeFilter = null,
+            scope = AgentScope.GLOBAL,
+            projectId = null,
+            trigger = AgentTrigger.MANUAL,
+            isEnabled = true,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        val configuration = LlmConfiguration(
+            id = configId,
+            name = "Local Agent",
+            endpointUrl = "http://localhost:11434",
+            modelIdentifier = "llama3.1",
+            hasApiKey = false,
+            isDefault = false,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        val approvedApproach = TaskSolvingApproach(
+            summary = "Approved plan summary",
+            steps = listOf(
+                TaskApproachStep(
+                    title = "First step",
+                    detail = "Do the work",
+                    suggestedTools = listOf(AgentToolKind.LOCAL_LLM),
+                    prompt = "Checklist"
+                )
+            ),
+            contextAgentId = null,
+            contextAgentName = null
+        )
+        coEvery { taskRepository.findById(taskId) } returns task
+        coEvery { projectRepository.findById(projectId) } returns project
+        coEvery { repositoryRepository.findByProject(projectId) } returns emptyList()
+        coEvery { agentDefinitionRepository.findById(agentId) } returns agent
+        coEvery { llmConfigurationRepository.findById(configId) } returns configuration
+        coEvery { agentExecutionService.execute(any(), any(), any()) } answers {
+            val prompt = args[0] as String
+            assertTrue(prompt.contains("User-approved solving approach"))
+            assertTrue(prompt.contains("Approved plan summary"))
+            assertTrue(prompt.contains("First step"))
+            assertTrue(prompt.contains("Do the work"))
+            assertTrue(prompt.contains("Checklist"))
+            Result.success(
+                AgentExecutionResult(
+                    generatedText = "Done",
+                    configurationName = configuration.name,
+                    modelIdentifier = configuration.modelIdentifier,
+                    endpointUrl = configuration.endpointUrl
+                )
+            )
+        }
+        coEvery { activityRepository.create(any()) } returns mockk()
+        val result = useCase(
+            RunAgentRequest(
+                taskId = taskId,
+                agentId = agentId,
+                approvedApproach = approvedApproach
+            )
+        )
+        assertTrue(result.isSuccess)
+        assertEquals("Done", result.getOrThrow().generatedText)
+        coVerify(exactly = 1) {
+            activityRepository.create(
+                match {
+                    it.type == ActivityType.AGENT_EXECUTED &&
+                        it.metadata["hasUserApprovedPlan"] == "true" &&
+                        it.metadata["approachSummary"]?.contains("Approved plan") == true &&
+                        it.metadata["approachStepTitles"]?.contains("First step") == true &&
+                        it.metadata["taskTitle"] == "Add agent builder"
+                }
+            )
         }
     }
 }
